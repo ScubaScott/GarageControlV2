@@ -37,13 +37,13 @@ bool MotionSensor::poll()
     {
       acked = true;
       ForcedAck = false;
-      Serial.println("Motion: Reset ForcedAck");
+      Serial.println(F("Motion: Reset ForcedAck"));
     }
     else
     {
       acked = true;
       lastMotion = now();
-      Serial.println("Motion:Motion Detected, and Ackd");
+      Serial.println(F("Motion:Detected+Ackd"));
       return true;
     }
   }
@@ -69,7 +69,7 @@ void MotionSensor::forceAck()
 {
   ForcedAck = true;
   lastMotion = now();
-  Serial.println("Motion: Forced ACK (relay spike suppressed)");
+  Serial.println(F("Motion:ForceAck"));
 }
 
 /**

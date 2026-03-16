@@ -6,24 +6,31 @@
 
 // ============================================================
 //  MQTTManager is compiled ONLY when WiFi is enabled.
-//  In DEV mode (ENABLE_WIFI 0) this entire class is absent,
-//  so no WiFi/MQTT libraries need to be present on the board.
+//  In DEV mode (ENABLE_WIFI 0) this entire class is absent.
 // ============================================================
 
 #if ENABLE_WIFI
-// #include <WiFiS3.h>
+
+// #include <WiFiS3.h>   // Built into "Arduino UNO R4 Boards" package
 #include <PubSubClient.h>
 
-// Forward declaration - avoids pulling in the full .ino header
 class GarageController;
 
 /**
  * @class MQTTManager
  * @brief Manages WiFi and MQTT connectivity for Home Assistant integration.
  *
- * This class handles connecting to WiFi, establishing MQTT connection,
- * publishing device states, subscribing to commands, and handling
- * Home Assistant auto-discovery.
+ * Compiled only when ENABLE_WIFI is 1. Set ENABLE_WIFI to 0 in Utility.h
+ * for a DEV build that omits all network code.
+ *
+ * Memory notes
+ * ─────────────
+ * • All string literals are stored in flash via F() / PROGMEM - not SRAM.
+ * • MQTT topics are NOT stored as persistent String members. They are built
+ *   on-demand from the DEVICE_ID root each time they are needed, using a
+ *   small shared char buffer.  This removes ~400 bytes of heap strings.
+ * • prevDoorState and prevHvacMode are stored as single bytes (enum/flag)
+ *   instead of heap-allocated String objects.
  */
 class MQTTManager
 {
@@ -31,93 +38,75 @@ private:
   WiFiClient   wifiClient;
   PubSubClient mqtt;
 
-  // MQTT topic strings
-  String topicBase;
-
-  // Configuration
+  // ── Configuration (all point to flash literals - zero SRAM cost) ──────
   const char *WIFI_SSID;
   const char *WIFI_PASSWORD;
   const char *MQTT_SERVER;
-  int MQTT_PORT;
+  int         MQTT_PORT;
   const char *MQTT_USER;
   const char *MQTT_PASS;
-  const char *DEVICE_ID;
+  const char *DEVICE_ID;       // e.g. "garage_ctrl_01"
   const char *DEVICE_NAME;
   const char *DISCOVERY_PREFIX;
 
   GarageController *controller;
-
   unsigned long lastMqttReconnect = 0;
 
-  // Previous states for change detection
-  bool prevLightState = false;
+  // ── Previous-state cache (change-detection for publishStateChanges) ────
+  // Use compact types instead of String objects to save heap.
+  bool          prevLightState    = false;
   unsigned long prevLightDuration = 0;
-  String prevDoorState = "";
-  float prevTemp = -999;
-  float prevHeatSet = -999;
-  bool prevMotion = false;
-  bool prevLockout = false;
-  String prevHvacMode = "";
+  uint8_t       prevDoorCode      = 0xFF;  // 0xFF = "not yet sent"
+  float         prevTemp          = -999;
+  float         prevHeatSet       = -999;
+  bool          prevMotion        = false;
+  bool          prevLockout       = false;
+  bool          prevHvacOn        = false; // false=off true=heat
 
-  void buildTopics();
+  // ── Shared topic-building buffer ───────────────────────────────────────
+  // Longest topic: "garage/garage_ctrl_01/light/duration/state" = 44 chars
+  // Longest discovery topic: "homeassistant/binary_sensor/garage_ctrl_01_lockout/config" = 57 chars
+  // 64 bytes covers both with room to spare.
+  char _topicBuf[64];
+
+  // Build a runtime topic into _topicBuf and return a pointer to it.
+  // suffix must be a flash string (F() macro), e.g. buildTopic(F("/door/state"))
+  const char* buildTopic(const __FlashStringHelper *suffix);
+
+  // Build a discovery topic, e.g. buildDiscoveryTopic(F("button"), F("_door"))
+  const char* buildDiscoveryTopic(const __FlashStringHelper *component,
+                                  const __FlashStringHelper *entitySuffix);
+
   void connectWiFi();
   void connectMQTT();
   void publishDiscovery();
- 
+
+  // Publish a single discovery entry. topic/payload are built in _topicBuf
+  // and a second local buffer; both are reused across calls.
+  void publishDiscoveryEntry(const __FlashStringHelper *component,
+                             const __FlashStringHelper *entitySuffix,
+                             const __FlashStringHelper *payloadBody);
+
 public:
-  // MQTT topic strings (public for controller access)
-  String DOOR_STATE_TOPIC;
-  String DOOR_CMD_TOPIC;
-  String LIGHT_STATE_TOPIC;
-  String LIGHT_CMD_TOPIC;
-  String LIGHT_DURATION_STATE_TOPIC;
-  String LIGHT_DURATION_CMD_TOPIC;
-  String HEAT_SET_STATE_TOPIC;
-  String HEAT_SET_CMD_TOPIC;
-  String TEMP_STATE_TOPIC;
-  String MODE_STATE_TOPIC;
-  String MODE_CMD_TOPIC;
-  String MOTION_STATE_TOPIC;
-  String LOCKOUT_STATE_TOPIC;
-  String AVAIL_TOPIC;
-
-
-  /**
-   * @brief Constructor for MQTTManager.
-   */
   MQTTManager();
 
-  /**
-   * @brief Initializes WiFi and MQTT connections.
-   * @param ctrl Pointer to the GarageController instance.
-   * @param callback C-style MQTT callback function pointer (e.g. GarageController::mqttCallback).
-   */
-  // FIX: Accept the callback as a parameter instead of referencing the free
-  // mqttCallback() from MQTT.cpp. This breaks the circular dependency:
-  // MQTT.cpp no longer needs the full GarageController definition to call
-  // handleMQTT(), and the .ino passes GarageController::mqttCallback (static)
-  // directly, keeping all knowledge of GarageController inside the .ino.
-  void init(GarageController *ctrl, void (*callback)(char *, byte *, unsigned int));
+  void init(GarageController *ctrl,
+            void (*callback)(char *, byte *, unsigned int));
 
-  /**
-   * @brief Main loop for maintaining connections and handling MQTT.
-   */
   void loop();
 
-  /**
-   * @brief Publishes state changes to MQTT topics.
-   * @param lightOn Current light state.
-   * @param durationMins Light timeout in minutes.
-   * @param doorState Current door state string.
-   * @param tempF Current temperature.
-   * @param heatSet Heat setpoint.
-   * @param hvacMode HVAC mode string.
-   * @param motionActive Motion sensor state.
-   * @param lockout HVAC lockout state.
-   */
-  void publishStateChanges(bool lightOn, unsigned long durationMins, const String &doorState,
-                           float tempF, float heatSet, const String &hvacMode,
-                           bool motionActive, bool lockout);
+  // Returns a pointer to _topicBuf containing the requested topic.
+  // Valid only until the next buildTopic() call - use immediately.
+  const char* getTopic(const __FlashStringHelper *suffix);
+
+  void publishStateChanges(bool          lightOn,
+                           unsigned long durationMins,
+                           uint8_t       doorCode,
+                           float         tempF,
+                           float         heatSet,
+                           bool          hvacOn,
+                           bool          motionActive,
+                           bool          lockout);
 };
 
 #endif // ENABLE_WIFI

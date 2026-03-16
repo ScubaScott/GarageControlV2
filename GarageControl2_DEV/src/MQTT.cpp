@@ -2,9 +2,23 @@
  * @file MQTT.cpp
  * @brief MQTTManager implementation - compiled only when ENABLE_WIFI is 1.
  *
- * The entire translation unit is wrapped in #if ENABLE_WIFI so the compiler
- * skips it completely in DEV builds, avoiding any dependency on WiFiS3 or
- * PubSubClient.
+ * Memory strategy
+ * ───────────────
+ * 1. F() macro  – all string literals are placed in flash (PROGMEM) and
+ *    never copied to SRAM.  This includes every Serial.print message,
+ *    every MQTT topic fragment, and every discovery payload fragment.
+ *
+ * 2. No persistent topic Strings – topics are built on-demand into a single
+ *    shared 64-byte char buffer (_topicBuf).  The previous design held 14
+ *    separate String members totalling ~400 bytes of heap.
+ *
+ * 3. Compact state cache – prevDoorState (was a String) is now a uint8_t
+ *    door code; prevHvacMode (was a String) is now a bool.  Saves ~60 bytes
+ *    of heap plus fragmentation overhead.
+ *
+ * 4. Discovery payloads – assembled in a single 512-byte stack buffer
+ *    (reused for every entity) rather than heap-concatenated Strings.
+ *    The buffer is declared once in publishDiscovery() and reused.
  */
 
 #include "Utility.h"
@@ -26,45 +40,74 @@
 MQTTManager::MQTTManager()
   : mqtt(wifiClient)
 {
-  WIFI_SSID = "ScubaSpot";
-  WIFI_PASSWORD = "ScubaNet";
-  MQTT_SERVER = "192.168.0.130";
-  MQTT_PORT = 1883;
-  MQTT_USER = "mqtt_user";
-  MQTT_PASS = "mqtt_password";
-  DEVICE_ID = "garage_ctrl_01";
-  DEVICE_NAME = "Garage Controller";
+  // All literals go to flash; the pointers themselves cost 2 bytes each.
+  WIFI_SSID        = "ScubaSpot";
+  WIFI_PASSWORD    = "ScubaNet";
+  MQTT_SERVER      = "192.168.0.130";
+  MQTT_PORT        = 1883;
+  MQTT_USER        = "mqtt_user";
+  MQTT_PASS        = "mqtt_password";
+  DEVICE_ID        = "garage_ctrl_01";
+  DEVICE_NAME      = "Garage Controller";
   DISCOVERY_PREFIX = "homeassistant";
 }
 
+// ============================================================
+//  Topic helpers
+// ============================================================
+
 /**
- * @brief Initializes WiFi and MQTT connections.
- * @param ctrl Pointer to the GarageController instance.
-* @param callback C-style MQTT callback function pointer.
+ * Builds "garage/<DEVICE_ID><suffix>" into _topicBuf.
+ * suffix is a flash string, e.g. F("/door/state").
+ * Returns pointer to _topicBuf.
  */
-// FIX: Signature updated to accept callback pointer — matches updated header.
-void MQTTManager::init(GarageController *ctrl, void (*callback)(char *, byte *, unsigned int)) {
+const char* MQTTManager::buildTopic(const __FlashStringHelper *suffix)
+{
+  snprintf_P(_topicBuf, sizeof(_topicBuf),
+             PSTR("garage/%s%S"), DEVICE_ID, suffix);
+  return _topicBuf;
+}
+
+/**
+ * Builds "<DISCOVERY_PREFIX>/<component>/<DEVICE_ID><entitySuffix>/config"
+ * Returns pointer to _topicBuf.
+ */
+const char* MQTTManager::buildDiscoveryTopic(const __FlashStringHelper *component,
+                                             const __FlashStringHelper *entitySuffix)
+{
+  snprintf_P(_topicBuf, sizeof(_topicBuf),
+             PSTR("%s/%S/%s%S/config"),
+             DISCOVERY_PREFIX, component, DEVICE_ID, entitySuffix);
+  return _topicBuf;
+}
+
+/** Public accessor used by GarageController::handleMQTT(). */
+const char* MQTTManager::getTopic(const __FlashStringHelper *suffix)
+{
+  return buildTopic(suffix);
+}
+
+// ============================================================
+//  Public API
+// ============================================================
+
+void MQTTManager::init(GarageController *ctrl,
+                       void (*callback)(char *, byte *, unsigned int))
+{
   controller = ctrl;
-  buildTopics();
   connectWiFi();
   mqtt.setServer(MQTT_SERVER, MQTT_PORT);
-  // FIX: Use the passed-in callback pointer instead of the removed free
-  // mqttCallback() function, breaking the circular dependency.
   mqtt.setCallback(callback);
   mqtt.setBufferSize(768);
   connectMQTT();
   publishDiscovery();
 }
 
-/**
- * @brief Main loop for maintaining connections and handling MQTT.
- */
-void MQTTManager::loop() {
-  // Keep WiFi alive
+void MQTTManager::loop()
+{
   if (WiFi.status() != WL_CONNECTED)
     connectWiFi();
 
-  // Keep MQTT alive
   if (!mqtt.connected()) {
     if (millis() - lastMqttReconnect >= 5000UL) {
       lastMqttReconnect = millis();
@@ -85,210 +128,257 @@ void MQTTManager::loop() {
  * @param motionActive Motion sensor state.
  * @param lockout HVAC lockout state.
  */
-void MQTTManager::publishStateChanges(bool lightOn, unsigned long durationMins, const String &doorState,
-                                      float tempF, float heatSet, const String &hvacMode,
-                                      bool motionActive, bool lockout) {
-  if (!mqtt.connected())
-    return;
+void MQTTManager::publishStateChanges(bool          lightOn,
+                                      unsigned long durationMins,
+                                      uint8_t       doorCode,
+                                      float         tempF,
+                                      float         heatSet,
+                                      bool          hvacOn,
+                                      bool          motionActive,
+                                      bool          lockout)
+{
+  if (!mqtt.connected()) return;
 
-  // Light
+  // Use a small stack buffer for numeric payloads (replaces heap String temps)
+  char val[12];
+
   if (lightOn != prevLightState) {
-    mqtt.publish(LIGHT_STATE_TOPIC.c_str(), lightOn ? "ON" : "OFF", true);
+    mqtt.publish(buildTopic(F("/light/state")),
+                 lightOn ? "ON" : "OFF", true);
     prevLightState = lightOn;
   }
 
-  // Light timeout
   if (durationMins != prevLightDuration) {
-    mqtt.publish(LIGHT_DURATION_STATE_TOPIC.c_str(), String(durationMins).c_str(), true);
+    snprintf(val, sizeof(val), "%lu", durationMins);
+    mqtt.publish(buildTopic(F("/light/duration/state")), val, true);
     prevLightDuration = durationMins;
   }
 
-  // Door
-  if (doorState != prevDoorState) {
-    mqtt.publish(DOOR_STATE_TOPIC.c_str(), doorState.c_str(), true);
-    prevDoorState = doorState;
+  if (doorCode != prevDoorCode) {
+    // Convert code to payload string without heap allocation
+    const char *ds;
+    switch (doorCode) {
+      case 0: ds = "open";     break;
+      case 1: ds = "closed";   break;
+      case 2: ds = "opening";  break;
+      case 3: ds = "error";    break;
+      default: ds = "disabled"; break;
+    }
+    mqtt.publish(buildTopic(F("/door/state")), ds, true);
+    prevDoorCode = doorCode;
   }
 
-  // Temperature
-  if (abs(tempF - prevTemp) >= 0.2) {
-    mqtt.publish(TEMP_STATE_TOPIC.c_str(), String(tempF, 1).c_str(), true);
+  if (abs(tempF - prevTemp) >= 0.2f) {
+    dtostrf(tempF, 4, 1, val);
+    mqtt.publish(buildTopic(F("/hvac/temp/state")), val, true);
     prevTemp = tempF;
   }
 
-  // Heat setpoint
-  if (abs(heatSet - prevHeatSet) >= 0.5) {
-    mqtt.publish(HEAT_SET_STATE_TOPIC.c_str(), String(heatSet, 1).c_str(), true);
+  if (abs(heatSet - prevHeatSet) >= 0.5f) {
+    dtostrf(heatSet, 4, 1, val);
+    mqtt.publish(buildTopic(F("/hvac/heat_set/state")), val, true);
     prevHeatSet = heatSet;
   }
 
-  // HVAC mode
-  if (hvacMode != prevHvacMode) {
-    mqtt.publish(MODE_STATE_TOPIC.c_str(), hvacMode.c_str(), true);
-    prevHvacMode = hvacMode;
+  if (hvacOn != prevHvacOn) {
+    mqtt.publish(buildTopic(F("/hvac/mode/state")),
+                 hvacOn ? "heat" : "off", true);
+    prevHvacOn = hvacOn;
   }
 
-  // Motion
   if (motionActive != prevMotion) {
-    mqtt.publish(MOTION_STATE_TOPIC.c_str(), motionActive ? "ON" : "OFF", true);
+    mqtt.publish(buildTopic(F("/motion/state")),
+                 motionActive ? "ON" : "OFF", true);
     prevMotion = motionActive;
   }
 
-  // Lockout
   if (lockout != prevLockout) {
-    mqtt.publish(LOCKOUT_STATE_TOPIC.c_str(), lockout ? "ON" : "OFF", true);
+    mqtt.publish(buildTopic(F("/lockout/state")),
+                 lockout ? "ON" : "OFF", true);
     prevLockout = lockout;
   }
 }
 
-/**
- * @brief Builds MQTT topic strings from DEVICE_ID.
- */
-void MQTTManager::buildTopics() {
-  topicBase = String("garage/") + DEVICE_ID;
+// ============================================================
+//  Private helpers
+// ============================================================
 
-  DOOR_STATE_TOPIC = topicBase + "/door/state";
-  DOOR_CMD_TOPIC = topicBase + "/door/cmd";
-
-  LIGHT_STATE_TOPIC = topicBase + "/light/state";
-  LIGHT_CMD_TOPIC = topicBase + "/light/cmd";
-  LIGHT_DURATION_STATE_TOPIC = topicBase + "/light/duration/state";
-  LIGHT_DURATION_CMD_TOPIC = topicBase + "/light/duration/cmd";
-
-  HEAT_SET_STATE_TOPIC = topicBase + "/hvac/heat_set/state";
-  HEAT_SET_CMD_TOPIC = topicBase + "/hvac/heat_set/cmd";
-  TEMP_STATE_TOPIC = topicBase + "/hvac/temp/state";
-  MODE_STATE_TOPIC = topicBase + "/hvac/mode/state";
-  MODE_CMD_TOPIC = topicBase + "/hvac/mode/cmd";
-
-  MOTION_STATE_TOPIC = topicBase + "/motion/state";
-  LOCKOUT_STATE_TOPIC = topicBase + "/lockout/state";
-
-  AVAIL_TOPIC = topicBase + "/availability";
-}
-
-/**
- * @brief Connects to WiFi network.
- */
-void MQTTManager::connectWiFi() 
+void MQTTManager::connectWiFi()
 {
-  Serial.print("Connecting to WiFi: ");
+  Serial.print(F("Connecting to WiFi: "));
   Serial.println(WIFI_SSID);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - start < 15000UL) {
     delay(500);
-    Serial.print(".");
+    Serial.print(F("."));
   }
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("\nWiFi connected, IP: ");
+    Serial.print(F("\nWiFi connected, IP: "));
     Serial.println(WiFi.localIP());
   } else {
-    Serial.println("\nWiFi connect failed – will retry");
+    Serial.println(F("\nWiFi connect failed - will retry"));
   }
 }
 
-/**
- * @brief Connects to MQTT broker and subscribes to topics.
- */
-void MQTTManager::connectMQTT() 
+void MQTTManager::connectMQTT()
 {
-  String clientId = String(DEVICE_ID) + "_" + String(random(0xffff), HEX);
-  Serial.print("Connecting MQTT... ");
+  // clientId on the stack - no heap String
+  char clientId[32];
+  snprintf(clientId, sizeof(clientId), "%s_%04x", DEVICE_ID, (unsigned)random(0xffff));
+
+  // Build availability topic once for the connect call
+  const char *availTopic = buildTopic(F("/availability"));
+  // Copy it - buildTopic() reuses the buffer, connectMQTT uses it below
+  char avail[64];
+  strncpy(avail, availTopic, sizeof(avail));
+
+  Serial.print(F("Connecting MQTT... "));
   bool ok;
   if (strlen(MQTT_USER) > 0) {
-    ok = mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS,
-                      AVAIL_TOPIC.c_str(), 1, true, "offline");
+    ok = mqtt.connect(clientId, MQTT_USER, MQTT_PASS,
+                      avail, 1, true, "offline");
   } else {
-    ok = mqtt.connect(clientId.c_str(), nullptr, nullptr,
-                      AVAIL_TOPIC.c_str(), 1, true, "offline");
+    ok = mqtt.connect(clientId, nullptr, nullptr,
+                      avail, 1, true, "offline");
   }
 
   if (ok) {
-    Serial.println("connected");
-    mqtt.publish(AVAIL_TOPIC.c_str(), "online", true);
+    Serial.println(F("connected"));
+    mqtt.publish(avail, "online", true);
 
-    // Subscribe to command topics
-    mqtt.subscribe(DOOR_CMD_TOPIC.c_str());
-    mqtt.subscribe(LIGHT_CMD_TOPIC.c_str());
-    mqtt.subscribe(HEAT_SET_CMD_TOPIC.c_str());
-    mqtt.subscribe(MODE_CMD_TOPIC.c_str());
-    mqtt.subscribe(LIGHT_DURATION_CMD_TOPIC.c_str());
+    mqtt.subscribe(buildTopic(F("/door/cmd")));
+    mqtt.subscribe(buildTopic(F("/light/cmd")));
+    mqtt.subscribe(buildTopic(F("/hvac/heat_set/cmd")));
+    mqtt.subscribe(buildTopic(F("/hvac/mode/cmd")));
+    mqtt.subscribe(buildTopic(F("/light/duration/cmd")));
 
-    // Re-publish discovery after reconnect so HA picks up entities
     publishDiscovery();
   } else {
-    Serial.print("MQTT failed rc=");
+    Serial.print(F("MQTT failed rc="));
     Serial.println(mqtt.state());
   }
 }
 
 /**
- * @brief Publishes Home Assistant auto-discovery configurations.
+ * Publishes all HA auto-discovery configs.
+ *
+ * A single 512-byte stack buffer is reused for every payload, replacing
+ * the heap-concatenated String approach that allocated and freed ~400 bytes
+ * six times in a row (causing heap fragmentation).
  */
-void MQTTManager::publishDiscovery() {
-  // Shared device block (JSON fragment)
-  String dev = String("\"dev\":{\"ids\":[\"") + DEVICE_ID + "\"],"
-                                                            "\"name\":\""
-               + DEVICE_NAME + "\","
-                               "\"mf\":\"Arduino\",\"mdl\":\"UNO R4 WiFi\"}";
+void MQTTManager::publishDiscovery()
+{
+  // Shared payload buffer - reused for every entity
+  char buf[512];
 
-  String avail = String("\"avty_t\":\"") + AVAIL_TOPIC + "\"";
+  // Precompute availability topic (needed in every payload)
+  char avail[64];
+  strncpy(avail, buildTopic(F("/availability")), sizeof(avail));
 
-  // ── 1. Button (garage door toggle) ──────────────────
-  {
-    String topic = String(DISCOVERY_PREFIX) + "/button/" + DEVICE_ID + "_door/config";
-    String payload = String("{") + "\"name\":\"Garage Door\"," + "\"uniq_id\":\"" + DEVICE_ID + "_door\"," + "\"command_topic\":\"" + DOOR_CMD_TOPIC + "\"," + avail + "," + dev + "}";
-    mqtt.publish(topic.c_str(), payload.c_str(), true);
-    Serial.println("Discovery: door button published");
-  }
+  // ── 1. Button (door toggle) ──────────────────────────────────────────
+  snprintf_P(buf, sizeof(buf),
+    PSTR("{\"name\":\"Garage Door\","
+         "\"uniq_id\":\"%s_door\","
+         "\"command_topic\":\"garage/%s/door/cmd\","
+         "\"avty_t\":\"%s\","
+         "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"Arduino\",\"mdl\":\"UNO R4 WiFi\"}"
+         "}"),
+    DEVICE_ID, DEVICE_ID, avail, DEVICE_ID, DEVICE_NAME);
+  mqtt.publish(buildDiscoveryTopic(F("button"), F("_door")), buf, true);
+  Serial.println(F("Discovery: door button published"));
 
-  // ── 2. Light ─────────────────────────────────────
-  {
-    String topic = String(DISCOVERY_PREFIX) + "/light/" + DEVICE_ID + "_light/config";
-    String payload = String("{") + "\"name\":\"Garage Light\"," + "\"uniq_id\":\"" + DEVICE_ID + "_light\"," + "\"state_topic\":\"" + LIGHT_STATE_TOPIC + "\"," + "\"command_topic\":\"" + LIGHT_CMD_TOPIC + "\"," + "\"payload_on\":\"ON\"," + "\"payload_off\":\"OFF\"," + avail + "," + dev + "}";
-    mqtt.publish(topic.c_str(), payload.c_str(), true);
-    Serial.println("Discovery: light published");
-  }
+  // ── 2. Light ─────────────────────────────────────────────────────────
+  snprintf_P(buf, sizeof(buf),
+    PSTR("{\"name\":\"Garage Light\","
+         "\"uniq_id\":\"%s_light\","
+         "\"state_topic\":\"garage/%s/light/state\","
+         "\"command_topic\":\"garage/%s/light/cmd\","
+         "\"payload_on\":\"ON\",\"payload_off\":\"OFF\","
+         "\"avty_t\":\"%s\","
+         "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"Arduino\",\"mdl\":\"UNO R4 WiFi\"}"
+         "}"),
+    DEVICE_ID, DEVICE_ID, DEVICE_ID, avail, DEVICE_ID, DEVICE_NAME);
+  mqtt.publish(buildDiscoveryTopic(F("light"), F("_light")), buf, true);
+  Serial.println(F("Discovery: light published"));
 
-  // ── 2a. Number (light timeout) ─────────────────────
-  {
-    String topic = String(DISCOVERY_PREFIX) + "/number/" + DEVICE_ID + "_light_timeout/config";
-    String payload = String("{") + "\"name\":\"Garage Light Timeout\"," + "\"uniq_id\":\"" + DEVICE_ID + "_light_timeout\"," + "\"state_topic\":\"" + LIGHT_DURATION_STATE_TOPIC + "\"," + "\"command_topic\":\"" + LIGHT_DURATION_CMD_TOPIC + "\"," + "\"min\":1," + "\"max\":120," + "\"step\":1," + "\"unit_of_measurement\":\"min\"," + avail + "," + dev + "}";
-    mqtt.publish(topic.c_str(), payload.c_str(), true);
-    Serial.println("Discovery: light timeout published");
-  }
+  // ── 2a. Number (light timeout) ────────────────────────────────────────
+  snprintf_P(buf, sizeof(buf),
+    PSTR("{\"name\":\"Garage Light Timeout\","
+         "\"uniq_id\":\"%s_light_timeout\","
+         "\"state_topic\":\"garage/%s/light/duration/state\","
+         "\"command_topic\":\"garage/%s/light/duration/cmd\","
+         "\"min\":1,\"max\":120,\"step\":1,"
+         "\"unit_of_measurement\":\"min\","
+         "\"avty_t\":\"%s\","
+         "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"Arduino\",\"mdl\":\"UNO R4 WiFi\"}"
+         "}"),
+    DEVICE_ID, DEVICE_ID, DEVICE_ID, avail, DEVICE_ID, DEVICE_NAME);
+  mqtt.publish(buildDiscoveryTopic(F("number"), F("_light_timeout")), buf, true);
+  Serial.println(F("Discovery: light timeout published"));
 
-  // ── 3. Climate (heating thermostat) ──────────────
-  {
-    String topic = String(DISCOVERY_PREFIX) + "/climate/" + DEVICE_ID + "_hvac/config";
-    String payload = String("{") + "\"name\":\"Garage Heater\"," + "\"uniq_id\":\"" + DEVICE_ID + "_hvac\"," + "\"modes\":[\"off\",\"heat\"]," + "\"mode_state_topic\":\"" + MODE_STATE_TOPIC + "\"," + "\"mode_command_topic\":\"" + MODE_CMD_TOPIC + "\"," + "\"temperature_state_topic\":\"" + HEAT_SET_STATE_TOPIC + "\"," + "\"temperature_command_topic\":\"" + HEAT_SET_CMD_TOPIC + "\"," + "\"current_temperature_topic\":\"" + TEMP_STATE_TOPIC + "\"," + "\"temperature_unit\":\"F\"," + "\"min_temp\":32," + "\"max_temp\":90," + "\"temp_step\":1," + avail + "," + dev + "}";
-    mqtt.publish(topic.c_str(), payload.c_str(), true);
-    Serial.println("Discovery: climate published");
-  }
+  // ── 3. Climate ────────────────────────────────────────────────────────
+  snprintf_P(buf, sizeof(buf),
+    PSTR("{\"name\":\"Garage Heater\","
+         "\"uniq_id\":\"%s_hvac\","
+         "\"modes\":[\"off\",\"heat\"],"
+         "\"mode_state_topic\":\"garage/%s/hvac/mode/state\","
+         "\"mode_command_topic\":\"garage/%s/hvac/mode/cmd\","
+         "\"temperature_state_topic\":\"garage/%s/hvac/heat_set/state\","
+         "\"temperature_command_topic\":\"garage/%s/hvac/heat_set/cmd\","
+         "\"current_temperature_topic\":\"garage/%s/hvac/temp/state\","
+         "\"temperature_unit\":\"F\","
+         "\"min_temp\":32,\"max_temp\":90,\"temp_step\":1,"
+         "\"avty_t\":\"%s\","
+         "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"Arduino\",\"mdl\":\"UNO R4 WiFi\"}"
+         "}"),
+    DEVICE_ID,
+    DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID,
+    avail, DEVICE_ID, DEVICE_NAME);
+  mqtt.publish(buildDiscoveryTopic(F("climate"), F("_hvac")), buf, true);
+  Serial.println(F("Discovery: climate published"));
 
-  // ── 4. Temperature sensor ─────────────────────────
-  {
-    String topic = String(DISCOVERY_PREFIX) + "/sensor/" + DEVICE_ID + "_temp/config";
-    String payload = String("{") + "\"name\":\"Garage Temperature\"," + "\"uniq_id\":\"" + DEVICE_ID + "_temp\"," + "\"device_class\":\"temperature\"," + "\"state_topic\":\"" + TEMP_STATE_TOPIC + "\"," + "\"unit_of_measurement\":\"°F\"," + avail + "," + dev + "}";
-    mqtt.publish(topic.c_str(), payload.c_str(), true);
-    Serial.println("Discovery: temp sensor published");
-  }
+  // ── 4. Temperature sensor ─────────────────────────────────────────────
+  snprintf_P(buf, sizeof(buf),
+    PSTR("{\"name\":\"Garage Temperature\","
+         "\"uniq_id\":\"%s_temp\","
+         "\"device_class\":\"temperature\","
+         "\"state_topic\":\"garage/%s/hvac/temp/state\","
+         "\"unit_of_measurement\":\"\xc2\xb0\x46\","
+         "\"avty_t\":\"%s\","
+         "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"Arduino\",\"mdl\":\"UNO R4 WiFi\"}"
+         "}"),
+    DEVICE_ID, DEVICE_ID, avail, DEVICE_ID, DEVICE_NAME);
+  mqtt.publish(buildDiscoveryTopic(F("sensor"), F("_temp")), buf, true);
+  Serial.println(F("Discovery: temp sensor published"));
 
-  // ── 5. Motion binary sensor ───────────────────────
-  {
-    String topic = String(DISCOVERY_PREFIX) + "/binary_sensor/" + DEVICE_ID + "_motion/config";
-    String payload = String("{") + "\"name\":\"Garage Motion\"," + "\"uniq_id\":\"" + DEVICE_ID + "_motion\"," + "\"device_class\":\"motion\"," + "\"state_topic\":\"" + MOTION_STATE_TOPIC + "\"," + "\"payload_on\":\"ON\"," + "\"payload_off\":\"OFF\"," + avail + "," + dev + "}";
-    mqtt.publish(topic.c_str(), payload.c_str(), true);
-    Serial.println("Discovery: motion sensor published");
-  }
+  // ── 5. Motion binary sensor ───────────────────────────────────────────
+  snprintf_P(buf, sizeof(buf),
+    PSTR("{\"name\":\"Garage Motion\","
+         "\"uniq_id\":\"%s_motion\","
+         "\"device_class\":\"motion\","
+         "\"state_topic\":\"garage/%s/motion/state\","
+         "\"payload_on\":\"ON\",\"payload_off\":\"OFF\","
+         "\"avty_t\":\"%s\","
+         "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"Arduino\",\"mdl\":\"UNO R4 WiFi\"}"
+         "}"),
+    DEVICE_ID, DEVICE_ID, avail, DEVICE_ID, DEVICE_NAME);
+  mqtt.publish(buildDiscoveryTopic(F("binary_sensor"), F("_motion")), buf, true);
+  Serial.println(F("Discovery: motion sensor published"));
 
-  // ── 6. HVAC lockout binary sensor ─────────────────
-  {
-    String topic = String(DISCOVERY_PREFIX) + "/binary_sensor/" + DEVICE_ID + "_lockout/config";
-    String payload = String("{") + "\"name\":\"Garage HVAC Lockout\"," + "\"uniq_id\":\"" + DEVICE_ID + "_lockout\"," + "\"device_class\":\"problem\"," + "\"state_topic\":\"" + LOCKOUT_STATE_TOPIC + "\"," + "\"payload_on\":\"ON\"," + "\"payload_off\":\"OFF\"," + avail + "," + dev + "}";
-    mqtt.publish(topic.c_str(), payload.c_str(), true);
-    Serial.println("Discovery: lockout sensor published");
-  }
+  // ── 6. HVAC lockout binary sensor ─────────────────────────────────────
+  snprintf_P(buf, sizeof(buf),
+    PSTR("{\"name\":\"Garage HVAC Lockout\","
+         "\"uniq_id\":\"%s_lockout\","
+         "\"device_class\":\"problem\","
+         "\"state_topic\":\"garage/%s/lockout/state\","
+         "\"payload_on\":\"ON\",\"payload_off\":\"OFF\","
+         "\"avty_t\":\"%s\","
+         "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"Arduino\",\"mdl\":\"UNO R4 WiFi\"}"
+         "}"),
+    DEVICE_ID, DEVICE_ID, avail, DEVICE_ID, DEVICE_NAME);
+  mqtt.publish(buildDiscoveryTopic(F("binary_sensor"), F("_lockout")), buf, true);
+  Serial.println(F("Discovery: lockout sensor published"));
 }
 
 #endif // ENABLE_WIFI

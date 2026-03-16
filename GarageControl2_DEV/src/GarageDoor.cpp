@@ -38,34 +38,28 @@ GarageDoor::GarageDoor(byte btn, byte open, byte closed, MotionSensor &m)
  */
 GarageDoor::State GarageDoor::poll(bool motionDetected)
 {
-  bool open = digitalRead(openPin);
+  bool open   = digitalRead(openPin);
   bool closed = digitalRead(closedPin);
 
   if (open && closed)
   {
-    // Both pins high - error condition, but allow for doorTravelTime tolerance
     if (errorStart == 0)
-    {
       errorStart = now();
-    }
-
     if (expired(errorStart, doorTravelTime))
     {
       if (state != Error)
-        Serial.println("Door:Door state changed: Error");
+        Serial.println(F("Door:Error"));
       state = Error;
     }
   }
   else
   {
-    // Clear error condition timer when we exit the anomaly
     errorStart = 0;
-
     if (open)
     {
       if (state != Open)
       {
-        Serial.println("Door:Door state changed: Open");
+        Serial.println(F("Door:Open"));
         state = Open;
         lastOpen = now();
         attempts = 0;
@@ -78,13 +72,13 @@ GarageDoor::State GarageDoor::poll(bool motionDetected)
     else if (closed)
     {
       if (state != Closed)
-        Serial.println("Door:Door state changed: Closed");
+        Serial.println(F("Door:Closed"));
       state = Closed;
     }
     else
     {
       if (state != Moving)
-        Serial.println("Door:Door state changed: Moving");
+        Serial.println(F("Door:Moving"));
       state = Moving;
     }
   }
@@ -101,7 +95,7 @@ GarageDoor::State GarageDoor::poll(bool motionDetected)
   if (attempts >= maxAttempts)
   {
     if (state != Disabled)
-      Serial.println("Door:Door state changed: Disabled");
+      Serial.println(F("Door:Disabled"));
     state = Disabled;
   }
 
@@ -119,7 +113,7 @@ GarageDoor::State GarageDoor::poll(bool motionDetected)
  */
 void GarageDoor::manualActivate()
 {
-  Serial.println("Door:Manual door activation triggered");
+  Serial.println(F("Door:Manual activate"));
   pressButton();
   attempts = 0;
 }
@@ -136,8 +130,7 @@ unsigned long GarageDoor::getAutoClose() const { return autoCloseDuration; }
  */
 void GarageDoor::setAutoClose(unsigned long ms)
 {
-  if (ms < 60000UL)
-    ms = 60000UL;
+  if (ms < 60000UL) ms = 60000UL;
   autoCloseDuration = ms;
 }
 
@@ -153,8 +146,7 @@ unsigned long GarageDoor::getDoorTravelTime() const { return doorTravelTime; }
  */
 void GarageDoor::setDoorTravelTime(unsigned long ms)
 {
-  if (ms < 1000UL)
-    ms = 1000UL;
+  if (ms < 1000UL) ms = 1000UL;
   doorTravelTime = ms;
 }
 
@@ -170,10 +162,8 @@ int GarageDoor::getMaxAttempts() const { return maxAttempts; }
  */
 void GarageDoor::setMaxAttempts(int v)
 {
-  if (v < 1)
-    v = 1;
-  if (v > 10)
-    v = 10;
+  if (v < 1)  v = 1;
+  if (v > 10) v = 10;
   maxAttempts = v;
 }
 
@@ -190,7 +180,7 @@ void GarageDoor::pressButton()
 {
   motion.forceAck();
   digitalWrite(buttonPin, buttonActiveHigh);
-  buttonStart = now();
+  buttonStart   = now();
   buttonPressed = true;
-  Serial.println("Door:Door button pressed");
+  Serial.println(F("Door:Button pressed"));
 }

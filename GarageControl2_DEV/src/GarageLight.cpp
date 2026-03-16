@@ -33,7 +33,7 @@ void GarageLight::turnOn()
 {
   lastOn = now();
   digitalWrite(pin, onState);
-  Serial.println("Lights: On");
+  Serial.println(F("Lights:On"));
 }
 
 /**
@@ -43,7 +43,7 @@ void GarageLight::turnOff()
 {
   motion.forceAck();
   digitalWrite(pin, !onState);
-  Serial.println("Lights: Off (command)");
+  Serial.println(F("Lights:Off(cmd)"));
 }
 
 /**
@@ -55,7 +55,7 @@ void GarageLight::poll()
   {
     motion.forceAck();
     digitalWrite(pin, !onState);
-    Serial.println("Lights: Off (timeout)");
+    Serial.println(F("Lights:Off(timeout)"));
   }
 }
 

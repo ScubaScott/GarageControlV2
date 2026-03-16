@@ -40,7 +40,7 @@ GarageHVAC::State GarageHVAC::poll(float tempF)
       motion.forceAck();
       digitalWrite(heatPin, !heatActiveHigh);
       state = Waiting;
-      Serial.println("HVAC: Disabled by HA");
+      Serial.println(F("HVAC:Disabled"));
     }
     return state;
   }
@@ -54,7 +54,7 @@ GarageHVAC::State GarageHVAC::poll(float tempF)
         motion.forceAck();
         digitalWrite(heatPin, heatActiveHigh);
         state = Heating;
-        Serial.println("HVAC: Heating");
+        Serial.println(F("HVAC:Heating"));
       }
     }
     else
@@ -62,7 +62,7 @@ GarageHVAC::State GarageHVAC::poll(float tempF)
       motion.forceAck();
       digitalWrite(heatPin, !heatActiveHigh);
       state = Pending;
-      Serial.println("HVAC: Pending");
+      Serial.println(F("HVAC:Pending"));
     }
   }
 
@@ -71,7 +71,7 @@ GarageHVAC::State GarageHVAC::poll(float tempF)
     motion.forceAck();
     digitalWrite(heatPin, !heatActiveHigh);
     state = Waiting;
-    Serial.println("HVAC: Waiting");
+    Serial.println(F("HVAC:Waiting"));
   }
 
   if (tempF > coolSet)
@@ -79,7 +79,7 @@ GarageHVAC::State GarageHVAC::poll(float tempF)
     if (state != Cooling)
     {
       state = Cooling;
-      Serial.println("HVAC: Cooling");
+      Serial.println(F("HVAC:Cooling"));
     }
   }
   else
@@ -87,7 +87,7 @@ GarageHVAC::State GarageHVAC::poll(float tempF)
     if (state == Cooling)
     {
       state = Waiting;
-      Serial.println("HVAC: Waiting");
+      Serial.println(F("HVAC:Waiting"));
     }
   }
 

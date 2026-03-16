@@ -2,21 +2,46 @@
  * @file GarageControl2_DEV.ino
  * @brief Main Arduino sketch for the Garage Control System with Home Assistant MQTT integration.
  *
- * This sketch implements a comprehensive garage control system featuring:
- * - WiFi and MQTT connectivity for Home Assistant integration
-
- * - Garage door control with safety features
- * - Lighting system with motion-activated auto-off
- * - HVAC temperature control with lockout protection
- * - LCD display with hierarchical menu system
- * - Motion detection and door state monitoring
+ * Board: Arduino UNO R4 WiFi (production) / Arduino UNO R4 Minima (dev)
  *
- * Board: Arduino UNO R4 WiFi
- *   - In Arduino IDE: Tools → Board → "Arduino UNO R4 WiFi"
- *   - Board package: "Arduino UNO R4 Boards" (install via Boards Manager)
+ * ── Build modes ──────────────────────────────────────────────────────────────
+ *   DEV  (ENABLE_WIFI 0)  All WiFi / MQTT / PubSubClient code excluded.
+ *                         Safe to flash on boards without WiFi hardware.
  *
- * The system can be configured to disable WiFi/MQTT for debugging purposes
- * by setting ENABLE_WIFI to 0.
+ *   PROD (ENABLE_WIFI 1)  Full WiFi + MQTT + HA auto-discovery enabled.
+ *                         Requires "Arduino UNO R4 WiFi" board and PubSubClient.
+ *
+ *   Change the flag in src/Utility.h to switch modes.
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Memory optimisations applied throughout this project
+ * ──────────────────────────────────────────────────────
+ * 1. F() macro on every string literal passed to Serial.print/println.
+ *    String literals without F() are copied to SRAM at boot; F() keeps
+ *    them in flash.  ~1.3 KB of debug strings moved to flash.
+ *
+ * 2. No heap-allocated String objects for MQTT topics.
+ *    The previous design stored 14 persistent String members in MQTTManager
+ *    (~400 bytes of heap).  Topics are now built on-demand into a single
+ *    64-byte char buffer and used immediately.
+ *
+ * 3. prevDoorState / prevHvacMode changed from String to uint8_t / bool.
+ *    Removes two heap strings plus fragmentation overhead (~60 bytes).
+ *
+ * 4. doorStateString() replaced by doorStateCode() returning uint8_t.
+ *    Eliminates a heap String created every loop iteration.
+ *
+ * 5. Discovery payloads built with snprintf into one reused 512-byte
+ *    stack buffer instead of heap-concatenated Strings (removed 6 × ~300
+ *    byte heap allocations that ran at startup and on every reconnect).
+ *
+ * 6. LcdController::printLCDText() changed from const String& to
+ *    const char* - callers use stack snprintf buffers or string literals.
+ *    getHvacStateString/getDoorStateString return const char* literals
+ *    instead of heap Strings.
+ *
+ * 7. dtostrf() used instead of String(float, n) for float → char
+ *    conversion in publishStateChanges().
  */
 
 #include "src/Utility.h"
@@ -26,7 +51,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-#include "src/MQTT.h"
+#include "src/MQTT.h"   // guards itself with #if ENABLE_WIFI
 
 #include "src/HVAC.h"
 #include "src/Motion.h"
@@ -36,7 +61,7 @@
 #include "src/LcdController.h"
 
 // ============================================================
-//  Pin definitions  (UNO R4 - same physical numbers as classic Uno)
+//  Pin definitions
 // ============================================================
 const byte DoorOpenPin = 2;       // HIGH when door fully open
 const byte DoorClosedPin = 3;     // HIGH when door fully closed
@@ -50,195 +75,85 @@ const byte MenuBtnUpPin = 11;     // Menu navigation (active LOW)
 const byte LightSwitchPin = 13;   // Relay → garage light (active HIGH)
 
 // ============================================================
-//  USER CONFIGURATION  ← edit these before flashing
+//  I2C LCD (4x20)
 // ============================================================
-const char *WIFI_SSID = "ScubaSpot";
-const char *WIFI_PASSWORD = "ScubaNet";
-
-const char *MQTT_SERVER = "192.168.0.130"; // IP of your HA MQTT broker
-const int MQTT_PORT = 1883;
-const char *MQTT_USER = "mqtt_user";     // leave "" if no auth
-const char *MQTT_PASS = "mqtt_password"; // leave "" if no auth
-
-// Unique device ID – change if you have multiple garage controllers
-const char *DEVICE_ID = "garage_ctrl_01";
-const char *DEVICE_NAME = "Garage Controller";
+const byte LCD_ADDR = 0x27;
+const byte LCD_COLS = 20;
+const byte LCD_ROWS = 4;
 
 // ============================================================
-//  MQTT TOPIC HELPERS  (built from DEVICE_ID)
+//  Utility helpers
 // ============================================================
-// All topics follow:  garage/<DEVICE_ID>/<entity>/<direction>
-//   state   = Arduino → HA
-//   command = HA      → Arduino
 
-String topicBase; // filled in setup()
-
-// ── Door ──────────────────────────────────────────────────
-String DOOR_STATE_TOPIC; // publishes: open / closed / opening / closing / stopped
-String DOOR_CMD_TOPIC;   // receives:  any payload → toggle (single button)
-
-// ── Light ─────────────────────────────────────────────────
-String LIGHT_STATE_TOPIC;          // publishes: ON / OFF
-String LIGHT_CMD_TOPIC;            // receives:  ON / OFF
-String LIGHT_DURATION_STATE_TOPIC; // publishes current timeout (minutes)
-String LIGHT_DURATION_CMD_TOPIC;   // receives new timeout value (minutes)
-
-// ── Thermostat ────────────────────────────────────────────
-String HEAT_SET_STATE_TOPIC; // publishes current setpoint (float)
-String HEAT_SET_CMD_TOPIC;   // receives new setpoint (float string)
-String TEMP_STATE_TOPIC;     // publishes current temperature (float)
-String MODE_STATE_TOPIC;     // publishes: heat / off
-String MODE_CMD_TOPIC;       // receives:  heat / off
-
-// ── Sensors ───────────────────────────────────────────────
-String MOTION_STATE_TOPIC;  // publishes: ON / OFF
-String LOCKOUT_STATE_TOPIC; // publishes: ON / OFF
-
-// ── Availability ─────────────────────────────────────────
-String AVAIL_TOPIC; // publishes: online / offline (LWT)
-
-// ── Discovery prefix (must match HA config, default is "homeassistant")
-const char *DISCOVERY_PREFIX = "homeassistant";
-
-// ============================================================
-//  I2C LCD Configuration (4x20 display)
-// ============================================================
-const byte LCD_ADDR = 0x27; // I2C address of the LCD display (adjust if needed)
-const byte LCD_COLS = 20;   // 20 character width
-const byte LCD_ROWS = 4;    // 4 rows
-
-// ============================================================
-//  Utilitys
-// ============================================================
+unsigned long now()                                   { return millis(); }
+bool expired(unsigned long last, unsigned long interval) { return (now() - last) >= interval; }
 
 /**
- * @brief Gets the current time in milliseconds.
- * @return Current time in milliseconds since program start.
+ * Returns a compact uint8_t code for the door state.
+ * Used by MQTTManager::publishStateChanges() to detect changes without
+ * allocating a heap String on every loop iteration.
+ *   0=open  1=closed  2=moving  3=error  4=disabled
  */
-unsigned long now()
+uint8_t doorStateCode(const GarageDoor &door)
 {
-  return millis();
-}
-
-/**
- * @brief Checks if a time interval has expired.
- * @param last Timestamp of the last event.
- * @param interval Interval in milliseconds.
- * @return True if the interval has expired since last, false otherwise.
- */
-bool expired(unsigned long last, unsigned long interval)
-{
-  return (now() - last) >= interval;
-}
-
-/**
- * @brief Converts door state to string for MQTT publishing.
- * @param door Reference to the GarageDoor instance.
- * @return String representation of door state.
- */
-String doorStateString(const GarageDoor &door)
-{
-  switch (door.getState())
-  {
-  case GarageDoor::Open:
-    return "open";
-  case GarageDoor::Closed:
-    return "closed";
-  case GarageDoor::Moving:
-    return "opening"; // Door is moving, assume opening
-  case GarageDoor::Error:
-    return "error";
-  case GarageDoor::Disabled:
-    return "disabled";
+  switch (door.getState()) {
+    case GarageDoor::Open:     return 0;
+    case GarageDoor::Closed:   return 1;
+    case GarageDoor::Moving:   return 2;
+    case GarageDoor::Error:    return 3;
+    default:                   return 4; // Disabled
   }
-  return "unknown";
 }
 
 // ============================================================
-//  Forward declaration of g_controller so GarageController
-//  member functions can reference it before it is defined.
+//  Forward declaration
 // ============================================================
-// FIX: Forward-declared g_controller here so it is visible inside
-//      GarageController (specifically mqttCallback) before the
-//      class definition is complete.
 class GarageController;
 GarageController *g_controller = nullptr;
 
 // ============================================================
 //  MAIN SYSTEM CONTROLLER
 // ============================================================
-/**
- * @class GarageController
- * @brief Main controller class that orchestrates all garage system components.
- *
- * This class integrates motion sensing, door control, lighting, HVAC, LCD display,
- * and optional MQTT connectivity to provide a complete garage automation system.
- * It handles the main program loop, state management, and communication between
- * all subsystems.
- */
 class GarageController
 {
 public:
-  MotionSensor motion;
-  GarageLight lights;
-  GarageDoor door;
-  GarageHVAC hvac;
-  MenuController menu;
-
+  MotionSensor      motion;
+  GarageLight       lights;
+  GarageDoor        door;
+  GarageHVAC        hvac;
+  MenuController    menu;
   LiquidCrystal_I2C lcd;
-  LcdController lcdDisplay;
-
-  OneWire oneWire;
+  LcdController     lcdDisplay;
+  OneWire           oneWire;
   DallasTemperature sensors;
 
   unsigned long lastTempPoll = 0;
-  float tempF = 0;
+  float         tempF        = 0;
 
 #if ENABLE_WIFI
   MQTTManager mqttManager;
 #endif
 
-  /* I think I can drop these
-  // Track previous states to publish only on change
-
-    String prevDoorState = "";
-    float prevTemp = -999;
-    float prevHeatSet = -999;
-    bool prevMotion = false;
-    bool prevLockout = false;
-    String prevHvacMode = "";
-    GarageHVAC::State prevHvacState = GarageHVAC::Waiting; // track for display updates
-
-  */
   GarageController()
-      : motion(PIRPin),
-        lights(LightSwitchPin, motion),
-        door(DoorButtonPin, DoorOpenPin, DoorClosedPin, motion),
-        hvac(HVACHeatPin, motion),
-        menu(MenuBtnUpPin, MenuBtnDownPin, MenuBtnSetPin),
-        lcd(LCD_ADDR, LCD_COLS, LCD_ROWS),
-        lcdDisplay(lcd, menu),
-        oneWire(HVACTempSensorPin),
-        sensors(&oneWire)
-  {
-  }
+    : motion(PIRPin),
+      lights(LightSwitchPin, motion),
+      door(DoorButtonPin, DoorOpenPin, DoorClosedPin, motion),
+      hvac(HVACHeatPin, motion),
+      menu(MenuBtnUpPin, MenuBtnDownPin, MenuBtnSetPin),
+      lcd(LCD_ADDR, LCD_COLS, LCD_ROWS),
+      lcdDisplay(lcd, menu),
+      oneWire(HVACTempSensorPin),
+      sensors(&oneWire)
+  {}
 
-  /**
-   * @brief Initializes all system components.
-   *
-   * Sets up sensors, menu system, LCD display, and MQTT connectivity (if enabled).
-   * This method should be called once in Arduino's setup() function.
-   */
   void begin()
   {
-    Serial.println("Controller:Garage Control Starting: Version 2 + HA");
-
+    Serial.println(F("Controller:Starting v2+HA"));
     sensors.begin();
     menu.begin();
     lcdDisplay.begin();
-    lcdDisplay.SetDirty(true); // wake backlight
-
-    Serial.println("Controller:LCD initialized...");
+    lcdDisplay.SetDirty(true);
+    Serial.println(F("Controller:LCD ready"));
 
 #if ENABLE_WIFI
     mqttManager.init(this, GarageController::mqttCallback);
@@ -246,119 +161,92 @@ public:
   }
 
 #if ENABLE_WIFI
-  /**
-   * @brief Handles incoming MQTT commands from Home Assistant.
-   * @param topic The MQTT topic of the received message.
-   * @param payload The payload of the MQTT message.
-   *
-   * Processes commands for door control, lighting, HVAC settings, and light timeout.
-   * Updates the LCD display when commands are received.
-   */
-  void handleMQTT(const String &topic, const String &payload)
+  void handleMQTT(const char *topic, const String &payload)
   {
-    Serial.print("Controller:MQTT IN [");
+    Serial.print(F("MQTT IN ["));
     Serial.print(topic);
-    Serial.print("] ");
+    Serial.print(F("] "));
     Serial.println(payload);
 
-    if (topic == mqttManager.DOOR_CMD_TOPIC)
+    if (strcmp(topic, mqttManager.getTopic(F("/door/cmd"))) == 0)
     {
-      // any command simply toggles the door relay (single button behaviour)
       door.manualActivate();
-      lcdDisplay.SetDirty(true); // wake backlight
+      lcdDisplay.SetDirty(true);
     }
-    else if (topic == mqttManager.LIGHT_CMD_TOPIC)
+    else if (strcmp(topic, mqttManager.getTopic(F("/light/cmd"))) == 0)
     {
-      if (payload == "ON")
+      if (payload == F("ON")) {
         lights.turnOn();
-      if (payload == "OFF")
+        lcdDisplay.SetDirty(true);   // wake backlight when light turns on
+      }
+      if (payload == F("OFF")) {
         lights.turnOff();
-      lcdDisplay.SetDirty(true); // wake backlight
+        lcdDisplay.SetDirty(false);  // update display but don't wake backlight
+        lcdDisplay.setBacklight(false);
+      }
     }
-    else if (topic == mqttManager.LIGHT_DURATION_CMD_TOPIC)
+    else if (strcmp(topic, mqttManager.getTopic(F("/light/duration/cmd"))) == 0)
     {
-      // payload is treated as minutes
       int mins = payload.toInt();
       if (mins > 0 && mins <= 120)
       {
         lights.duration = (unsigned long)mins * 60000UL;
-        Serial.print("Controller:Light timeout → ");
-        Serial.print(mins);
-        Serial.println(" min");
-        lcdDisplay.SetDirty(false); // dont wake backlight
+        lcdDisplay.SetDirty(false);
       }
     }
-    else if (topic == mqttManager.HEAT_SET_CMD_TOPIC)
+    else if (strcmp(topic, mqttManager.getTopic(F("/hvac/heat_set/cmd"))) == 0)
     {
       float val = payload.toFloat();
       if (val > 30 && val < 100)
       {
         hvac.heatSet = val;
-        Serial.print("Controller:Heat setpoint → ");
-        Serial.println(val);
-        lcdDisplay.SetDirty(false); // dont wake backlight
+        lcdDisplay.SetDirty(false);
       }
     }
-    else if (topic == mqttManager.MODE_CMD_TOPIC)
+    else if (strcmp(topic, mqttManager.getTopic(F("/hvac/mode/cmd"))) == 0)
     {
-      hvac.enabled = (payload == "heat");
-      Serial.print("Controller:HVAC mode → ");
-      Serial.println(payload);
-      lcdDisplay.SetDirty(false); // dont wake backlight
+      hvac.enabled = (payload == F("heat"));
+      lcdDisplay.SetDirty(false);
     }
   }
 
-  /**
-   * @brief MQTT callback function that routes messages to the controller.
-   * @param topic MQTT topic of the received message.
-   * @param payload Message payload bytes.
-   * @param length Length of the payload.
-   */
   static void mqttCallback(char *topic, byte *payload, unsigned int length)
   {
-    String t(topic);
+    // Build payload String only once here (PubSubClient requires char* API)
     String p;
+    p.reserve(length);
     for (unsigned int i = 0; i < length; i++)
       p += (char)payload[i];
     if (g_controller)
-      g_controller->handleMQTT(t, p);
+      g_controller->handleMQTT(topic, p);
   }
 #endif
 
-  /**
-   * @brief Main program loop that handles all system logic.
-   *
-   * Processes motion detection, door control, lighting, HVAC, menu interaction,
-   * LCD updates, and MQTT communication. This method should be called repeatedly
-   * in Arduino's loop() function.
-   */
   void loop()
   {
-
 #if ENABLE_WIFI
-    // Keep WiFi alive
     mqttManager.loop();
 #endif
-    // Garage logic (unchanged)
+
     bool motionDetected = motion.poll();
 
-    // if the sensor is currently active we treat it as activity for the menu timer
-    if (motion.isActive())
-    {
-      menu.noteActivity();
-    }
-
-    // turn on lights on the first detection event
     if (motionDetected)
     {
       lights.turnOn();
-      Serial.println("Controller:Motion Activated light.");
+      Serial.println(F("Controller:Motion->light on"));
       if (!lcdDisplay.isBacklightOn())
-      {
         lcdDisplay.setBacklight(true);
-      }
     }
+
+    bool lightWasOn = lights.isOn();
     lights.poll();
+
+    // Turn backlight off when the garage light turns off (timeout or manual)
+    if (lightWasOn && !lights.isOn())
+    {
+      Serial.println(F("Controller:Light off->backlight off"));
+      lcdDisplay.setBacklight(false);
+    }
 
     GarageDoor::State doorState = door.poll(motionDetected);
     hvac.lockout = (doorState != GarageDoor::Closed);
@@ -369,18 +257,22 @@ public:
       sensors.requestTemperatures();
       tempF = sensors.getTempFByIndex(0);
       hvac.poll(tempF);
-
-      // temperature has been refreshed – update screen so main page shows new value
-      lcdDisplay.SetDirty(false); // dont wake backlight
+      lcdDisplay.SetDirty(false);
     }
 
     bool menuEvent = menu.poll(hvac, lights, door);
-    if (menuEvent)
-      lcdDisplay.SetDirty(true); // wake backlight
+    if (menuEvent) lcdDisplay.SetDirty(true);
 
 #if ENABLE_WIFI
-    // Publish state changes to MQTT
-    mqttManager.publishStateChanges(lights.isOn(), lights.duration / 60000UL, doorStateString(door), tempF, hvac.heatSet, hvac.enabled ? "heat" : "off", motion.isActive(), hvac.lockout);
+    mqttManager.publishStateChanges(
+      lights.isOn(),
+      lights.duration / 60000UL,
+      doorStateCode(door),         // uint8_t code - no String allocation
+      tempF,
+      hvac.heatSet,
+      hvac.enabled,                // bool - no String allocation
+      motion.isActive(),
+      hvac.lockout);
 #endif
 
     lcdDisplay.updateDisplay(hvac, door, lights, tempF);
@@ -389,21 +281,14 @@ public:
 
 GarageController controller;
 
-/**
- * @brief Arduino setup function called once at startup.
- */
 void setup()
 {
-  Serial.begin(9600);         // USB serial for debug
-  delay(2000);                // let serial start
-  g_controller = &controller; // Initialize the global pointer
-
+  Serial.begin(9600);
+  delay(2000);
+  g_controller = &controller;
   controller.begin();
 }
 
-/**
- * @brief Arduino main loop function called repeatedly.
- */
 void loop()
 {
   controller.loop();

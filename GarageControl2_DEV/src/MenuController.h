@@ -31,32 +31,43 @@ public:
    */
   enum class Screen
   {
-    Main, /**< Main status screen */
-    HVACMenu, /**< HVAC settings menu */
-    SetHeat, /**< Heat setpoint adjustment */
-    SetCool, /**< Cool setpoint adjustment */
-    SetSwing, /**< Temperature swing adjustment */
-    HVACBack, /**< Return to HVAC menu */
-    LightMenu, /**< Light settings menu */
-    SetLightTimeout, /**< Light timeout adjustment */
-    LightBack, /**< Return to light menu */
-    DoorMenu, /**< Door settings menu */
-    SetDoorTimeout, /**< Door timeout adjustment */
-    SetDoorAttempts, /**< Door retry attempts adjustment */
-    DoorBack, /**< Return to door menu */
-    MenuExit, /**< Exit menu */
-    Count /**< Number of screens */
+    Main,
+    HVACMenu,
+    SetHeat,
+    SetCool,
+    SetSwing,
+    HVACBack,
+    LightMenu,
+    SetLightTimeout,
+    LightBack,
+    DoorMenu,
+    SetDoorTimeout,
+    SetDoorAttempts,
+    DoorBack,
+    MenuExit,
+    Count
   };
 
-  bool EditMode = false; /**< Flag indicating if in edit mode */
+  bool EditMode = false;
 
 private:
-  Screen current = Screen::Main; /**< Current menu screen */
+  Screen current = Screen::Main;
 
-  unsigned long lastButton = 0; /**< Timestamp of last button press */
-  const unsigned long timeout = 15000UL; /**< Menu timeout in milliseconds */
+  unsigned long lastActivity = 0;          // drives menu timeout
+  const unsigned long MENU_TIMEOUT = 20000UL;
+  const unsigned long DEBOUNCE_MS  = 50UL; // reduced from 300 ms
 
-  byte pinUp, pinDown, pinSet; /**< Button pin assignments */
+  byte pinUp, pinDown, pinSet;
+
+  // Per-button debounce state - each button tracked independently
+  enum { BTN_UP = 0, BTN_DOWN = 1, BTN_SET = 2, BTN_COUNT = 3 };
+  unsigned long lastPressTime[BTN_COUNT] = {0, 0, 0};
+  bool          lastPinState[BTN_COUNT]  = {true, true, true}; // HIGH = unpressed (INPUT_PULLUP)
+
+  bool pressed(byte btnIndex);
+  void handleSet();
+  void handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
+  void handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
 
 public:
   /**
@@ -91,12 +102,6 @@ public:
    * @brief Resets the menu timeout due to external activity.
    */
   void noteActivity();
-
-private:
-  bool pressed(byte pin);
-  void handleSet();
-  void handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
-  void handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
 };
 
 #endif

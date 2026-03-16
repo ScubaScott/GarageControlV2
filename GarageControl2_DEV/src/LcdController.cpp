@@ -25,28 +25,24 @@
  * @param menuRef Reference to the MenuController instance.
  */
 LcdController::LcdController(LiquidCrystal_I2C &lcdRef, MenuController &menuRef)
-  : lcd(lcdRef), menu(menuRef) {
-}
+  : lcd(lcdRef), menu(menuRef) {}
 
 /**
  * @brief Initializes the LCD display and creates custom characters.
  */
 void LcdController::begin() {
   lcd.init();
-  // create then custom Chars.
-  byte UpArrow[] = { B00100, B01110, B10101, B00100, B00100, B00100, B00100, B00100 };
-  byte DownArrow[] = { B00100, B00100, B00100, B00100, B00100, B10101, B01110, B00100 };
-  byte DoubleArrow[] = { B00100, B01110, B10101, B00100, B00100, B10101, B01110, B00100 };
-  byte Degree[] = { B01000, B10100, B01000, B00000, B00000, B00000, B00000, B00000 };
-
+  byte UpArrow[]     = { B00100,B01110,B10101,B00100,B00100,B00100,B00100,B00100 };
+  byte DownArrow[]   = { B00100,B00100,B00100,B00100,B00100,B10101,B01110,B00100 };
+  byte DoubleArrow[] = { B00100,B01110,B10101,B00100,B00100,B10101,B01110,B00100 };
+  byte Degree[]      = { B01000,B10100,B01000,B00000,B00000,B00000,B00000,B00000 };
   lcd.createChar(0, UpArrow);
   lcd.createChar(1, DownArrow);
   lcd.createChar(2, DoubleArrow);
   lcd.createChar(3, Degree);
-
   clearDisplay();
   printLCDText(1, true, "Garage Control");
-  printLCDText(1, true, "version 2.0");
+  printLCDText(2, true, "version 2.0");
 }
 
 // ============================================================
@@ -65,10 +61,9 @@ void LcdController::clearDisplay() {
  * @param row Row number (1-based).
  * @param col Column number (0-based).
  */
-void LcdController::setCursor(int row, int col) {
-  // adjust for the zero based row index
-  row = row - 1;
-  lcd.setCursor(col, row);
+void LcdController::setCursor(int row, int col)
+{
+  lcd.setCursor(col, row - 1);
 }
 
 /**
@@ -77,27 +72,15 @@ void LcdController::setCursor(int row, int col) {
  * @param center If true, centers the text on the line.
  * @param text Text to print.
  */
-void LcdController::printLCDText(int row, bool center, const String &text) {
-  // 4x20 display: 20 characters per line
-
-  // adjust for the zero based row index
-  row = row - 1;
-
-  // center text
+void LcdController::printLCDText(int row, bool center, const char *text)
+{
+  int len = strlen(text);
+  int col = 0;
   if (center) {
-    // Calculate needed initial spaces
-    int spaces = (20 - text.length()) / 2;
-    if (spaces < 0)
-      spaces = 0;
-    Serial.print("LCD:row:" + String(row) + ":");
-    Serial.println(String(text));
-
-    // print spaces to center text
-    setCursor(row, 0);
-    for (int i = 0; i < spaces; i++)
-      lcd.print(" ");
+    col = (20 - len) / 2;
+    if (col < 0) col = 0;
   }
-
+  lcd.setCursor(col, row - 1);
   lcd.print(text);
 }
 
@@ -110,18 +93,14 @@ void LcdController::printLCDText(int row, bool center, const String &text) {
  * @param door Reference to the GarageDoor instance.
  * @return String representation of door state.
  */
-String LcdController::getDoorStateString(const GarageDoor &door) {
+const char* LcdController::getDoorStateString(const GarageDoor &door)
+{
   switch (door.getState()) {
-    case GarageDoor::Open:
-      return "Open";
-    case GarageDoor::Closed:
-      return "Closed";
-    case GarageDoor::Moving:
-      return "Moving";
-    case GarageDoor::Error:
-      return "Error";
-    case GarageDoor::Disabled:
-      return "Dsbld";
+    case GarageDoor::Open:     return "Open";
+    case GarageDoor::Closed:   return "Closed";
+    case GarageDoor::Moving:   return "Moving";
+    case GarageDoor::Error:    return "Error";
+    case GarageDoor::Disabled: return "Dsbld";
   }
   return "Unknown";
 }
@@ -131,19 +110,17 @@ String LcdController::getDoorStateString(const GarageDoor &door) {
  * @param hvac Reference to the GarageHVAC instance.
  * @return String representation of HVAC state.
  */
-String LcdController::getHvacStateString(const GarageHVAC &hvac) {
+const char* LcdController::getHvacStateString(const GarageHVAC &hvac)
+{
   switch (hvac.state) {
-    case GarageHVAC::Heating:
-      return "Heat";
-    case GarageHVAC::Cooling:
-      return "Cool";
-    case GarageHVAC::Pending:
-      return "Pend";
-    case GarageHVAC::Waiting:
-    default:
-      return "Wait";
+    case GarageHVAC::Heating: return "Heat";
+    case GarageHVAC::Cooling: return "Cool";
+    case GarageHVAC::Pending: return "Pend";
+    default:                  return "Wait";
   }
 }
+
+// ── Display update ───────────────────────────────────────────────────────────
 
 // ============================================================
 //  Main Display Update
@@ -153,12 +130,12 @@ String LcdController::getHvacStateString(const GarageHVAC &hvac) {
  * @brief Marks the display as needing an update.
  * @param WakeBackLight If true, turns on the backlight.
  */
-void LcdController::SetDirty(bool WakeBackLight) {
-  // mark entire screen dirty; next updateDisplay will redraw all four lines
-  LcdController::IsDirty = true;
-  if (WakeBackLight){
-    Serial.println("LCD:waking backlight");
-    LcdController::setBacklight(true);
+void LcdController::SetDirty(bool WakeBackLight)
+{
+  IsDirty = true;
+  if (WakeBackLight) {
+    Serial.println(F("LCD:Wake backlight"));
+    setBacklight(true);
   }
 }
 
@@ -169,194 +146,133 @@ void LcdController::SetDirty(bool WakeBackLight) {
  * @param lights Reference to the GarageLight instance.
  * @param tempF Current temperature in Fahrenheit.
  */
-void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door, GarageLight &lights, float tempF) {
-  
-  if (!LcdController::IsDirty) {
-    return;
-  } else {
-    Serial.println("LCD:updating LCD");
-    LcdController::IsDirty = false;
-  }
+void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
+                                  GarageLight &lights, float tempF)
+{
+  if (!IsDirty) return;
+  Serial.println(F("LCD:Update"));
+  IsDirty = false;
 
   clearDisplay();
 
   MenuController::Screen currentScreen = menu.get();
   bool EditMode = menu.EditMode;
 
-  switch (currentScreen) {
+  // Single shared stack buffer for all snprintf calls in this function.
+  // 21 bytes = 20 LCD columns + null terminator.
+  char buf[21];
+
+  switch (currentScreen)
+  {
     case MenuController::Screen::Main:
-      {
+      snprintf(buf, sizeof(buf), "F:%.1f\x03  H:%d/C:%d",
+               tempF, (int)hvac.heatSet, (int)hvac.coolSet);
+      printLCDText(1, true, buf);
 
-        char buffer[21];  // 20 chars + 1 for null terminator
+      snprintf(buf, sizeof(buf), "Ht:%s / Dr:%s",
+               getHvacStateString(hvac), getDoorStateString(door));
+      printLCDText(2, true, buf);
 
-        // snprintf ensures we never write more than 21 bytes
-        // It also automatically adds the '\0' at the end.
-
-        // print line 1
-        snprintf(buffer, sizeof(buffer), "F:%d\x03  H:%d/C:%d", tempF, hvac.heatSet, hvac.coolSet);
-        printLCDText(1, true, buffer);
-
-        // print line 2
-        snprintf(buffer, sizeof(buffer), "Ht:%s / Dr:%s", getHvacStateString(hvac), getDoorStateString(door));
-        printLCDText(1, true, buffer);
-
-        // print line 3
-
-        // snprintf(buffer, sizeof(buffer), "HVAC:%s", (hvac.lockout ? "LOCKOUT" : "Normal"));
-        snprintf(buffer, sizeof(buffer), "HVAC:%s", (hvac.lockout ? "LOCKOUT" : "Normal"));
-        printLCDText(1, true, buffer);
-
-        /*
-    setCursor(1, 0);
-    lcd.print("T:");
-    lcd.print(tempF, 0);
-    lcd.write(3);
-    lcd.print("F  H:");
-    lcd.print((int)hvac.heatSet);
-    lcd.print("/C:");
-    lcd.print((int)hvac.coolSet);
-
-    setCursor(2, 0);
-    //String hvacStatus = getHvacStateString(hvac);
-    //String doorStatus = getDoorStateString(door);
-    lcd.print("HV:");
-    lcd.print(hvacStatus);
-    lcd.print(" DR:");
-    lcd.print(doorStatus);
-
-    setCursor(3, 0);
-    if (hvac.lockout)
-      lcd.print("HVAC: LOCKOUT");
-    else
-      lcd.print("HVAC: Normal");
-      */
-      }
+      snprintf(buf, sizeof(buf), "HVAC:%s",
+               hvac.lockout ? "LOCKOUT" : "Normal");
+      printLCDText(3, true, buf);
       break;
 
     case MenuController::Screen::HVACMenu:
       printLCDText(1, true, "HVAC Settings");
-      printLCDText(3, true, "Set Heat/Cool/Swing");
+      printLCDText(3, true, "Heat/Cool/Swing/etc");
       printLCDText(4, false, "\x01");
       break;
 
     case MenuController::Screen::SetHeat:
-      {
-        printLCDText(1, true, "Heat Setpoint");
-        if (EditMode) {
-          lcd.blink_on();
-        } else {
-          lcd.blink_off();
-          setCursor(4, 0);
-          lcd.write(1);
-        }
-        setCursor(3, 0);
-        for (int i = 0; i < 20; i++)
-          lcd.print(" ");
-        printLCDText(3, true, String((int)hvac.heatSet));
-        // lcd.write(3);
-      }
+      printLCDText(1, true, "Heat Setpoint");
+      printLCDText(4, false, "\x01");
+      EditMode ? lcd.blink_on() : lcd.blink_off();
+      snprintf(buf, sizeof(buf), "%d\x03", (int)hvac.heatSet);
+      printLCDText(3, true, buf);
       break;
 
     case MenuController::Screen::SetCool:
-      {
-        printLCDText(1, true, "Cool Setpoint");
-        if (EditMode) {
-          lcd.blink_on();
-        } else {
-          lcd.blink_off();
-          setCursor(4, 0);
-          lcd.write(2);
-        }
-        setCursor(3, 0);
-        for (int i = 0; i < 20; i++)
-          lcd.print(" ");
-        printLCDText(3, true, String(hvac.coolSet, 1));
-        lcd.write(3);
-      }
+      printLCDText(1, true, "Cool Setpoint");
+      printLCDText(4, false, "\x02");
+      EditMode ? lcd.blink_on() : lcd.blink_off();
+      snprintf(buf, sizeof(buf), "%d\x03", (int)hvac.coolSet);
+      printLCDText(3, true, buf);
       break;
 
     case MenuController::Screen::SetSwing:
-      {
-        printLCDText(1, true, "HVAC Swing");
-        if (EditMode) {
-          lcd.blink_on();
-        } else {
-          lcd.blink_off();
-          setCursor(4, 0);
-          lcd.write(2);
-        }
-        setCursor(3, 0);
-        for (int i = 0; i < 20; i++)
-          lcd.print(" ");
-        printLCDText(3, true, String(hvac.HVACSwing) + "\x03");
-      }
+      printLCDText(1, true, "HVAC Swing");
+      printLCDText(4, false, "\x02");
+      EditMode ? lcd.blink_on() : lcd.blink_off();
+      snprintf(buf, sizeof(buf), "%d\x03", hvac.HVACSwing);
+      printLCDText(3, true, buf);
       break;
+
     case MenuController::Screen::HVACBack:
       printLCDText(1, true, "Back...");
-      setCursor(4, 0);
-      lcd.write(0);
-
+      printLCDText(4, false, "\x00");
       break;
+
     case MenuController::Screen::LightMenu:
       printLCDText(1, true, "Light Settings");
       printLCDText(3, true, "Set Timeout");
+      printLCDText(4, false, "\x02");
       break;
 
     case MenuController::Screen::SetLightTimeout:
-      {
-        printLCDText(1, true, "Light Timeout");
-        EditMode ? lcd.blink_on() : lcd.blink_off();
-        setCursor(3, 0);
-        for (int i = 0; i < 20; i++)
-          lcd.print(" ");
-        unsigned long mins = lights.duration / 60000UL;
-        printLCDText(3, true, String(mins) + " minutes");
-      }
+      printLCDText(1, true, "Light Timeout");
+      printLCDText(4, false, "\x01");
+      EditMode ? lcd.blink_on() : lcd.blink_off();
+      snprintf(buf, sizeof(buf), "%lu minutes", lights.duration / 60000UL);
+      printLCDText(3, true, buf);
       break;
-    case MenuController::Screen::LightBack:
 
+    case MenuController::Screen::LightBack:
       printLCDText(1, true, "Back...");
+      printLCDText(4, false, "\x00");
       break;
+
     case MenuController::Screen::DoorMenu:
       printLCDText(1, true, "Door Settings");
       printLCDText(3, true, "Timeout/Attempts");
+      printLCDText(4, false, "\x02");
       break;
 
     case MenuController::Screen::SetDoorTimeout:
-      {
-        printLCDText(1, true, "Door Timeout");
-        EditMode ? lcd.blink_on() : lcd.blink_off();
-        setCursor(3, 0);
-        for (int i = 0; i < 20; i++)
-          lcd.print(" ");
-        printLCDText(3, true, String(door.getAutoClose() / 60000UL) + " min");
-      }
+      printLCDText(1, true, "Door Timeout");
+      printLCDText(4, false, "\x01");
+      EditMode ? lcd.blink_on() : lcd.blink_off();
+      snprintf(buf, sizeof(buf), "%lu min", door.getAutoClose() / 60000UL);
+      printLCDText(3, true, buf);
       break;
 
     case MenuController::Screen::SetDoorAttempts:
-      {
-        printLCDText(1, true, "Close Attempts");
-        EditMode ? lcd.blink_on() : lcd.blink_off();
-        setCursor(3, 0);
-        for (int i = 0; i < 20; i++)
-          lcd.print(" ");
-        printLCDText(3, true, String(door.getMaxAttempts()));
-      }
+      printLCDText(1, true, "Close Attempts");
+      printLCDText(4, false, "\x02");
+      EditMode ? lcd.blink_on() : lcd.blink_off();
+      snprintf(buf, sizeof(buf), "%d", door.getMaxAttempts());
+      printLCDText(3, true, buf);
       break;
+
     case MenuController::Screen::DoorBack:
-
       printLCDText(1, true, "Back...");
+      printLCDText(4, false, "\x00");
       break;
-    case MenuController::Screen::MenuExit:
 
+    case MenuController::Screen::MenuExit:
       printLCDText(1, true, "Menu Exit...");
+      printLCDText(4, false, "\x00");
       break;
+
     default:
       printLCDText(1, true, "Garage Control");
       printLCDText(3, true, "Unknown Menu");
+      printLCDText(4, false, "?");
       break;
   }
 }
+
+// ── Backlight ────────────────────────────────────────────────────────────────
 
 // ============================================================
 //  Backlight helper
@@ -366,15 +282,15 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door, GarageLigh
  * @brief Controls the LCD backlight.
  * @param on True to turn on backlight, false to turn off.
  */
-void LcdController::setBacklight(bool on) {
-  Serial.println("LCD:updating backlight:"+String(on));
+void LcdController::setBacklight(bool on)
+{
   if (on && !backlightOn) {
-    Serial.println("LCD: backlight on");
+    Serial.println(F("LCD:Backlight on"));
     lcd.backlight();
     backlightOn = true;
-  } 
+  }
   if (!on) {
-    Serial.println("LCD: backlight off");
+    Serial.println(F("LCD:Backlight off"));
     lcd.noBacklight();
     backlightOn = false;
   }

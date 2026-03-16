@@ -1,9 +1,16 @@
 /**
  * @file MenuController.cpp
- * @brief Implementation of menu navigation controller.
  *
- * This file implements the MenuController class methods for handling button inputs,
- * menu screen transitions, and configuration editing for the garage control system.
+ * Button debounce approach
+ * ────────────────────────
+ * Each button has its own lastPressTime and lastPinState so they are
+ * completely independent. The old code used a single shared `static`
+ * timestamp, meaning pressing any one button would lock out all three
+ * for the debounce period — requiring long holds to register reliably.
+ *
+ * Debounce logic: a press is registered on the falling edge (HIGH→LOW),
+ * provided the pin has been stable for at least DEBOUNCE_MS. This fires
+ * exactly once per physical press regardless of how long the button is held.
  */
 
 #include <Arduino.h>
@@ -32,9 +39,9 @@ MenuController::MenuController(byte up, byte down, byte set)
  */
 void MenuController::begin()
 {
-  pinMode(pinUp, INPUT_PULLUP);
+  pinMode(pinUp,   INPUT_PULLUP);
   pinMode(pinDown, INPUT_PULLUP);
-  pinMode(pinSet, INPUT_PULLUP);
+  pinMode(pinSet,  INPUT_PULLUP);
 }
 
 /**
@@ -43,80 +50,105 @@ void MenuController::begin()
  */
 MenuController::Screen MenuController::get() const { return current; }
 
+void MenuController::noteActivity()
+{
+  lastActivity = now();
+}
+
+// ── Debounce ──────────────────────────────────────────────────────────────────
 /**
- * @brief Polls button inputs and updates menu state.
- * @param hvac Reference to GarageHVAC for settings.
- * @param lights Reference to GarageLight for settings.
- * @param door Reference to GarageDoor for settings.
- * @return True if any button press or screen change occurred.
+ * Returns true exactly once on the falling edge (button press) for the
+ * given button index (BTN_UP / BTN_DOWN / BTN_SET), with debounce.
+ *
+ * Each button maintains its own lastPressTime and lastPinState so they
+ * are completely independent of each other.
  */
+bool MenuController::pressed(byte btnIndex)
+{
+  byte pin;
+  switch (btnIndex) {
+    case BTN_UP:   pin = pinUp;   break;
+    case BTN_DOWN: pin = pinDown; break;
+    default:       pin = pinSet;  break;
+  }
+
+  bool currentState = digitalRead(pin); // LOW = pressed (INPUT_PULLUP)
+
+  // Detect falling edge: was HIGH, now LOW
+  if (lastPinState[btnIndex] == HIGH && currentState == LOW)
+  {
+    // Only accept if enough time has passed since the last registered press
+    if (expired(lastPressTime[btnIndex], DEBOUNCE_MS))
+    {
+      lastPressTime[btnIndex] = now();
+      lastPinState[btnIndex]  = currentState;
+      return true;
+    }
+  }
+
+  lastPinState[btnIndex] = currentState;
+  return false;
+}
+
+// ── Main poll ─────────────────────────────────────────────────────────────────
+
 bool MenuController::poll(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door)
 {
   bool activity = false;
 
-  if (expired(lastButton, timeout))
+  // Menu idle timeout → return to Main screen
+  if (current != Screen::Main && expired(lastActivity, MENU_TIMEOUT))
   {
-    if (current != Screen::Main)
-    {
-      Serial.println("Menu:Menu timeout → Main");
-      activity = true;
-    }
-    current = Screen::Main;
+    Serial.println(F("Menu:Timeout->Main"));
+    current  = Screen::Main;
+    EditMode = false;
+    activity = true;
   }
-
-  unsigned long t = now();
 
   if (current == Screen::Main)
   {
-    // Main Screen only - Special functions.
-    // Single press of UP → toggle door
-    if (pressed(pinUp))
+    // On the main screen UP/DOWN act as direct shortcuts
+    if (pressed(BTN_UP))
     {
-      lastButton = t;
+      noteActivity();
       door.manualActivate();
-      Serial.println("Menu:Main: UP pressed → door toggle");
+      Serial.println(F("Menu:UP->door toggle"));
       activity = true;
     }
-    // Single press of DOWN → toggle light
-    if (pressed(pinDown))
+    if (pressed(BTN_DOWN))
     {
-      lastButton = t;
-      if (lights.isOn())
-        lights.turnOff();
-      else
-        lights.turnOn();
-      Serial.println("Menu:Main: DOWN pressed → light toggle");
+      noteActivity();
+      lights.isOn() ? lights.turnOff() : lights.turnOn();
+      Serial.println(F("Menu:DOWN->light toggle"));
       activity = true;
     }
-    // SET enters the menu
-    if (pressed(pinSet))
+    if (pressed(BTN_SET))
     {
-      lastButton = t;
+      noteActivity();
       handleSet();
       activity = true;
     }
   }
   else
   {
-    // All other screens: UP/DOWN/SET navigate/adjust as before
-    if (pressed(pinUp))
+    if (pressed(BTN_UP))
     {
-      lastButton = t;
-      Serial.println("Menu:Menu: UP pressed");
+      noteActivity();
+      Serial.println(F("Menu:UP"));
       handleUp(hvac, lights, door);
       activity = true;
     }
-    if (pressed(pinDown))
+    if (pressed(BTN_DOWN))
     {
-      lastButton = t;
-      Serial.println("Menu:Menu: DOWN pressed");
+      noteActivity();
+      Serial.println(F("Menu:DOWN"));
       handleDown(hvac, lights, door);
       activity = true;
     }
-    if (pressed(pinSet))
+    if (pressed(BTN_SET))
     {
-      lastButton = t;
-      Serial.println("Menu:Menu: SET pressed");
+      noteActivity();
+      Serial.println(F("Menu:SET"));
       handleSet();
       activity = true;
     }
@@ -125,53 +157,27 @@ bool MenuController::poll(GarageHVAC &hvac, GarageLight &lights, GarageDoor &doo
   return activity;
 }
 
-/**
- * @brief Resets the menu timeout due to external activity.
- */
-void MenuController::noteActivity()
-{
-  lastButton = now();
-}
-
-/**
- * @brief Checks if a button is pressed with debouncing.
- * @param pin Pin number to check.
- * @return True if button is pressed and debounced.
- */
-bool MenuController::pressed(byte pin)
-{
-  static unsigned long debounce = 300;
-  static unsigned long last = 0;
-  if (digitalRead(pin) == LOW && expired(last, debounce))
-  {
-    last = now();
-    return true;
-  }
-  return false;
-}
+// ── Button action handlers ────────────────────────────────────────────────────
 
 void MenuController::handleSet()
 {
   switch (current)
   {
   case Screen::Main:
-    current = Screen::HVACMenu;
-    EditMode = false; // ensure edit mode dosen't persist.
+    current  = Screen::HVACMenu;
+    EditMode = false;
     break;
   case Screen::HVACMenu:
     current = Screen::SetHeat;
     break;
   case Screen::SetHeat:
     EditMode = !EditMode;
-    // current = Screen::SetCool;
     break;
   case Screen::SetCool:
     EditMode = !EditMode;
-    // current = Screen::SetSwing;
     break;
   case Screen::SetSwing:
     EditMode = !EditMode;
-    // current = Screen::LightMenu;
     break;
   case Screen::HVACBack:
     current = Screen::HVACMenu;
@@ -181,7 +187,6 @@ void MenuController::handleSet()
     break;
   case Screen::SetLightTimeout:
     EditMode = !EditMode;
-    // current = Screen::DoorMenu;
     break;
   case Screen::LightBack:
     current = Screen::LightMenu;
@@ -191,11 +196,9 @@ void MenuController::handleSet()
     break;
   case Screen::SetDoorTimeout:
     EditMode = !EditMode;
-    // current = Screen::SetDoorAttempts;
     break;
   case Screen::SetDoorAttempts:
     EditMode = !EditMode;
-    // current = Screen::Main;
     break;
   case Screen::DoorBack:
     current = Screen::DoorMenu;
@@ -213,65 +216,33 @@ void MenuController::handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor 
 {
   switch (current)
   {
-  case Screen::LightMenu:
-    current = Screen::HVACMenu;
-    break;
-  case Screen::DoorMenu:
-    current = Screen::LightMenu;
-    break;
-  case Screen::MenuExit:
-    current = Screen::DoorMenu;
-    break;
+  case Screen::LightMenu:   current = Screen::HVACMenu;  break;
+  case Screen::DoorMenu:    current = Screen::LightMenu;  break;
+  case Screen::MenuExit:    current = Screen::DoorMenu;   break;
+  case Screen::HVACBack:    current = Screen::SetSwing;   break;
+  case Screen::LightBack:   current = Screen::SetLightTimeout; break;
+  case Screen::DoorBack:    current = Screen::SetDoorAttempts; break;
+
   case Screen::SetHeat:
-    if (EditMode)
-      hvac.heatSet++;
+    if (EditMode) hvac.heatSet++;
     break;
   case Screen::SetCool:
-    if (EditMode)
-    {
-      hvac.coolSet++;
-    }
-    else
-    {
-      current = Screen::SetHeat;
-    }
+    if (EditMode) hvac.coolSet++;
+    else          current = Screen::SetHeat;
     break;
   case Screen::SetSwing:
-    if (EditMode)
-    {
-      hvac.HVACSwing++;
-    }
-    else
-    {
-      current = Screen::SetCool;
-    }
-    break;
-  case Screen::HVACBack:
-    current = Screen::SetSwing;
+    if (EditMode) hvac.HVACSwing++;
+    else          current = Screen::SetCool;
     break;
   case Screen::SetLightTimeout:
-    if (EditMode)
-      lights.duration += 60000UL;
-    break;
-  case Screen::LightBack:
-    current = Screen::SetLightTimeout;
+    if (EditMode) lights.duration += 60000UL;
     break;
   case Screen::SetDoorTimeout:
-    if (EditMode)
-      door.setAutoClose(door.getAutoClose() + 60000UL);
+    if (EditMode) door.setAutoClose(door.getAutoClose() + 60000UL);
     break;
   case Screen::SetDoorAttempts:
-    if (EditMode)
-    {
-      door.setMaxAttempts(door.getMaxAttempts() + 1);
-    }
-    else
-    {
-      current = Screen::SetDoorTimeout;
-    }
-    break;
-  case Screen::DoorBack:
-    current = Screen::SetDoorAttempts;
+    if (EditMode) door.setMaxAttempts(door.getMaxAttempts() + 1);
+    else          current = Screen::SetDoorTimeout;
     break;
   default:
     break;
@@ -282,74 +253,33 @@ void MenuController::handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoo
 {
   switch (current)
   {
-  case Screen::HVACMenu:
-    current = Screen::LightMenu;
-    break;
-  case Screen::LightMenu:
-    current = Screen::DoorMenu;
-    break;
-  case Screen::DoorMenu:
-    current = Screen::MenuExit;
-    break;
+  case Screen::HVACMenu:  current = Screen::LightMenu;  break;
+  case Screen::LightMenu: current = Screen::DoorMenu;   break;
+  case Screen::DoorMenu:  current = Screen::MenuExit;   break;
+
   case Screen::SetHeat:
-    if (EditMode)
-    {
-      hvac.heatSet--;
-    }
-    else
-    {
-      current = Screen::SetCool;
-    }
+    if (EditMode) hvac.heatSet--;
+    else          current = Screen::SetCool;
     break;
   case Screen::SetCool:
-    if (EditMode)
-    {
-      hvac.coolSet--;
-    }
-    else
-    {
-      current = Screen::SetSwing;
-    }
+    if (EditMode) hvac.coolSet--;
+    else          current = Screen::SetSwing;
     break;
   case Screen::SetSwing:
-    if (EditMode)
-    {
-      hvac.HVACSwing--;
-    }
-    else
-    {
-      current = Screen::HVACBack;
-    }
+    if (EditMode) hvac.HVACSwing--;
+    else          current = Screen::HVACBack;
     break;
   case Screen::SetLightTimeout:
-    if (EditMode)
-    {
-      lights.duration -= 60000UL;
-    }
-    else
-    {
-      current = Screen::LightBack;
-    }
+    if (EditMode) lights.duration -= 60000UL;
+    else          current = Screen::LightBack;
     break;
   case Screen::SetDoorTimeout:
-    if (EditMode)
-    {
-      door.setAutoClose(door.getAutoClose() - 60000UL);
-    }
-    else
-    {
-      current = Screen::SetDoorAttempts;
-    }
+    if (EditMode) door.setAutoClose(door.getAutoClose() - 60000UL);
+    else          current = Screen::SetDoorAttempts;
     break;
   case Screen::SetDoorAttempts:
-    if (EditMode)
-    {
-      door.setMaxAttempts(door.getMaxAttempts() - 1);
-    }
-    else
-    {
-      current = Screen::DoorBack;
-    }
+    if (EditMode) door.setMaxAttempts(door.getMaxAttempts() - 1);
+    else          current = Screen::DoorBack;
     break;
   default:
     break;
