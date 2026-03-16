@@ -1,8 +1,20 @@
+/**
+ * @file MQTT.cpp
+ * @brief MQTTManager implementation - compiled only when ENABLE_WIFI is 1.
+ *
+ * The entire translation unit is wrapped in #if ENABLE_WIFI so the compiler
+ * skips it completely in DEV builds, avoiding any dependency on WiFiS3 or
+ * PubSubClient.
+ */
+
+#include "Utility.h"
 #include "MQTT.h"
 
-// Forward declaration
-class GarageController;
+#if ENABLE_WIFI
 
+// ============================================================
+//  Constructor
+// ============================================================
 /**
  * @file MQTT.cpp
  * @brief Implementation of MQTTManager class for WiFi and MQTT handling.
@@ -12,12 +24,8 @@ class GarageController;
  * @brief Constructor for MQTTManager.
  */
 MQTTManager::MQTTManager()
-  #if ENABLE_WIFI
   : mqtt(wifiClient)
-  #endif
 {
-  #if ENABLE_WIFI
-  // Initialize config
   WIFI_SSID = "ScubaSpot";
   WIFI_PASSWORD = "ScubaNet";
   MQTT_SERVER = "192.168.0.130";
@@ -27,31 +35,31 @@ MQTTManager::MQTTManager()
   DEVICE_ID = "garage_ctrl_01";
   DEVICE_NAME = "Garage Controller";
   DISCOVERY_PREFIX = "homeassistant";
-  #endif
 }
 
 /**
  * @brief Initializes WiFi and MQTT connections.
  * @param ctrl Pointer to the GarageController instance.
+* @param callback C-style MQTT callback function pointer.
  */
-void MQTTManager::init(GarageController *ctrl) {
-  #if ENABLE_WIFI
+// FIX: Signature updated to accept callback pointer — matches updated header.
+void MQTTManager::init(GarageController *ctrl, void (*callback)(char *, byte *, unsigned int)) {
   controller = ctrl;
   buildTopics();
   connectWiFi();
   mqtt.setServer(MQTT_SERVER, MQTT_PORT);
-  mqtt.setCallback(mqttCallback);
+  // FIX: Use the passed-in callback pointer instead of the removed free
+  // mqttCallback() function, breaking the circular dependency.
+  mqtt.setCallback(callback);
   mqtt.setBufferSize(768);
   connectMQTT();
   publishDiscovery();
-  #endif
 }
 
 /**
  * @brief Main loop for maintaining connections and handling MQTT.
  */
 void MQTTManager::loop() {
-  #if ENABLE_WIFI
   // Keep WiFi alive
   if (WiFi.status() != WL_CONNECTED)
     connectWiFi();
@@ -64,7 +72,6 @@ void MQTTManager::loop() {
     }
   }
   mqtt.loop();
-  #endif
 }
 
 /**
@@ -81,7 +88,6 @@ void MQTTManager::loop() {
 void MQTTManager::publishStateChanges(bool lightOn, unsigned long durationMins, const String &doorState,
                                       float tempF, float heatSet, const String &hvacMode,
                                       bool motionActive, bool lockout) {
-  #if ENABLE_WIFI
   if (!mqtt.connected())
     return;
 
@@ -132,14 +138,12 @@ void MQTTManager::publishStateChanges(bool lightOn, unsigned long durationMins, 
     mqtt.publish(LOCKOUT_STATE_TOPIC.c_str(), lockout ? "ON" : "OFF", true);
     prevLockout = lockout;
   }
-  #endif
 }
 
 /**
  * @brief Builds MQTT topic strings from DEVICE_ID.
  */
 void MQTTManager::buildTopics() {
-  #if ENABLE_WIFI
   topicBase = String("garage/") + DEVICE_ID;
 
   DOOR_STATE_TOPIC = topicBase + "/door/state";
@@ -160,14 +164,13 @@ void MQTTManager::buildTopics() {
   LOCKOUT_STATE_TOPIC = topicBase + "/lockout/state";
 
   AVAIL_TOPIC = topicBase + "/availability";
-  #endif
 }
 
 /**
  * @brief Connects to WiFi network.
  */
-void MQTTManager::connectWiFi() {
-  #if ENABLE_WIFI
+void MQTTManager::connectWiFi() 
+{
   Serial.print("Connecting to WiFi: ");
   Serial.println(WIFI_SSID);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -182,14 +185,13 @@ void MQTTManager::connectWiFi() {
   } else {
     Serial.println("\nWiFi connect failed – will retry");
   }
-  #endif
 }
 
 /**
  * @brief Connects to MQTT broker and subscribes to topics.
  */
-void MQTTManager::connectMQTT() {
-  #if ENABLE_WIFI
+void MQTTManager::connectMQTT() 
+{
   String clientId = String(DEVICE_ID) + "_" + String(random(0xffff), HEX);
   Serial.print("Connecting MQTT... ");
   bool ok;
@@ -218,14 +220,12 @@ void MQTTManager::connectMQTT() {
     Serial.print("MQTT failed rc=");
     Serial.println(mqtt.state());
   }
-  #endif
 }
 
 /**
  * @brief Publishes Home Assistant auto-discovery configurations.
  */
 void MQTTManager::publishDiscovery() {
-  #if ENABLE_WIFI
   // Shared device block (JSON fragment)
   String dev = String("\"dev\":{\"ids\":[\"") + DEVICE_ID + "\"],"
                                                             "\"name\":\""
@@ -289,17 +289,6 @@ void MQTTManager::publishDiscovery() {
     mqtt.publish(topic.c_str(), payload.c_str(), true);
     Serial.println("Discovery: lockout sensor published");
   }
-  #endif
 }
 
-// Global callback function
-void mqttCallback(char *topic, byte *payload, unsigned int length) {
-  #if ENABLE_WIFI
-  String t(topic);
-  String p;
-  for (unsigned int i = 0; i < length; i++)
-    p += (char)payload[i];
-  if (g_controller)
-    g_controller->handleMQTT(t, p);
-  #endif
-}
+#endif // ENABLE_WIFI

@@ -24,4 +24,9 @@ unsigned long now();
  * @return True if the interval has expired since last, false otherwise.
  */
 bool expired(unsigned long last, unsigned long interval);
+
+/**
+ * @brief * To disable WiFi/MQTT for debugging, change 1 to 0 here.
+ */
+#define ENABLE_WIFI 0
 #endif

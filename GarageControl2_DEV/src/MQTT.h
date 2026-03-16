@@ -2,12 +2,19 @@
 #define MQTT_MANAGER_H
 
 #include <Arduino.h>
-#if ENABLE_WIFI
-//#include <WiFiS3.h>
-#include <PubSubClient.h>
-#endif
+#include "Utility.h"
 
-// Forward declarations
+// ============================================================
+//  MQTTManager is compiled ONLY when WiFi is enabled.
+//  In DEV mode (ENABLE_WIFI 0) this entire class is absent,
+//  so no WiFi/MQTT libraries need to be present on the board.
+// ============================================================
+
+#if ENABLE_WIFI
+// #include <WiFiS3.h>
+#include <PubSubClient.h>
+
+// Forward declaration - avoids pulling in the full .ino header
 class GarageController;
 
 /**
@@ -18,10 +25,10 @@ class GarageController;
  * publishing device states, subscribing to commands, and handling
  * Home Assistant auto-discovery.
  */
-class MQTTManager {
+class MQTTManager
+{
 private:
-  #if ENABLE_WIFI
-  WiFiClient wifiClient;
+  WiFiClient   wifiClient;
   PubSubClient mqtt;
 
   // MQTT topic strings
@@ -31,7 +38,7 @@ private:
   const char *WIFI_SSID;
   const char *WIFI_PASSWORD;
   const char *MQTT_SERVER;
-  const int MQTT_PORT;
+  int MQTT_PORT;
   const char *MQTT_USER;
   const char *MQTT_PASS;
   const char *DEVICE_ID;
@@ -51,10 +58,13 @@ private:
   bool prevMotion = false;
   bool prevLockout = false;
   String prevHvacMode = "";
-  #endif
 
+  void buildTopics();
+  void connectWiFi();
+  void connectMQTT();
+  void publishDiscovery();
+ 
 public:
-  #if ENABLE_WIFI
   // MQTT topic strings (public for controller access)
   String DOOR_STATE_TOPIC;
   String DOOR_CMD_TOPIC;
@@ -70,7 +80,7 @@ public:
   String MOTION_STATE_TOPIC;
   String LOCKOUT_STATE_TOPIC;
   String AVAIL_TOPIC;
-  #endif
+
 
   /**
    * @brief Constructor for MQTTManager.
@@ -80,8 +90,14 @@ public:
   /**
    * @brief Initializes WiFi and MQTT connections.
    * @param ctrl Pointer to the GarageController instance.
+   * @param callback C-style MQTT callback function pointer (e.g. GarageController::mqttCallback).
    */
-  void init(GarageController *ctrl);
+  // FIX: Accept the callback as a parameter instead of referencing the free
+  // mqttCallback() from MQTT.cpp. This breaks the circular dependency:
+  // MQTT.cpp no longer needs the full GarageController definition to call
+  // handleMQTT(), and the .ino passes GarageController::mqttCallback (static)
+  // directly, keeping all knowledge of GarageController inside the .ino.
+  void init(GarageController *ctrl, void (*callback)(char *, byte *, unsigned int));
 
   /**
    * @brief Main loop for maintaining connections and handling MQTT.
@@ -102,7 +118,7 @@ public:
   void publishStateChanges(bool lightOn, unsigned long durationMins, const String &doorState,
                            float tempF, float heatSet, const String &hvacMode,
                            bool motionActive, bool lockout);
-
 };
 
-#endif
+#endif // ENABLE_WIFI
+#endif // MQTT_MANAGER_H
