@@ -24,6 +24,9 @@
 #include "Utility.h"
 #include "MQTT.h"
 
+// Global for reporting network status to UI/menu.
+MQTTManager *g_mqttManager = nullptr;
+
 #if ENABLE_WIFI
 
 // ============================================================
@@ -43,7 +46,7 @@ MQTTManager::MQTTManager()
   // All literals go to flash; the pointers themselves cost 2 bytes each.
   WIFI_SSID        = "ScubaSpot";
   WIFI_PASSWORD    = "ScubaNet";
-  MQTT_SERVER      = "192.168.0.130";
+  MQTT_SERVER      = "192.168.0.0"; //130
   MQTT_PORT        = 1883;
   MQTT_USER        = "mqtt_user";
   MQTT_PASS        = "mqtt_password";
@@ -95,6 +98,12 @@ void MQTTManager::init(GarageController *ctrl,
                        void (*callback)(char *, byte *, unsigned int))
 {
   controller = ctrl;
+  g_mqttManager = this;
+
+  // Ensure we start in a state where we attempt to connect.
+  netStatus = NetStatus::Connecting;
+  consecutiveFailures = 0;
+
   connectWiFi();
   mqtt.setServer(MQTT_SERVER, MQTT_PORT);
   mqtt.setCallback(callback);
@@ -105,16 +114,22 @@ void MQTTManager::init(GarageController *ctrl,
 
 void MQTTManager::loop()
 {
+  if (netStatus == NetStatus::Disabled)
+    return;
+
   if (WiFi.status() != WL_CONNECTED)
     connectWiFi();
 
   if (!mqtt.connected()) {
+    netStatus = NetStatus::Connecting;
     if (millis() - lastMqttReconnect >= 5000UL) {
       lastMqttReconnect = millis();
       connectMQTT();
     }
   }
-  mqtt.loop();
+
+  if (netStatus != NetStatus::Disabled && mqtt.connected())
+    mqtt.loop();
 }
 
 /**
@@ -137,6 +152,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
                                       bool          motionActive,
                                       bool          lockout)
 {
+  if (netStatus == NetStatus::Disabled) return;
   if (!mqtt.connected()) return;
 
   // Use a small stack buffer for numeric payloads (replaces heap String temps)
@@ -205,8 +221,12 @@ void MQTTManager::publishStateChanges(bool          lightOn,
 
 void MQTTManager::connectWiFi()
 {
+  if (netStatus == NetStatus::Disabled)
+    return;
+
   Serial.print(F("Connecting to WiFi: "));
   Serial.println(WIFI_SSID);
+  netStatus = NetStatus::Connecting;
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - start < 15000UL) {
@@ -216,13 +236,24 @@ void MQTTManager::connectWiFi()
   if (WiFi.status() == WL_CONNECTED) {
     Serial.print(F("\nWiFi connected, IP: "));
     Serial.println(WiFi.localIP());
+    consecutiveFailures = 0;
   } else {
-    Serial.println(F("\nWiFi connect failed - will retry"));
+    consecutiveFailures++;
+    Serial.println(F("\nWiFi connect failed"));
+    if (consecutiveFailures >= MAX_FAILURES) {
+      netStatus = NetStatus::Disabled;
+      Serial.println(F("Network disabled due to repeated failures"));
+      return;
+    }
+    Serial.println(F("- will retry"));
   }
 }
 
 void MQTTManager::connectMQTT()
 {
+  if (netStatus == NetStatus::Disabled)
+    return;
+
   // clientId on the stack - no heap String
   char clientId[32];
   snprintf(clientId, sizeof(clientId), "%s_%04x", DEVICE_ID, (unsigned)random(0xffff));
@@ -254,9 +285,18 @@ void MQTTManager::connectMQTT()
     mqtt.subscribe(buildTopic(F("/light/duration/cmd")));
 
     publishDiscovery();
+
+    netStatus = NetStatus::Connected;
+    consecutiveFailures = 0;
   } else {
+    consecutiveFailures++;
     Serial.print(F("MQTT failed rc="));
     Serial.println(mqtt.state());
+    if (consecutiveFailures >= MAX_FAILURES) {
+      netStatus = NetStatus::Disabled;
+      Serial.println(F("Network disabled due to repeated failures"));
+      return;
+    }
   }
 }
 
@@ -379,6 +419,62 @@ void MQTTManager::publishDiscovery()
     DEVICE_ID, DEVICE_ID, avail, DEVICE_ID, DEVICE_NAME);
   mqtt.publish(buildDiscoveryTopic(F("binary_sensor"), F("_lockout")), buf, true);
   Serial.println(F("Discovery: lockout sensor published"));
+}
+
+// ============================================================
+//  Network status helpers
+// ============================================================
+
+MQTTManager::NetStatus MQTTManager::getNetStatus() const
+{
+  return netStatus;
+}
+
+const char* MQTTManager::getNetStatusString() const
+{
+  switch (netStatus) {
+    case NetStatus::Connecting: return "Connecting";
+    case NetStatus::Connected:  return "Connected";
+    case NetStatus::Disabled:   return "Disabled";
+  }
+  return "Unknown";
+}
+
+bool MQTTManager::isNetworkEnabled() const
+{
+  return netStatus != NetStatus::Disabled;
+}
+
+void MQTTManager::resetNetStatus()
+{
+  consecutiveFailures = 0;
+  if (netStatus == NetStatus::Disabled)
+    netStatus = NetStatus::Connecting;
+}
+
+void MQTTManager::disableNetwork()
+{
+  netStatus = NetStatus::Disabled;
+  if (mqtt.connected())
+    mqtt.disconnect();
+  WiFi.disconnect();
+}
+
+void MQTTManager::getLocalIP(char *buf, size_t len) const
+{
+  if (WiFi.status() == WL_CONNECTED) {
+    IPAddress ip = WiFi.localIP();
+    snprintf(buf, len, "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
+  } else {
+    strncpy(buf, "n/a", len);
+    buf[len - 1] = '\0';
+  }
+}
+
+void MQTTManager::getMqttServerIP(char *buf, size_t len) const
+{
+  strncpy(buf, MQTT_SERVER, len);
+  buf[len - 1] = '\0';
 }
 
 #endif // ENABLE_WIFI

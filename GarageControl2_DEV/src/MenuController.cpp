@@ -21,6 +21,10 @@
 #include "GarageDoor.h"
 #include "Utility.h"
 
+#if ENABLE_WIFI
+#include "MQTT.h"
+#endif
+
 // ============================================================
 //  Menu Controller
 // ============================================================
@@ -203,6 +207,15 @@ void MenuController::handleSet()
   case Screen::DoorBack:
     current = Screen::DoorMenu;
     break;
+  case Screen::ConfigMenu:
+    current = Screen::NetworkInfo;
+    break;
+  case Screen::NetworkInfo:
+    EditMode = !EditMode;
+    break;
+  case Screen::ConfigBack:
+    current = Screen::ConfigMenu;
+    break;
   case Screen::MenuExit:
     current = Screen::Main;
     break;
@@ -218,10 +231,12 @@ void MenuController::handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor 
   {
   case Screen::LightMenu:   current = Screen::HVACMenu;  break;
   case Screen::DoorMenu:    current = Screen::LightMenu;  break;
-  case Screen::MenuExit:    current = Screen::DoorMenu;   break;
+  case Screen::MenuExit:    current = Screen::ConfigMenu;   break;
   case Screen::HVACBack:    current = Screen::SetSwing;   break;
   case Screen::LightBack:   current = Screen::SetLightTimeout; break;
   case Screen::DoorBack:    current = Screen::SetDoorAttempts; break;
+  case Screen::ConfigMenu:    current = Screen::DoorMenu; break;
+  case Screen::ConfigBack:    current = Screen::NetworkInfo; break;
 
   case Screen::SetHeat:
     if (EditMode) hvac.heatSet++;
@@ -244,6 +259,18 @@ void MenuController::handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor 
     if (EditMode) door.setMaxAttempts(door.getMaxAttempts() + 1);
     else          current = Screen::SetDoorTimeout;
     break;
+  case Screen::NetworkInfo:
+    if (EditMode)
+    {
+#if ENABLE_WIFI
+      if (g_mqttManager) {
+        g_mqttManager->resetNetStatus();
+        Serial.println(F("Menu:Network reset (retry connections)"));
+      }
+#endif
+      EditMode = false;
+    }
+    break;
   default:
     break;
   }
@@ -255,7 +282,8 @@ void MenuController::handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoo
   {
   case Screen::HVACMenu:  current = Screen::LightMenu;  break;
   case Screen::LightMenu: current = Screen::DoorMenu;   break;
-  case Screen::DoorMenu:  current = Screen::MenuExit;   break;
+  case Screen::DoorMenu:  current = Screen::ConfigMenu;   break;
+  case Screen::ConfigMenu:  current = Screen::MenuExit;   break;
 
   case Screen::SetHeat:
     if (EditMode) hvac.heatSet--;
@@ -280,6 +308,19 @@ void MenuController::handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoo
   case Screen::SetDoorAttempts:
     if (EditMode) door.setMaxAttempts(door.getMaxAttempts() - 1);
     else          current = Screen::DoorBack;
+    break;
+  case Screen::NetworkInfo:
+    if (EditMode)
+    {
+#if ENABLE_WIFI
+      if (g_mqttManager) {
+        g_mqttManager->disableNetwork();
+        Serial.println(F("Menu:Network disabled"));
+      }
+#endif
+      EditMode = false;
+    }
+    else current = Screen::ConfigBack;
     break;
   default:
     break;

@@ -11,7 +11,7 @@
 
 #if ENABLE_WIFI
 
-// #include <WiFiS3.h>   // Built into "Arduino UNO R4 Boards" package
+#include <WiFiS3.h>   // Built into "Arduino UNO R4 Boards" package
 #include <PubSubClient.h>
 
 class GarageController;
@@ -34,9 +34,25 @@ class GarageController;
  */
 class MQTTManager
 {
+public:
+  /**
+   * Status of the network stack (WiFi + MQTT).
+   */
+  enum class NetStatus
+  {
+    Connecting,
+    Connected,
+    Disabled
+  };
+
 private:
   WiFiClient   wifiClient;
   PubSubClient mqtt;
+
+  // Network status reporting / failure tracking
+  NetStatus netStatus = NetStatus::Connecting;
+  uint8_t  consecutiveFailures = 0;
+  static constexpr uint8_t MAX_FAILURES = 5;
 
   // ── Configuration (all point to flash literals - zero SRAM cost) ──────
   const char *WIFI_SSID;
@@ -95,6 +111,19 @@ public:
 
   void loop();
 
+  // Network status helpers
+  NetStatus getNetStatus() const;
+  const char* getNetStatusString() const;
+  bool isNetworkEnabled() const;
+  void resetNetStatus();      // Reset failure counter and retry connections
+  void disableNetwork();      // Force disable network/MQTT activity
+
+  // Returns the current local IP address (or "n/a" if not connected).
+  void getLocalIP(char *buf, size_t len) const;
+
+  // Returns the configured MQTT server/IP string.
+  void getMqttServerIP(char *buf, size_t len) const;
+
   // Returns a pointer to _topicBuf containing the requested topic.
   // Valid only until the next buildTopic() call - use immediately.
   const char* getTopic(const __FlashStringHelper *suffix);
@@ -108,6 +137,8 @@ public:
                            bool          motionActive,
                            bool          lockout);
 };
+
+extern MQTTManager *g_mqttManager;
 
 #endif // ENABLE_WIFI
 #endif // MQTT_MANAGER_H

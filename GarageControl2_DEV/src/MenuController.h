@@ -44,6 +44,10 @@ public:
     SetDoorTimeout,
     SetDoorAttempts,
     DoorBack,
+    ConfigMenu,
+    NetworkInfo,
+    NetworkReset,
+    ConfigBack,
     MenuExit,
     Count
   };

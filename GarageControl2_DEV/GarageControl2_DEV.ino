@@ -69,9 +69,9 @@ const byte PIRPin = 4;            // PIR OUT - active HIGH on motion
 const byte DoorButtonPin = 5;     // Relay → garage door opener (active HIGH)
 const byte HVACHeatPin = 6;       // Relay → heater (active HIGH)
 const byte HVACTempSensorPin = 7; // OneWire data (DS18B20)
-const byte MenuBtnDownPin = 9;    // Menu navigation (active LOW)
-const byte MenuBtnSetPin = 10;    // Menu select (active LOW)
-const byte MenuBtnUpPin = 11;     // Menu navigation (active LOW)
+const byte MenuBtnDownPin = 8;    // Menu navigation (active LOW)
+const byte MenuBtnSetPin = 9;    // Menu select (active LOW)
+const byte MenuBtnUpPin = 10;     // Menu navigation (active LOW)
 const byte LightSwitchPin = 13;   // Relay → garage light (active HIGH)
 
 // ============================================================

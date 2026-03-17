@@ -28,5 +28,5 @@ bool expired(unsigned long last, unsigned long interval);
 /**
  * @brief * To disable WiFi/MQTT for debugging, change 1 to 0 here.
  */
-#define ENABLE_WIFI 0
+#define ENABLE_WIFI 1
 #endif
