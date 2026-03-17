@@ -42,13 +42,44 @@ private:
   bool backlightOn = false;
 
 public:
+  /**
+   * @brief Constructs an LCD controller.
+   * @param lcdRef Reference to an initialized LiquidCrystal_I2C instance.
+   * @param menuRef Reference to the MenuController for navigation state.
+   */
   LcdController(LiquidCrystal_I2C &lcdRef, MenuController &menuRef);
 
+  /**
+   * @brief Initializes the LCD and global display state.
+   */
   void begin();
+
+  /**
+   * @brief Marks the display as dirty to force a refresh.
+   * @param WakeBackLight If true, also wake the backlight on next update.
+   */
   void SetDirty(bool WakeBackLight);
+
+  /**
+   * @brief Updates the LCD display with current system state.
+   * @param hvac HVAC controller state.
+   * @param door Garage door controller state.
+   * @param lights Garage light controller state.
+   * @param tempF Current temperature reading.
+   */
   void updateDisplay(GarageHVAC &hvac, GarageDoor &door,
                      GarageLight &lights, float tempF);
+
+  /**
+   * @brief Enables or disables the LCD backlight.
+   * @param on True to turn backlight on, false to turn it off.
+   */
   void setBacklight(bool on);
+
+  /**
+   * @brief Gets the current backlight state.
+   * @return True if backlight is on.
+   */
   bool isBacklightOn() const { return backlightOn; }
 
 private:

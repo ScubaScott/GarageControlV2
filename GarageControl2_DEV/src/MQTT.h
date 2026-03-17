@@ -104,11 +104,28 @@ private:
                              const __FlashStringHelper *payloadBody);
 
 public:
+  /**
+   * @brief Constructs the MQTTManager instance.
+   *
+   * Configuration values (WiFi/MQTT credentials, device IDs) are hardcoded
+   * into the implementation for simplicity.
+   */
   MQTTManager();
 
+  /**
+   * @brief Initializes WiFi, MQTT, and Home Assistant discovery.
+   * @param ctrl Pointer to the main GarageController instance.
+   * @param callback Callback invoked on received MQTT messages.
+   */
   void init(GarageController *ctrl,
             void (*callback)(char *, byte *, unsigned int));
 
+  /**
+   * @brief Main loop handler for MQTT processing.
+   *
+   * Must be called frequently from the main loop to service MQTT and
+   * reconnect if disconnected.
+   */
   void loop();
 
   // Network status helpers
@@ -128,6 +145,21 @@ public:
   // Valid only until the next buildTopic() call - use immediately.
   const char* getTopic(const __FlashStringHelper *suffix);
 
+  /**
+   * @brief Publishes sensor and state updates to MQTT.
+   *
+   * Only changed values are published to reduce traffic and avoid
+   * unnecessary state churn.
+   *
+   * @param lightOn Current light relay state (true = on).
+   * @param durationMins Current light timeout duration in minutes.
+   * @param doorCode Current door state code (0=open, 1=closed, 2=moving, 3=error).
+   * @param tempF Current temperature in Fahrenheit.
+   * @param heatSet Current HVAC setpoint temperature.
+   * @param hvacOn HVAC enabled state (true = heat on).
+   * @param motionActive Motion sensor state (true = motion detected).
+   * @param lockout HVAC lockout state (true = lockout active).
+   */
   void publishStateChanges(bool          lightOn,
                            unsigned long durationMins,
                            uint8_t       doorCode,

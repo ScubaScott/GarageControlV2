@@ -42,6 +42,24 @@
  *
  * 7. dtostrf() used instead of String(float, n) for float → char
  *    conversion in publishStateChanges().
+ *
+ * @section Hardware
+ * - Door open sensor: digital pin 2 (HIGH when fully open)
+ * - Door closed sensor: digital pin 3 (HIGH when fully closed)
+ * - PIR motion sensor: digital pin 4 (active HIGH)
+ * - Garage door relay: digital pin 5 (active HIGH)
+ * - HVAC heater relay: digital pin 6 (active HIGH)
+ * - DS18B20 temp sensor (OneWire): digital pin 7
+ * - Menu navigation buttons: pins 8/9/10 (active LOW, using INPUT_PULLUP)
+ * - Garage light relay: digital pin 13 (active HIGH)
+ *
+ * @section Menu
+ * - Main: status screen (door/light/HVAC/motion)
+ * - SET: enter submenu
+ *   - HVAC: enable/disable heat, adjust setpoint
+ *   - Light: set auto-off timeout
+ *   - Door: set auto-close timeout and retry attempts
+ *   - Config: show network status, trigger reconnect
  */
 
 #include "src/Utility.h"
@@ -89,10 +107,12 @@ unsigned long now()                                   { return millis(); }
 bool expired(unsigned long last, unsigned long interval) { return (now() - last) >= interval; }
 
 /**
- * Returns a compact uint8_t code for the door state.
- * Used by MQTTManager::publishStateChanges() to detect changes without
- * allocating a heap String on every loop iteration.
- *   0=open  1=closed  2=moving  3=error  4=disabled
+ * @brief Converts a GarageDoor state into a compact uint8_t code.
+ *
+ * This avoids heap allocations in the main loop when publishing MQTT state.
+ *
+ * @param door Reference to the GarageDoor instance.
+ * @return State code: 0=open, 1=closed, 2=moving, 3=error, 4=disabled.
  */
 uint8_t doorStateCode(const GarageDoor &door)
 {

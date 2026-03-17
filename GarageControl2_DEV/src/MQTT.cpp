@@ -46,7 +46,7 @@ MQTTManager::MQTTManager()
   // All literals go to flash; the pointers themselves cost 2 bytes each.
   WIFI_SSID        = "ScubaSpot";
   WIFI_PASSWORD    = "ScubaNet";
-  MQTT_SERVER      = "192.168.0.0"; //130
+  MQTT_SERVER      = "192.168.0.130"; //130
   MQTT_PORT        = 1883;
   MQTT_USER        = "mqtt_user";
   MQTT_PASS        = "mqtt_password";
@@ -66,8 +66,12 @@ MQTTManager::MQTTManager()
  */
 const char* MQTTManager::buildTopic(const __FlashStringHelper *suffix)
 {
-  snprintf_P(_topicBuf, sizeof(_topicBuf),
-             PSTR("garage/%s%S"), DEVICE_ID, suffix);
+  // Build topic into shared buffer using flash-safe concatenation.
+  // snprintf_P with %S is unreliable on some toolchains (it may emit "S").
+  strcpy(_topicBuf, "garage/");
+  strncat(_topicBuf, DEVICE_ID, sizeof(_topicBuf) - strlen(_topicBuf) - 1);
+  strncat_P(_topicBuf, (PGM_P)suffix,
+            sizeof(_topicBuf) - strlen(_topicBuf) - 1);
   return _topicBuf;
 }
 
@@ -78,9 +82,16 @@ const char* MQTTManager::buildTopic(const __FlashStringHelper *suffix)
 const char* MQTTManager::buildDiscoveryTopic(const __FlashStringHelper *component,
                                              const __FlashStringHelper *entitySuffix)
 {
-  snprintf_P(_topicBuf, sizeof(_topicBuf),
-             PSTR("%s/%S/%s%S/config"),
-             DISCOVERY_PREFIX, component, DEVICE_ID, entitySuffix);
+  // Build discovery topic into shared buffer using flash-safe concatenation.
+  strcpy(_topicBuf, DISCOVERY_PREFIX);
+  strncat(_topicBuf, "/", sizeof(_topicBuf) - strlen(_topicBuf) - 1);
+  strncat_P(_topicBuf, (PGM_P)component,
+            sizeof(_topicBuf) - strlen(_topicBuf) - 1);
+  strncat(_topicBuf, "/", sizeof(_topicBuf) - strlen(_topicBuf) - 1);
+  strncat(_topicBuf, DEVICE_ID, sizeof(_topicBuf) - strlen(_topicBuf) - 1);
+  strncat_P(_topicBuf, (PGM_P)entitySuffix,
+            sizeof(_topicBuf) - strlen(_topicBuf) - 1);
+  strncat(_topicBuf, "/config", sizeof(_topicBuf) - strlen(_topicBuf) - 1);
   return _topicBuf;
 }
 

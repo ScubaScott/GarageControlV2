@@ -26,7 +26,12 @@ unsigned long now();
 bool expired(unsigned long last, unsigned long interval);
 
 /**
- * @brief * To disable WiFi/MQTT for debugging, change 1 to 0 here.
+ * @brief Enable or disable WiFi/MQTT features.
+ *
+ * Set to 1 to enable WiFi + MQTT + Home Assistant auto-discovery.
+ * Set to 0 to build in DEV mode with all network code excluded.
+ *
+ * Note: DEV mode is useful when running on hardware without WiFi.
  */
 #define ENABLE_WIFI 1
 #endif

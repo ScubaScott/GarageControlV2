@@ -28,28 +28,35 @@ public:
   /**
    * @enum Screen
    * @brief Enumeration of available menu screens.
+   *
+   * The menu is driven by three hardware buttons (up/down/set) and is
+   * displayed on the I2C LCD. Screens are grouped into logical sections
+   * (HVAC, Light, Door, Config). Navigation generally works as:
+   *   - Main: status summary (door state, temp, motion, light state)
+   *   - Press Set -> enters the first submenu (HVAC)
+   *   - Up/Down moves between options, Set selects, timeout returns to Main
    */
   enum class Screen
   {
-    Main,
-    HVACMenu,
-    SetHeat,
-    SetCool,
-    SetSwing,
-    HVACBack,
-    LightMenu,
-    SetLightTimeout,
-    LightBack,
-    DoorMenu,
-    SetDoorTimeout,
-    SetDoorAttempts,
-    DoorBack,
-    ConfigMenu,
-    NetworkInfo,
-    NetworkReset,
-    ConfigBack,
-    MenuExit,
-    Count
+    Main,               ///< Main status screen (door/light/HVAC/motion)
+    HVACMenu,           ///< HVAC menu (enable/disable, setpoint)
+    SetHeat,            ///< Set heat setpoint (temperature)
+    SetCool,            ///< Placeholder / unused screen (reserved)
+    SetSwing,           ///< Placeholder / unused screen (reserved)
+    HVACBack,           ///< Back option in HVAC menu
+    LightMenu,          ///< Light menu (timeout configuration)
+    SetLightTimeout,    ///< Set auto-off timeout for lights
+    LightBack,          ///< Back option in light menu
+    DoorMenu,           ///< Door menu (auto-close / retry settings)
+    SetDoorTimeout,     ///< Set auto-close timeout
+    SetDoorAttempts,    ///< Set max retry attempts for auto-close
+    DoorBack,           ///< Back option in door menu
+    ConfigMenu,         ///< Configuration menu (network/status)
+    NetworkInfo,        ///< Show network/WiFi/MQTT status
+    NetworkReset,       ///< Trigger network reconnect/reset
+    ConfigBack,         ///< Back option in config menu
+    MenuExit,           ///< Exit menu and return to Main status
+    Count               ///< Internal: number of screens
   };
 
   bool EditMode = false;
