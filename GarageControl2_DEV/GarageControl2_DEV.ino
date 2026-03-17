@@ -63,6 +63,7 @@
  */
 
 #include "src/Utility.h"
+const char* GC_VERSION = "2.5.1";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
