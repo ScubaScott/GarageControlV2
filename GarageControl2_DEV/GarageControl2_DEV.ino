@@ -131,6 +131,12 @@ public:
   float         tempF        = 0;
 
 #if ENABLE_WIFI
+  unsigned long lastDoorCmd = 0;
+  unsigned long lastLightCmd = 0;
+  unsigned long lastHvacCmd = 0;
+#endif
+
+#if ENABLE_WIFI
   MQTTManager mqttManager;
 #endif
 
@@ -170,19 +176,27 @@ public:
 
     if (strcmp(topic, mqttManager.getTopic(F("/door/cmd"))) == 0)
     {
-      door.manualActivate();
-      lcdDisplay.SetDirty(true);
+      if (expired(lastDoorCmd, 2000UL))  // Debounce door commands to prevent rapid toggling
+      {
+        door.manualActivate();
+        lastDoorCmd = now();
+        lcdDisplay.SetDirty(true);
+      }
     }
     else if (strcmp(topic, mqttManager.getTopic(F("/light/cmd"))) == 0)
     {
-      if (payload == F("ON")) {
-        lights.turnOn();
-        lcdDisplay.SetDirty(true);   // wake backlight when light turns on
-      }
-      if (payload == F("OFF")) {
-        lights.turnOff();
-        lcdDisplay.SetDirty(false);  // update display but don't wake backlight
-        lcdDisplay.setBacklight(false);
+      if (expired(lastLightCmd, 500UL))  // Debounce light commands
+      {
+        if (payload == F("ON")) {
+          lights.turnOn();
+          lcdDisplay.SetDirty(true);   // wake backlight when light turns on
+        }
+        if (payload == F("OFF")) {
+          lights.turnOff();
+          lcdDisplay.SetDirty(false);  // update display but don't wake backlight
+          lcdDisplay.setBacklight(false);
+        }
+        lastLightCmd = now();
       }
     }
     else if (strcmp(topic, mqttManager.getTopic(F("/light/duration/cmd"))) == 0)
@@ -196,17 +210,25 @@ public:
     }
     else if (strcmp(topic, mqttManager.getTopic(F("/hvac/heat_set/cmd"))) == 0)
     {
-      float val = payload.toFloat();
-      if (val > 30 && val < 100)
+      if (expired(lastHvacCmd, 1000UL))  // Debounce HVAC commands
       {
-        hvac.heatSet = val;
-        lcdDisplay.SetDirty(false);
+        float val = payload.toFloat();
+        if (val > 30 && val < 100)
+        {
+          hvac.heatSet = val;
+          lcdDisplay.SetDirty(false);
+        }
+        lastHvacCmd = now();
       }
     }
     else if (strcmp(topic, mqttManager.getTopic(F("/hvac/mode/cmd"))) == 0)
     {
-      hvac.enabled = (payload == F("heat"));
-      lcdDisplay.SetDirty(false);
+      if (expired(lastHvacCmd, 1000UL))  // Debounce HVAC commands
+      {
+        hvac.enabled = (payload == F("heat"));
+        lcdDisplay.SetDirty(false);
+        lastHvacCmd = now();
+      }
     }
   }
 
