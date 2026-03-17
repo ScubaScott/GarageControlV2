@@ -232,7 +232,7 @@ void MenuController::handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor 
   case Screen::LightMenu:   current = Screen::HVACMenu;  break;
   case Screen::DoorMenu:    current = Screen::LightMenu;  break;
   case Screen::MenuExit:    current = Screen::ConfigMenu;   break;
-  case Screen::HVACBack:    current = Screen::SetSwing;   break;
+  case Screen::HVACBack:    current = Screen::SetMode;  break;
   case Screen::LightBack:   current = Screen::SetLightTimeout; break;
   case Screen::DoorBack:    current = Screen::SetDoorAttempts; break;
   case Screen::ConfigMenu:    current = Screen::DoorMenu; break;
@@ -247,7 +247,11 @@ void MenuController::handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor 
     break;
   case Screen::SetSwing:
     if (EditMode) hvac.HVACSwing++;
-    else          current = Screen::SetCool;
+    else          current = Screen::SetMode;
+    break;
+  case Screen::SetMode:
+    if (EditMode) hvac.mode = (GarageHVAC::Mode)((hvac.mode + 1) % 3);
+    else          current = Screen::SetSwing;
     break;
   case Screen::SetLightTimeout:
     if (EditMode) lights.duration += 60000UL;
@@ -295,6 +299,10 @@ void MenuController::handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoo
     break;
   case Screen::SetSwing:
     if (EditMode) hvac.HVACSwing--;
+    else          current = Screen::SetMode;
+    break;
+  case Screen::SetMode:
+    if (EditMode) hvac.mode = (GarageHVAC::Mode)((hvac.mode + 2) % 3);
     else          current = Screen::HVACBack;
     break;
   case Screen::SetLightTimeout:

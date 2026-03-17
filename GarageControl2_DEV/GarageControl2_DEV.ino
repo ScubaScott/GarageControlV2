@@ -86,6 +86,7 @@ const byte DoorClosedPin = 3;     // HIGH when door fully closed
 const byte PIRPin = 4;            // PIR OUT - active HIGH on motion
 const byte DoorButtonPin = 5;     // Relay → garage door opener (active HIGH)
 const byte HVACHeatPin = 6;       // Relay → heater (active HIGH)
+const byte HVACCoolPin = 11;      // Relay → cooler (active HIGH)
 const byte HVACTempSensorPin = 7; // OneWire data (DS18B20)
 const byte MenuBtnDownPin = 8;    // Menu navigation (active LOW)
 const byte MenuBtnSetPin = 9;    // Menu select (active LOW)
@@ -164,7 +165,7 @@ public:
     : motion(PIRPin),
       lights(LightSwitchPin, motion),
       door(DoorButtonPin, DoorOpenPin, DoorClosedPin, motion),
-      hvac(HVACHeatPin, motion),
+      hvac(HVACHeatPin, HVACCoolPin, motion),
       menu(MenuBtnUpPin, MenuBtnDownPin, MenuBtnSetPin),
       lcd(LCD_ADDR, LCD_COLS, LCD_ROWS),
       lcdDisplay(lcd, menu),
@@ -245,8 +246,23 @@ public:
     {
       if (expired(lastHvacCmd, 1000UL))  // Debounce HVAC commands
       {
-        hvac.enabled = (payload == F("heat"));
+        if (payload == "off") hvac.mode = GarageHVAC::Off;
+        else if (payload == "auto") hvac.mode = GarageHVAC::Auto;
+        else if (payload == "heat") hvac.mode = GarageHVAC::On;
         lcdDisplay.SetDirty(false);
+        lastHvacCmd = now();
+      }
+    }
+    else if (strcmp(topic, mqttManager.getTopic(F("/hvac/cool_set/cmd"))) == 0)
+    {
+      if (expired(lastHvacCmd, 1000UL))  // Debounce HVAC commands
+      {
+        float val = payload.toFloat();
+        if (val > 30 && val < 100)
+        {
+          hvac.coolSet = val;
+          lcdDisplay.SetDirty(false);
+        }
         lastHvacCmd = now();
       }
     }
@@ -293,12 +309,13 @@ public:
     GarageDoor::State doorState = door.poll(motionDetected);
     hvac.lockout = (doorState != GarageDoor::Closed);
 
+    GarageHVAC::State hvacState = hvac.state;
     if (expired(lastTempPoll, 30000UL))
     {
       lastTempPoll = now();
       sensors.requestTemperatures();
       tempF = sensors.getTempFByIndex(0);
-      hvac.poll(tempF);
+      hvacState = hvac.poll(tempF);
       lcdDisplay.SetDirty(false);
     }
 
@@ -312,7 +329,9 @@ public:
       doorStateCode(door),         // uint8_t code - no String allocation
       tempF,
       hvac.heatSet,
-      hvac.enabled,                // bool - no String allocation
+      hvac.coolSet,
+      (uint8_t)hvac.mode,          // uint8_t mode
+      (uint8_t)hvacState,          // uint8_t runtime state
       motion.isActive(),
       hvac.lockout);
 #endif

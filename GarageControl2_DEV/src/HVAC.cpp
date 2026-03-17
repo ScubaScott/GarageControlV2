@@ -18,41 +18,49 @@
 /**
  * @brief Constructor for GarageHVAC.
  * @param heat Heating relay pin number.
+ * @param cool Cooling relay pin number.
  * @param m Reference to MotionSensor instance.
  */
-GarageHVAC::GarageHVAC(byte heat, MotionSensor &m) : heatPin(heat), motion(m)
+GarageHVAC::GarageHVAC(byte heat, byte cool, MotionSensor &m) : heatPin(heat), coolPin(cool), motion(m)
 {
   pinMode(heatPin, OUTPUT);
   digitalWrite(heatPin, !heatActiveHigh);
+  pinMode(coolPin, OUTPUT);
+  digitalWrite(coolPin, !coolActiveHigh);
 }
 
 /**
- * @brief Polls temperature and controls HVAC operation.
+ * @brief Polls temperature and controls HVAC operation based on mode.
  * @param tempF Current temperature in Fahrenheit.
  * @return Current State enum value.
  */
 GarageHVAC::State GarageHVAC::poll(float tempF)
 {
-  if (!enabled)
+  if (mode == Off)
   {
     if (state != Waiting)
     {
       motion.forceAck();
       digitalWrite(heatPin, !heatActiveHigh);
+      digitalWrite(coolPin, !coolActiveHigh);
       state = Waiting;
-      Serial.println(F("HVAC:Disabled"));
+      Serial.println(F("HVAC:Off"));
     }
     return state;
   }
 
+  bool useLockout = (mode == Auto);
+
+  // Heating logic
   if (tempF < heatSet)
   {
-    if (!lockout)
+    if (!useLockout || !lockout)
     {
       if (state != Heating)
       {
         motion.forceAck();
         digitalWrite(heatPin, heatActiveHigh);
+        digitalWrite(coolPin, !coolActiveHigh);
         state = Heating;
         Serial.println(F("HVAC:Heating"));
       }
@@ -65,8 +73,7 @@ GarageHVAC::State GarageHVAC::poll(float tempF)
       Serial.println(F("HVAC:Pending"));
     }
   }
-
-  if (tempF > heatSet + HVACSwing && state == Heating)
+  else if (tempF > heatSet + HVACSwing && state == Heating)
   {
     motion.forceAck();
     digitalWrite(heatPin, !heatActiveHigh);
@@ -74,21 +81,34 @@ GarageHVAC::State GarageHVAC::poll(float tempF)
     Serial.println(F("HVAC:Waiting"));
   }
 
+  // Cooling logic
   if (tempF > coolSet)
   {
-    if (state != Cooling)
+    if (!useLockout || !lockout)
     {
-      state = Cooling;
-      Serial.println(F("HVAC:Cooling"));
+      if (state != Cooling)
+      {
+        motion.forceAck();
+        digitalWrite(coolPin, coolActiveHigh);
+        digitalWrite(heatPin, !heatActiveHigh);
+        state = Cooling;
+        Serial.println(F("HVAC:Cooling"));
+      }
+    }
+    else
+    {
+      motion.forceAck();
+      digitalWrite(coolPin, !coolActiveHigh);
+      if (state == Cooling) state = Waiting;
+      Serial.println(F("HVAC:Pending"));
     }
   }
-  else
+  else if (tempF < coolSet - HVACSwing && state == Cooling)
   {
-    if (state == Cooling)
-    {
-      state = Waiting;
-      Serial.println(F("HVAC:Waiting"));
-    }
+    motion.forceAck();
+    digitalWrite(coolPin, !coolActiveHigh);
+    state = Waiting;
+    Serial.println(F("HVAC:Waiting"));
   }
 
   return state;

@@ -118,7 +118,7 @@ void MQTTManager::init(GarageController *ctrl,
   connectWiFi();
   mqtt.setServer(MQTT_SERVER, MQTT_PORT);
   mqtt.setCallback(callback);
-  mqtt.setBufferSize(768);
+  mqtt.setBufferSize(1280);  // Increased from 768 to accommodate large climate discovery payload
   connectMQTT();
   publishDiscovery();
 }
@@ -159,12 +159,23 @@ void MQTTManager::publishStateChanges(bool          lightOn,
                                       uint8_t       doorCode,
                                       float         tempF,
                                       float         heatSet,
-                                      bool          hvacOn,
+                                      float         coolSet,
+                                      uint8_t       mode,
+                                      uint8_t       hvacState,
                                       bool          motionActive,
                                       bool          lockout)
 {
   if (netStatus == NetStatus::Disabled) return;
   if (!mqtt.connected()) return;
+
+  // Don't publish any state updates until we have a valid temperature.
+  // This prevents HA from seeing stale/invalid values on startup.
+  if (!hasValidTemp) {
+    // DS18B20 returns -127 or other out-of-range values when not ready.
+    if (isnan(tempF) || tempF < -40.0f || tempF > 150.0f)
+      return;
+    hasValidTemp = true;
+  }
 
   // Use a small stack buffer for numeric payloads (replaces heap String temps)
   char val[12];
@@ -182,14 +193,16 @@ void MQTTManager::publishStateChanges(bool          lightOn,
   }
 
   if (doorCode != prevDoorCode) {
-    // Convert code to payload string without heap allocation
+    // Convert code to payload string without heap allocation.
+    // Use canonical values (uppercase) so Home Assistant can consume them
+    // cleanly via discovery mappings.
     const char *ds;
     switch (doorCode) {
-      case 0: ds = "open";     break;
-      case 1: ds = "closed";   break;
-      case 2: ds = "opening";  break;
-      case 3: ds = "error";    break;
-      default: ds = "disabled"; break;
+      case 0: ds = "OPEN";     break;
+      case 1: ds = "CLOSED";   break;
+      case 2: ds = "OPENING";  break;
+      case 3: ds = "ERROR";    break;
+      default: ds = "DISABLED"; break;
     }
     mqtt.publish(buildTopic(F("/door/state")), ds, true);
     prevDoorCode = doorCode;
@@ -207,10 +220,35 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevHeatSet = heatSet;
   }
 
-  if (hvacOn != prevHvacOn) {
-    mqtt.publish(buildTopic(F("/hvac/mode/state")),
-                 hvacOn ? "heat" : "off", true);
-    prevHvacOn = hvacOn;
+  if (abs(coolSet - prevCoolSet) >= 0.5f) {
+    dtostrf(coolSet, 4, 1, val);
+    mqtt.publish(buildTopic(F("/hvac/cool_set/state")), val, true);
+    prevCoolSet = coolSet;
+  }
+
+  if (mode != prevMode) {
+    const char *modeStr;
+    switch (mode) {
+      case 0: modeStr = "off"; break;
+      case 1: modeStr = "auto"; break;
+      case 2: modeStr = "heat"; break;
+      default: modeStr = "off"; break;
+    }
+    mqtt.publish(buildTopic(F("/hvac/mode/state")), modeStr, true);
+    prevMode = mode;
+  }
+
+  if (hvacState != prevHvacState) {
+    const char *action;
+    switch (hvacState) {
+      case 0: action = "idle";    break; // Waiting
+      case 1: action = "heating"; break;
+      case 2: action = "cooling"; break;
+      case 3: action = "pending"; break;
+      default: action = "unknown"; break;
+    }
+    mqtt.publish(buildTopic(F("/hvac/action/state")), action, true);
+    prevHvacState = hvacState;
   }
 
   if (motionActive != prevMotion) {
@@ -221,7 +259,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
 
   if (lockout != prevLockout) {
     mqtt.publish(buildTopic(F("/lockout/state")),
-                 lockout ? "ON" : "OFF", true);
+                 lockout ? "Lockout" : "OK", true);
     prevLockout = lockout;
   }
 }
@@ -314,14 +352,18 @@ void MQTTManager::connectMQTT()
 /**
  * Publishes all HA auto-discovery configs.
  *
- * A single 512-byte stack buffer is reused for every payload, replacing
+ * A single 1024-byte stack buffer is reused for every payload, replacing
  * the heap-concatenated String approach that allocated and freed ~400 bytes
  * six times in a row (causing heap fragmentation).
+ *
+ * NOTE: Buffer size increased from 512 to 1024 bytes to accommodate the
+ * climate (HVAC) entity payload, which contains 9 device ID substitutions
+ * and multiple topic references.
  */
 void MQTTManager::publishDiscovery()
 {
   // Shared payload buffer - reused for every entity
-  char buf[512];
+  char buf[1024];
 
   // Precompute availability topic (needed in every payload)
   char avail[64];
@@ -338,6 +380,19 @@ void MQTTManager::publishDiscovery()
     DEVICE_ID, DEVICE_ID, avail, DEVICE_ID, DEVICE_NAME);
   mqtt.publish(buildDiscoveryTopic(F("button"), F("_door")), buf, true);
   Serial.println(F("Discovery: door button published"));
+
+  // ── 1a. Door state sensor ───────────────────────────────────────────
+  snprintf_P(buf, sizeof(buf),
+    PSTR("{\"name\":\"Garage Door State\","\
+         "\"uniq_id\":\"%s_door_state\","\
+         "\"state_topic\":\"garage/%s/door/state\","
+         "\"payload_on\":\"OPEN\",\"payload_off\":\"CLOSED\","
+         "\"avty_t\":\"%s\","
+         "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"Arduino\",\"mdl\":\"UNO R4 WiFi\"}"
+         "}"),
+    DEVICE_ID, DEVICE_ID, avail, DEVICE_ID, DEVICE_NAME);
+  mqtt.publish(buildDiscoveryTopic(F("binary_sensor"), F("_door_state")), buf, true);
+  Serial.println(F("Discovery: door state published"));
 
   // ── 2. Light ─────────────────────────────────────────────────────────
   snprintf_P(buf, sizeof(buf),
@@ -370,21 +425,25 @@ void MQTTManager::publishDiscovery()
 
   // ── 3. Climate ────────────────────────────────────────────────────────
   snprintf_P(buf, sizeof(buf),
-    PSTR("{\"name\":\"Garage Heater\","
+    PSTR("{\"name\":\"Garage Thermostat\","
          "\"uniq_id\":\"%s_hvac\","
-         "\"modes\":[\"off\",\"heat\"],"
+         "\"modes\":[\"off\",\"heat\",\"auto\"],"
          "\"mode_state_topic\":\"garage/%s/hvac/mode/state\","
          "\"mode_command_topic\":\"garage/%s/hvac/mode/cmd\","
-         "\"temperature_state_topic\":\"garage/%s/hvac/heat_set/state\","
-         "\"temperature_command_topic\":\"garage/%s/hvac/heat_set/cmd\","
+         "\"action_topic\":\"garage/%s/hvac/action/state\","
          "\"current_temperature_topic\":\"garage/%s/hvac/temp/state\","
+         "\"temperature_command_topic\":\"garage/%s/hvac/heat_set/cmd\","
+         "\"target_temp_low_state_topic\":\"garage/%s/hvac/cool_set/state\","
+         "\"target_temp_low_command_topic\":\"garage/%s/hvac/cool_set/cmd\","
+         "\"target_temp_high_state_topic\":\"garage/%s/hvac/heat_set/state\","
+         "\"target_temp_high_command_topic\":\"garage/%s/hvac/heat_set/cmd\","
          "\"temperature_unit\":\"F\","
          "\"min_temp\":32,\"max_temp\":90,\"temp_step\":1,"
          "\"avty_t\":\"%s\","
          "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"Arduino\",\"mdl\":\"UNO R4 WiFi\"}"
          "}"),
     DEVICE_ID,
-    DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID,
+    DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID,
     avail, DEVICE_ID, DEVICE_NAME);
   mqtt.publish(buildDiscoveryTopic(F("climate"), F("_hvac")), buf, true);
   Serial.println(F("Discovery: climate published"));
@@ -421,9 +480,8 @@ void MQTTManager::publishDiscovery()
   snprintf_P(buf, sizeof(buf),
     PSTR("{\"name\":\"Garage HVAC Lockout\","
          "\"uniq_id\":\"%s_lockout\","
-         "\"device_class\":\"problem\","
          "\"state_topic\":\"garage/%s/lockout/state\","
-         "\"payload_on\":\"ON\",\"payload_off\":\"OFF\","
+         "\"payload_on\":\"Lockout\",\"payload_off\":\"OK\","
          "\"avty_t\":\"%s\","
          "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"Arduino\",\"mdl\":\"UNO R4 WiFi\"}"
          "}"),

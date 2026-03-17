@@ -196,8 +196,15 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
              getHvacStateString(hvac), getDoorStateString(door));
     printLCDText(2, true, buf);
 
+    const char *modeStr;
+    switch (hvac.mode) {
+      case GarageHVAC::Off: modeStr = "Off"; break;
+      case GarageHVAC::Auto: modeStr = "Auto"; break;
+      case GarageHVAC::On: modeStr = "On"; break;
+      default: modeStr = "???"; break;
+    }
     snprintf(buf, sizeof(buf), "HVAC:%s",
-             hvac.lockout ? "LOCKOUT" : "Normal");
+             modeStr);
     printLCDText(3, true, buf);
 
 #if ENABLE_WIFI
@@ -244,6 +251,20 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     EditMode ? lcd.blink_on() : lcd.blink_off();
     snprintf(buf, sizeof(buf), "%d\x03", hvac.HVACSwing);
     printLCDText(3, true, buf);
+    break;
+
+  case MenuController::Screen::SetMode:
+    printLCDText(1, true, "HVAC Mode");
+    printLCDText(4, false, "\x01");
+    EditMode ? lcd.blink_on() : lcd.blink_off();
+    const char *modeStr;
+    switch (hvac.mode) {
+      case GarageHVAC::Off: modeStr = "Off"; break;
+      case GarageHVAC::Auto: modeStr = "Auto"; break;
+      case GarageHVAC::On: modeStr = "On"; break;
+      default: modeStr = "???"; break;
+    }
+    printLCDText(3, true, modeStr);
     break;
 
     // case MenuController::Screen::HVACBack:

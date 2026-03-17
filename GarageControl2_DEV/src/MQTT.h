@@ -75,9 +75,12 @@ private:
   uint8_t       prevDoorCode      = 0xFF;  // 0xFF = "not yet sent"
   float         prevTemp          = -999;
   float         prevHeatSet       = -999;
+  float         prevCoolSet       = -999;
   bool          prevMotion        = false;
   bool          prevLockout       = false;
-  bool          prevHvacOn        = false; // false=off true=heat
+  uint8_t       prevMode          = 0xFF; // 0xFF = "not yet sent"
+  uint8_t       prevHvacState     = 0xFF; // 0xFF = "not yet sent"
+  bool          hasValidTemp      = false; // Wait for first good temperature before publishing
 
   // ── Shared topic-building buffer ───────────────────────────────────────
   // Longest topic: "garage/garage_ctrl_01/light/duration/state" = 44 chars
@@ -151,12 +154,17 @@ public:
    * Only changed values are published to reduce traffic and avoid
    * unnecessary state churn.
    *
+   * Publishing is gated until a valid temperature reading is available to
+   * avoid sending stale/invalid data on startup.
+   *
    * @param lightOn Current light relay state (true = on).
    * @param durationMins Current light timeout duration in minutes.
    * @param doorCode Current door state code (0=open, 1=closed, 2=moving, 3=error).
    * @param tempF Current temperature in Fahrenheit.
-   * @param heatSet Current HVAC setpoint temperature.
-   * @param hvacOn HVAC enabled state (true = heat on).
+   * @param heatSet Current HVAC heating setpoint temperature.
+   * @param coolSet Current HVAC cooling setpoint temperature.
+   * @param mode HVAC mode (0=Off, 1=Auto, 2=On).
+   * @param hvacState HVAC runtime state (0=Waiting, 1=Heating, 2=Cooling, 3=Pending).
    * @param motionActive Motion sensor state (true = motion detected).
    * @param lockout HVAC lockout state (true = lockout active).
    */
@@ -165,7 +173,9 @@ public:
                            uint8_t       doorCode,
                            float         tempF,
                            float         heatSet,
-                           bool          hvacOn,
+                           float         coolSet,
+                           uint8_t       mode,
+                           uint8_t       hvacState,
                            bool          motionActive,
                            bool          lockout);
 };

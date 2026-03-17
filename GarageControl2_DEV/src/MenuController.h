@@ -41,8 +41,9 @@ public:
     Main,               ///< Main status screen (door/light/HVAC/motion)
     HVACMenu,           ///< HVAC menu (enable/disable, setpoint)
     SetHeat,            ///< Set heat setpoint (temperature)
-    SetCool,            ///< Placeholder / unused screen (reserved)
-    SetSwing,           ///< Placeholder / unused screen (reserved)
+    SetCool,            ///< Set cool setpoint (temperature)
+    SetSwing,           ///< Set temperature swing/hysteresis
+    SetMode,            ///< Set HVAC operation mode
     HVACBack,           ///< Back option in HVAC menu
     LightMenu,          ///< Light menu (timeout configuration)
     SetLightTimeout,    ///< Set auto-off timeout for lights
