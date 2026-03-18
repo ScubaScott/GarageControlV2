@@ -12,6 +12,12 @@
 #include <Arduino.h>
 
 /**
+ * @brief The current code version
+ */
+
+extern const char* GC_VERSION;
+
+/**
  * @brief Gets the current time in milliseconds.
  * @return Current time in milliseconds since program start.
  */

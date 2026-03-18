@@ -47,7 +47,9 @@ void LcdController::begin()
   lcd.createChar(3, Degree);
   clearDisplay();
   printLCDText(1, true, "Garage Control");
-  printLCDText(2, true, "version 2.0");
+  char buf[21];
+  snprintf(buf, sizeof(buf), "Version: %s", GC_VERSION);
+  printLCDText(2, true, buf);
 }
 
 // ============================================================
