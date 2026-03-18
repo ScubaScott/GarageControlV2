@@ -330,6 +330,7 @@ void MQTTManager::connectMQTT()
     mqtt.subscribe(buildTopic(F("/door/cmd")));
     mqtt.subscribe(buildTopic(F("/light/cmd")));
     mqtt.subscribe(buildTopic(F("/hvac/heat_set/cmd")));
+    mqtt.subscribe(buildTopic(F("/hvac/cool_set/cmd")));
     mqtt.subscribe(buildTopic(F("/hvac/mode/cmd")));
     mqtt.subscribe(buildTopic(F("/light/duration/cmd")));
 
@@ -442,9 +443,10 @@ void MQTTManager::publishDiscovery()
          "\"avty_t\":\"%s\","
          "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"Arduino\",\"mdl\":\"UNO R4 WiFi\"}"
          "}"),
-    DEVICE_ID,
-    DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID,
-    avail, DEVICE_ID, DEVICE_NAME);
+    DEVICE_ID,                                                              // 1:  uniq_id
+    DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID,                            // 2-5: mode/action/temp topics
+    DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID,                 // 6-10: heat/cool cmd+state topics
+    avail, DEVICE_ID, DEVICE_NAME); 
   mqtt.publish(buildDiscoveryTopic(F("climate"), F("_hvac")), buf, true);
   Serial.println(F("Discovery: climate published"));
 
