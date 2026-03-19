@@ -125,8 +125,19 @@ void MQTTManager::init(GarageController *ctrl,
 
 void MQTTManager::loop()
 {
-  if (netStatus == NetStatus::Disabled)
+  // When disabled due to repeated failures, attempt a full reconnect once per hour.
+  if (netStatus == NetStatus::Disabled) {
+    if (millis() - lastHourlyRetry >= 3600000UL) {
+      lastHourlyRetry = millis();
+      Serial.println(F("MQTT:Hourly reconnect attempt"));
+      consecutiveFailures = 0;
+      netStatus = NetStatus::Connecting;
+      connectWiFi();
+      if (WiFi.status() == WL_CONNECTED)
+        connectMQTT();
+    }
     return;
+  }
 
   if (WiFi.status() != WL_CONNECTED)
     connectWiFi();
@@ -168,13 +179,23 @@ void MQTTManager::publishStateChanges(bool          lightOn,
   if (netStatus == NetStatus::Disabled) return;
   if (!mqtt.connected()) return;
 
-  // Don't publish any state updates until we have a valid temperature.
-  // This prevents HA from seeing stale/invalid values on startup.
-  if (!hasValidTemp) {
-    // DS18B20 returns -127 or other out-of-range values when not ready.
-    if (isnan(tempF) || tempF < -40.0f || tempF > 150.0f)
-      return;
-    hasValidTemp = true;
+  // After every (re)connect, force all prev-state sentinels to differ from
+  // current state so that the next call publishes everything immediately.
+  // This overwrites any stale retained values HA has from a previous session
+  // (e.g. heatSet 70 retained in HA while device boots with heatSet 65).
+  // Temperature is excluded here – it is gated separately below until valid.
+  if (pendingFullPublish) {
+    prevLightState    = !lightOn;
+    prevLightDuration = durationMins + 1;
+    prevDoorCode      = 0xFF;
+    prevHeatSet       = heatSet + 10.0f;
+    prevCoolSet       = coolSet + 10.0f;
+    prevMode          = 0xFF;
+    prevHvacState     = 0xFF;
+    prevMotion        = !motionActive;
+    prevLockout       = !lockout;
+    // prevTemp intentionally NOT reset – temperature waits for hasValidTemp below
+    pendingFullPublish = false;
   }
 
   // Use a small stack buffer for numeric payloads (replaces heap String temps)
@@ -193,22 +214,26 @@ void MQTTManager::publishStateChanges(bool          lightOn,
   }
 
   if (doorCode != prevDoorCode) {
-    // Convert code to payload string without heap allocation.
-    // Use canonical values (uppercase) so Home Assistant can consume them
-    // cleanly via discovery mappings.
     const char *ds;
     switch (doorCode) {
-      case 0: ds = "OPEN";     break;
-      case 1: ds = "CLOSED";   break;
-      case 2: ds = "OPENING";  break;
-      case 3: ds = "ERROR";    break;
+      case 0: ds = "OPEN";      break;
+      case 1: ds = "CLOSED";    break;
+      case 2: ds = "OPENING";   break;
+      case 3: ds = "ERROR";     break;
       default: ds = "DISABLED"; break;
     }
     mqtt.publish(buildTopic(F("/door/state")), ds, true);
     prevDoorCode = doorCode;
   }
 
-  if (abs(tempF - prevTemp) >= 0.2f) {
+  // Temperature: validate before first publish.  Only this value is gated –
+  // setpoints and modes must publish immediately so HA does not retain stale
+  // values while waiting for the DS18B20 to return a valid reading.
+  if (!hasValidTemp) {
+    if (!isnan(tempF) && tempF > -40.0f && tempF < 150.0f)
+      hasValidTemp = true;
+  }
+  if (hasValidTemp && abs(tempF - prevTemp) >= 0.2f) {
     dtostrf(tempF, 4, 1, val);
     mqtt.publish(buildTopic(F("/hvac/temp/state")), val, true);
     prevTemp = tempF;
@@ -229,10 +254,10 @@ void MQTTManager::publishStateChanges(bool          lightOn,
   if (mode != prevMode) {
     const char *modeStr;
     switch (mode) {
-      case 0: modeStr = "off"; break;
-      case 1: modeStr = "auto"; break;
-      case 2: modeStr = "heat"; break;
-      default: modeStr = "off"; break;
+      case 0: modeStr = "off";       break;
+      case 1: modeStr = "heat_cool"; break;  // GarageHVAC::Auto maps to HA "heat_cool"
+      case 2: modeStr = "heat";      break;
+      default: modeStr = "off";      break;
     }
     mqtt.publish(buildTopic(F("/hvac/mode/state")), modeStr, true);
     prevMode = mode;
@@ -244,8 +269,8 @@ void MQTTManager::publishStateChanges(bool          lightOn,
       case 0: action = "idle";    break; // Waiting
       case 1: action = "heating"; break;
       case 2: action = "cooling"; break;
-      case 3: action = "pending"; break;
-      default: action = "unknown"; break;
+      case 3: action = "idle";    break; // Pending – "pending" not a valid HA climate action
+      default: action = "idle";   break;
     }
     mqtt.publish(buildTopic(F("/hvac/action/state")), action, true);
     prevHvacState = hvacState;
@@ -330,11 +355,16 @@ void MQTTManager::connectMQTT()
     mqtt.subscribe(buildTopic(F("/door/cmd")));
     mqtt.subscribe(buildTopic(F("/light/cmd")));
     mqtt.subscribe(buildTopic(F("/hvac/heat_set/cmd")));
-    mqtt.subscribe(buildTopic(F("/hvac/cool_set/cmd")));
+    mqtt.subscribe(buildTopic(F("/hvac/cool_set/cmd")));   // was missing – HA commands silently dropped
     mqtt.subscribe(buildTopic(F("/hvac/mode/cmd")));
     mqtt.subscribe(buildTopic(F("/light/duration/cmd")));
 
     publishDiscovery();
+
+    // Force a full state publish on the next publishStateChanges() call so that
+    // any stale retained values in HA are immediately overwritten with the
+    // device's current state.
+    pendingFullPublish = true;
 
     netStatus = NetStatus::Connected;
     consecutiveFailures = 0;
@@ -425,14 +455,42 @@ void MQTTManager::publishDiscovery()
   Serial.println(F("Discovery: light timeout published"));
 
   // ── 3. Climate ────────────────────────────────────────────────────────
+  //
+  // Mode mapping:  GarageHVAC::Off  → "off"
+  //                GarageHVAC::Auto → "heat_cool"  (dual setpoint; HA shows both sliders)
+  //                GarageHVAC::On   → "heat"        (single setpoint)
+  //
+  // "auto" was the previous value but HA treats it as fan-auto, not dual
+  // heat+cool.  "heat_cool" is the correct HA mode for a system that controls
+  // both a heat and a cool setpoint simultaneously.
+  //
+  // temperature_state/command_topic covers the single-setpoint "heat" mode.
+  // target_temp_low/high cover the dual-setpoint "heat_cool" mode.
+  //
+  // snprintf_P arg count:  14 × %s
+  //   1  uniq_id         DEVICE_ID
+  //   2  mode_state      DEVICE_ID
+  //   3  mode_cmd        DEVICE_ID
+  //   4  action          DEVICE_ID
+  //   5  current_temp    DEVICE_ID
+  //   6  temp_state      DEVICE_ID
+  //   7  temp_cmd        DEVICE_ID
+  //   8  low_state       DEVICE_ID
+  //   9  low_cmd         DEVICE_ID
+  //  10  high_state      DEVICE_ID
+  //  11  high_cmd        DEVICE_ID
+  //  12  avty_t          avail
+  //  13  dev ids         DEVICE_ID
+  //  14  dev name        DEVICE_NAME
   snprintf_P(buf, sizeof(buf),
     PSTR("{\"name\":\"Garage Thermostat\","
          "\"uniq_id\":\"%s_hvac\","
-         "\"modes\":[\"off\",\"heat\",\"auto\"],"
+         "\"modes\":[\"off\",\"heat\",\"heat_cool\"],"
          "\"mode_state_topic\":\"garage/%s/hvac/mode/state\","
          "\"mode_command_topic\":\"garage/%s/hvac/mode/cmd\","
          "\"action_topic\":\"garage/%s/hvac/action/state\","
          "\"current_temperature_topic\":\"garage/%s/hvac/temp/state\","
+         "\"temperature_state_topic\":\"garage/%s/hvac/heat_set/state\","
          "\"temperature_command_topic\":\"garage/%s/hvac/heat_set/cmd\","
          "\"target_temp_low_state_topic\":\"garage/%s/hvac/cool_set/state\","
          "\"target_temp_low_command_topic\":\"garage/%s/hvac/cool_set/cmd\","
@@ -443,10 +501,10 @@ void MQTTManager::publishDiscovery()
          "\"avty_t\":\"%s\","
          "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"Arduino\",\"mdl\":\"UNO R4 WiFi\"}"
          "}"),
-    DEVICE_ID,                                                              // 1:  uniq_id
-    DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID,                            // 2-5: mode/action/temp topics
-    DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID,                 // 6-10: heat/cool cmd+state topics
-    avail, DEVICE_ID, DEVICE_NAME); 
+    DEVICE_ID,                                                           //  1
+    DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID,  //  2-7
+    DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID,                         //  8-11
+    avail, DEVICE_ID, DEVICE_NAME);                                      // 12-14
   mqtt.publish(buildDiscoveryTopic(F("climate"), F("_hvac")), buf, true);
   Serial.println(F("Discovery: climate published"));
 

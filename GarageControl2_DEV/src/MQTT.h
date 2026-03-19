@@ -67,6 +67,8 @@ private:
 
   GarageController *controller;
   unsigned long lastMqttReconnect = 0;
+  unsigned long lastHourlyRetry   = 0;   // for once-per-hour retry after permanent disable
+  bool pendingFullPublish         = false; // set on (re)connect; forces full state re-publish
 
   // ── Previous-state cache (change-detection for publishStateChanges) ────
   // Use compact types instead of String objects to save heap.
