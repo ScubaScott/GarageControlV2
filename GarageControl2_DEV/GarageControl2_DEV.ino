@@ -24,6 +24,7 @@
  */
 
 #include "src/Utility.h"
+const char* GC_VERSION = "2.6.2";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -207,9 +208,10 @@ public:
     {
       if (expired(lastHvacCmd, 1000UL))  // Debounce HVAC commands
       {
-        if (payload == "off") hvac.mode = GarageHVAC::Off;
-        else if (payload == "auto") hvac.mode = GarageHVAC::Auto;
-        else if (payload == "heat") hvac.mode = GarageHVAC::On;
+        if      (payload == "off")       hvac.mode = GarageHVAC::Off;
+        else if (payload == "heat")      hvac.mode = GarageHVAC::Heat;
+        else if (payload == "heat_cool") hvac.mode = GarageHVAC::Heat_Cool;
+        else if (payload == "cool")      hvac.mode = GarageHVAC::Cool;
         lcdDisplay.SetDirty(false);
         lastHvacCmd = now();
       }

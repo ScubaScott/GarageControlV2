@@ -250,7 +250,7 @@ void MenuController::handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor 
     else          current = Screen::SetMode;
     break;
   case Screen::SetMode:
-    if (EditMode) hvac.mode = (GarageHVAC::Mode)((hvac.mode + 1) % 3);
+    if (EditMode) hvac.mode = (GarageHVAC::Mode)((hvac.mode + 1) % 4);
     else          current = Screen::SetSwing;
     break;
   case Screen::SetLightTimeout:
@@ -302,7 +302,7 @@ void MenuController::handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoo
     else          current = Screen::SetMode;
     break;
   case Screen::SetMode:
-    if (EditMode) hvac.mode = (GarageHVAC::Mode)((hvac.mode + 2) % 3);
+    if (EditMode) hvac.mode = (GarageHVAC::Mode)((hvac.mode + 3) % 4);
     else          current = Screen::HVACBack;
     break;
   case Screen::SetLightTimeout:

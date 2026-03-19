@@ -214,6 +214,9 @@ void MQTTManager::publishStateChanges(bool          lightOn,
   }
 
   if (doorCode != prevDoorCode) {
+    // Convert code to payload string without heap allocation.
+    // Use canonical values (uppercase) so Home Assistant can consume them
+    // cleanly via discovery mappings.
     const char *ds;
     switch (doorCode) {
       case 0: ds = "OPEN";      break;
@@ -254,9 +257,10 @@ void MQTTManager::publishStateChanges(bool          lightOn,
   if (mode != prevMode) {
     const char *modeStr;
     switch (mode) {
-      case 0: modeStr = "off";       break;
-      case 1: modeStr = "heat_cool"; break;  // GarageHVAC::Auto maps to HA "heat_cool"
-      case 2: modeStr = "heat";      break;
+      case 0: modeStr = "off";       break;  // Off
+      case 1: modeStr = "heat";      break;  // Heat
+      case 2: modeStr = "heat_cool"; break;  // Heat_Cool
+      case 3: modeStr = "cool";      break;  // Cool
       default: modeStr = "off";      break;
     }
     mqtt.publish(buildTopic(F("/hvac/mode/state")), modeStr, true);
@@ -269,8 +273,8 @@ void MQTTManager::publishStateChanges(bool          lightOn,
       case 0: action = "idle";    break; // Waiting
       case 1: action = "heating"; break;
       case 2: action = "cooling"; break;
-      case 3: action = "idle";    break; // Pending – "pending" not a valid HA climate action
-      default: action = "idle";   break;
+      case 3: action = "pending"; break;
+      default: action = "unknown"; break;
     }
     mqtt.publish(buildTopic(F("/hvac/action/state")), action, true);
     prevHvacState = hvacState;
@@ -355,7 +359,7 @@ void MQTTManager::connectMQTT()
     mqtt.subscribe(buildTopic(F("/door/cmd")));
     mqtt.subscribe(buildTopic(F("/light/cmd")));
     mqtt.subscribe(buildTopic(F("/hvac/heat_set/cmd")));
-    mqtt.subscribe(buildTopic(F("/hvac/cool_set/cmd")));   // was missing – HA commands silently dropped
+    mqtt.subscribe(buildTopic(F("/hvac/cool_set/cmd")));
     mqtt.subscribe(buildTopic(F("/hvac/mode/cmd")));
     mqtt.subscribe(buildTopic(F("/light/duration/cmd")));
 
@@ -485,26 +489,24 @@ void MQTTManager::publishDiscovery()
   snprintf_P(buf, sizeof(buf),
     PSTR("{\"name\":\"Garage Thermostat\","
          "\"uniq_id\":\"%s_hvac\","
-         "\"modes\":[\"off\",\"heat\",\"heat_cool\"],"
+         "\"modes\":[\"off\",\"heat\",\"cool\",\"heat_cool\"],"
          "\"mode_state_topic\":\"garage/%s/hvac/mode/state\","
          "\"mode_command_topic\":\"garage/%s/hvac/mode/cmd\","
          "\"action_topic\":\"garage/%s/hvac/action/state\","
          "\"current_temperature_topic\":\"garage/%s/hvac/temp/state\","
-         "\"temperature_state_topic\":\"garage/%s/hvac/heat_set/state\","
-         "\"temperature_command_topic\":\"garage/%s/hvac/heat_set/cmd\","
-         "\"target_temp_low_state_topic\":\"garage/%s/hvac/cool_set/state\","
-         "\"target_temp_low_command_topic\":\"garage/%s/hvac/cool_set/cmd\","
-         "\"target_temp_high_state_topic\":\"garage/%s/hvac/heat_set/state\","
-         "\"target_temp_high_command_topic\":\"garage/%s/hvac/heat_set/cmd\","
+         "\"target_temp_low_state_topic\":\"garage/%s/hvac/heat_set/state\","
+         "\"target_temp_low_command_topic\":\"garage/%s/hvac/heat_set/cmd\","
+         "\"target_temp_high_state_topic\":\"garage/%s/hvac/cool_set/state\","
+         "\"target_temp_high_command_topic\":\"garage/%s/hvac/cool_set/cmd\","
          "\"temperature_unit\":\"F\","
          "\"min_temp\":32,\"max_temp\":90,\"temp_step\":1,"
          "\"avty_t\":\"%s\","
          "\"dev\":{\"ids\":[\"%s\"],\"name\":\"%s\",\"mf\":\"Arduino\",\"mdl\":\"UNO R4 WiFi\"}"
          "}"),
-    DEVICE_ID,                                                           //  1
-    DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID,  //  2-7
-    DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID,                         //  8-11
-    avail, DEVICE_ID, DEVICE_NAME);                                      // 12-14
+    DEVICE_ID,
+    DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID,
+    DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID,
+    avail, DEVICE_ID, DEVICE_NAME);
   mqtt.publish(buildDiscoveryTopic(F("climate"), F("_hvac")), buf, true);
   Serial.println(F("Discovery: climate published"));
 

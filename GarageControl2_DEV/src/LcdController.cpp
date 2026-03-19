@@ -200,10 +200,11 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
 
     const char *modeStr;
     switch (hvac.mode) {
-      case GarageHVAC::Off: modeStr = "Off"; break;
-      case GarageHVAC::Auto: modeStr = "Auto"; break;
-      case GarageHVAC::On: modeStr = "On"; break;
-      default: modeStr = "???"; break;
+      case GarageHVAC::Off:      modeStr = "Off";  break;
+      case GarageHVAC::Heat:     modeStr = "Heat"; break;
+      case GarageHVAC::Heat_Cool: modeStr = "H+C"; break;
+      case GarageHVAC::Cool:     modeStr = "Cool"; break;
+      default:                   modeStr = "???";  break;
     }
     snprintf(buf, sizeof(buf), "HVAC:%s",
              modeStr);
@@ -261,10 +262,11 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     EditMode ? lcd.blink_on() : lcd.blink_off();
     const char *modeStr;
     switch (hvac.mode) {
-      case GarageHVAC::Off: modeStr = "Off"; break;
-      case GarageHVAC::Auto: modeStr = "Auto"; break;
-      case GarageHVAC::On: modeStr = "On"; break;
-      default: modeStr = "???"; break;
+      case GarageHVAC::Off:      modeStr = "Off";  break;
+      case GarageHVAC::Heat:     modeStr = "Heat"; break;
+      case GarageHVAC::Heat_Cool: modeStr = "H+C"; break;
+      case GarageHVAC::Cool:     modeStr = "Cool"; break;
+      default:                   modeStr = "???";  break;
     }
     printLCDText(3, true, modeStr);
     break;

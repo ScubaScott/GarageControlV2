@@ -49,10 +49,31 @@ GarageHVAC::State GarageHVAC::poll(float tempF)
     return state;
   }
 
-  bool useLockout = (mode == Auto);
+  // Heat_Cool is the only mode that respects the door-open lockout.
+  // Heat-only and Cool-only run unconditionally (manual intent).
+  bool useLockout = (mode == Heat_Cool);
+  bool canHeat    = (mode == Heat || mode == Heat_Cool);
+  bool canCool    = (mode == Cool || mode == Heat_Cool);
 
-  // Heating logic
-  if (tempF < heatSet)
+  // ── Turn off relays that the current mode no longer uses ─────────────
+  // Handles mid-run mode changes (e.g. Heat_Cool → Cool leaves heater on).
+  if (!canHeat && state == Heating)
+  {
+    motion.forceAck();
+    digitalWrite(heatPin, !heatActiveHigh);
+    state = Waiting;
+    Serial.println(F("HVAC:Waiting(mode chg)"));
+  }
+  if (!canCool && state == Cooling)
+  {
+    motion.forceAck();
+    digitalWrite(coolPin, !coolActiveHigh);
+    state = Waiting;
+    Serial.println(F("HVAC:Waiting(mode chg)"));
+  }
+
+  // ── Heating logic ─────────────────────────────────────────────────────
+  if (canHeat && tempF < heatSet)
   {
     if (!useLockout || !lockout)
     {
@@ -73,7 +94,7 @@ GarageHVAC::State GarageHVAC::poll(float tempF)
       Serial.println(F("HVAC:Pending"));
     }
   }
-  else if (tempF > heatSet + HVACSwing && state == Heating)
+  else if (canHeat && tempF > heatSet + HVACSwing && state == Heating)
   {
     motion.forceAck();
     digitalWrite(heatPin, !heatActiveHigh);
@@ -81,8 +102,8 @@ GarageHVAC::State GarageHVAC::poll(float tempF)
     Serial.println(F("HVAC:Waiting"));
   }
 
-  // Cooling logic
-  if (tempF > coolSet)
+  // ── Cooling logic ─────────────────────────────────────────────────────
+  if (canCool && tempF > coolSet)
   {
     if (!useLockout || !lockout)
     {
@@ -103,7 +124,7 @@ GarageHVAC::State GarageHVAC::poll(float tempF)
       Serial.println(F("HVAC:Pending"));
     }
   }
-  else if (tempF < coolSet - HVACSwing && state == Cooling)
+  else if (canCool && tempF < coolSet - HVACSwing && state == Cooling)
   {
     motion.forceAck();
     digitalWrite(coolPin, !coolActiveHigh);

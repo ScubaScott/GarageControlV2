@@ -32,11 +32,12 @@ public:
      */
     enum Mode
     {
-        Off, /**< HVAC system off */
-        Auto, /**< Automatic operation with lockout */
-        On /**< Manual operation without lockout */
+        Off,       /**< HVAC system off */
+        Heat,      /**< Heat only, no door-open lockout */
+        Heat_Cool, /**< Heat + Cool with door-open lockout */
+        Cool       /**< Cool only, no door-open lockout */
     };
-    Mode mode = Auto; /**< Current HVAC mode */
+    Mode mode = Heat_Cool; /**< Current HVAC mode */
 
     /**
      * @enum State
