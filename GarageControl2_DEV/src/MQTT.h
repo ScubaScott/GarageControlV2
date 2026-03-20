@@ -2,6 +2,7 @@
 #define MQTT_MANAGER_H
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include "Utility.h"
 
 // ============================================================
@@ -11,7 +12,7 @@
 
 #if ENABLE_WIFI
 
-#include <WiFiS3.h>   // Built into "Arduino UNO R4 Boards" package
+#include <WiFiS3.h> // Built into "Arduino UNO R4 Boards" package
 #include <PubSubClient.h>
 
 class GarageController;
@@ -46,43 +47,44 @@ public:
   };
 
 private:
-  WiFiClient   wifiClient;
+  WiFiClient wifiClient;
   PubSubClient mqtt;
 
   // Network status reporting / failure tracking
   NetStatus netStatus = NetStatus::Connecting;
-  uint8_t  consecutiveFailures = 0;
+  uint8_t consecutiveFailures = 0;
   static constexpr uint8_t MAX_FAILURES = 5;
 
   // ── Configuration (all point to flash literals - zero SRAM cost) ──────
   const char *WIFI_SSID;
   const char *WIFI_PASSWORD;
   const char *MQTT_SERVER;
-  int         MQTT_PORT;
+  int MQTT_PORT;
   const char *MQTT_USER;
   const char *MQTT_PASS;
-  const char *DEVICE_ID;       // e.g. "garage_ctrl_01"
+  const char *DEVICE_ID; // e.g. "garage_ctrl_01"
   const char *DEVICE_NAME;
   const char *DISCOVERY_PREFIX;
 
   GarageController *controller;
   unsigned long lastMqttReconnect = 0;
-  unsigned long lastHourlyRetry   = 0;   // for once-per-hour retry after permanent disable
-  bool pendingFullPublish         = false; // set on (re)connect; forces full state re-publish
+  unsigned long lastHourlyRetry = 0; // for once-per-hour retry after permanent disable
+  bool pendingFullPublish = false;   // set on (re)connect; forces full state re-publish
 
   // ── Previous-state cache (change-detection for publishStateChanges) ────
   // Use compact types instead of String objects to save heap.
-  bool          prevLightState    = false;
+  bool prevLightState = false;
   unsigned long prevLightDuration = 0;
-  uint8_t       prevDoorCode      = 0xFF;  // 0xFF = "not yet sent"
-  float         prevTemp          = -999;
-  float         prevHeatSet       = -999;
-  float         prevCoolSet       = -999;
-  bool          prevMotion        = false;
-  bool          prevLockout       = false;
-  uint8_t       prevMode          = 0xFF; // 0xFF = "not yet sent"
-  uint8_t       prevHvacState     = 0xFF; // 0xFF = "not yet sent"
-  bool          hasValidTemp      = false; // Wait for first good temperature before publishing
+  uint8_t prevDoorCode = 0xFF; // 0xFF = "not yet sent"
+  unsigned long prevDoorDuration = 0;
+  float prevTemp = -999;
+  float prevHeatSet = -999;
+  float prevCoolSet = -999;
+  bool prevMotion = false;
+  bool prevLockout = false;
+  uint8_t prevMode = 0xFF;      // 0xFF = "not yet sent"
+  uint8_t prevHvacState = 0xFF; // 0xFF = "not yet sent"
+  bool hasValidTemp = false;    // Wait for first good temperature before publishing
 
   // ── Shared topic-building buffer ───────────────────────────────────────
   // Longest topic: "garage/garage_ctrl_01/light/duration/state" = 44 chars
@@ -92,10 +94,10 @@ private:
 
   // Build a runtime topic into _topicBuf and return a pointer to it.
   // suffix must be a flash string (F() macro), e.g. buildTopic(F("/door/state"))
-  const char* buildTopic(const __FlashStringHelper *suffix);
+  const char *buildTopic(const __FlashStringHelper *suffix);
 
   // Build a discovery topic, e.g. buildDiscoveryTopic(F("button"), F("_door"))
-  const char* buildDiscoveryTopic(const __FlashStringHelper *component,
+  const char *buildDiscoveryTopic(const __FlashStringHelper *component,
                                   const __FlashStringHelper *entitySuffix);
 
   void connectWiFi();
@@ -135,10 +137,10 @@ public:
 
   // Network status helpers
   NetStatus getNetStatus() const;
-  const char* getNetStatusString() const;
+  const char *getNetStatusString() const;
   bool isNetworkEnabled() const;
-  void resetNetStatus();      // Reset failure counter and retry connections
-  void disableNetwork();      // Force disable network/MQTT activity
+  void resetNetStatus(); // Reset failure counter and retry connections
+  void disableNetwork(); // Force disable network/MQTT activity
 
   // Returns the current local IP address (or "n/a" if not connected).
   void getLocalIP(char *buf, size_t len) const;
@@ -148,7 +150,7 @@ public:
 
   // Returns a pointer to _topicBuf containing the requested topic.
   // Valid only until the next buildTopic() call - use immediately.
-  const char* getTopic(const __FlashStringHelper *suffix);
+  const char *getTopic(const __FlashStringHelper *suffix);
 
   /**
    * @brief Publishes sensor and state updates to MQTT.
@@ -160,8 +162,9 @@ public:
    * avoid sending stale/invalid data on startup.
    *
    * @param lightOn Current light relay state (true = on).
-   * @param durationMins Current light timeout duration in minutes.
+   * @param lightDurationMins Current light timeout duration in minutes.
    * @param doorCode Current door state code (0=open, 1=closed, 2=moving, 3=error).
+   * @param doorDurationMins Current light timeout duration in minutes.
    * @param tempF Current temperature in Fahrenheit.
    * @param heatSet Current HVAC heating setpoint temperature.
    * @param coolSet Current HVAC cooling setpoint temperature.
@@ -170,16 +173,21 @@ public:
    * @param motionActive Motion sensor state (true = motion detected).
    * @param lockout HVAC lockout state (true = lockout active).
    */
-  void publishStateChanges(bool          lightOn,
-                           unsigned long durationMins,
-                           uint8_t       doorCode,
-                           float         tempF,
-                           float         heatSet,
-                           float         coolSet,
-                           uint8_t       mode,
-                           uint8_t       hvacState,
-                           bool          motionActive,
-                           bool          lockout);
+  void publishStateChanges(bool lightOn,
+                           unsigned long lightDurationMins,
+                           uint8_t doorCode,
+                           unsigned long doorDurationMins,
+                           float tempF,
+                           float heatSet,
+                           float coolSet,
+                           uint8_t mode,
+                           uint8_t hvacState,
+                           bool motionActive,
+                           bool lockout);
+
+  void addDevice(JsonObject dev);
+
+  void makeTopic(char *out, size_t len, const char *base, const char *suffix);
 };
 
 extern MQTTManager *g_mqttManager;

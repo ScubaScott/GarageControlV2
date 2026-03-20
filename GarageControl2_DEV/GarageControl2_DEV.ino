@@ -24,14 +24,14 @@
  */
 
 #include "src/Utility.h"
-const char* GC_VERSION = "2.6.2";
+const char *GC_VERSION = "2.7.1";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-#include "src/MQTT.h"   // guards itself with #if ENABLE_WIFI
+#include "src/MQTT.h" // guards itself with #if ENABLE_WIFI
 
 #include "src/HVAC.h"
 #include "src/Motion.h"
@@ -51,7 +51,7 @@ const byte HVACHeatPin = 6;       // Relay → heater (active HIGH)
 const byte HVACCoolPin = 11;      // Relay → cooler (active HIGH)
 const byte HVACTempSensorPin = 7; // OneWire data (DS18B20)
 const byte MenuBtnDownPin = 8;    // Menu navigation (active LOW)
-const byte MenuBtnSetPin = 9;    // Menu select (active LOW)
+const byte MenuBtnSetPin = 9;     // Menu select (active LOW)
 const byte MenuBtnUpPin = 10;     // Menu navigation (active LOW)
 const byte LightSwitchPin = 13;   // Relay → garage light (active HIGH)
 
@@ -66,7 +66,7 @@ const byte LCD_ROWS = 4;
 //  Utility helpers
 // ============================================================
 
-unsigned long now()                                   { return millis(); }
+unsigned long now() { return millis(); }
 bool expired(unsigned long last, unsigned long interval) { return (now() - last) >= interval; }
 
 /**
@@ -79,12 +79,18 @@ bool expired(unsigned long last, unsigned long interval) { return (now() - last)
  */
 uint8_t doorStateCode(const GarageDoor &door)
 {
-  switch (door.getState()) {
-    case GarageDoor::Open:     return 0;
-    case GarageDoor::Closed:   return 1;
-    case GarageDoor::Moving:   return 2;
-    case GarageDoor::Error:    return 3;
-    default:                   return 4; // Disabled
+  switch (door.getState())
+  {
+  case GarageDoor::Open:
+    return 0;
+  case GarageDoor::Closed:
+    return 1;
+  case GarageDoor::Moving:
+    return 2;
+  case GarageDoor::Error:
+    return 3;
+  default:
+    return 4; // Disabled
   }
 }
 
@@ -100,18 +106,18 @@ GarageController *g_controller = nullptr;
 class GarageController
 {
 public:
-  MotionSensor      motion;
-  GarageLight       lights;
-  GarageDoor        door;
-  GarageHVAC        hvac;
-  MenuController    menu;
+  MotionSensor motion;
+  GarageLight lights;
+  GarageDoor door;
+  GarageHVAC hvac;
+  MenuController menu;
   LiquidCrystal_I2C lcd;
-  LcdController     lcdDisplay;
-  OneWire           oneWire;
+  LcdController lcdDisplay;
+  OneWire oneWire;
   DallasTemperature sensors;
 
   unsigned long lastTempPoll = 0;
-  float         tempF        = 0;
+  float tempF = 0;
 
 #if ENABLE_WIFI
   unsigned long lastDoorCmd = 0;
@@ -124,16 +130,17 @@ public:
 #endif
 
   GarageController()
-    : motion(PIRPin),
-      lights(LightSwitchPin, motion),
-      door(DoorButtonPin, DoorOpenPin, DoorClosedPin, motion),
-      hvac(HVACHeatPin, HVACCoolPin, motion),
-      menu(MenuBtnUpPin, MenuBtnDownPin, MenuBtnSetPin),
-      lcd(LCD_ADDR, LCD_COLS, LCD_ROWS),
-      lcdDisplay(lcd, menu),
-      oneWire(HVACTempSensorPin),
-      sensors(&oneWire)
-  {}
+      : motion(PIRPin),
+        lights(LightSwitchPin, motion),
+        door(DoorButtonPin, DoorOpenPin, DoorClosedPin, motion),
+        hvac(HVACHeatPin, HVACCoolPin, motion),
+        menu(MenuBtnUpPin, MenuBtnDownPin, MenuBtnSetPin),
+        lcd(LCD_ADDR, LCD_COLS, LCD_ROWS),
+        lcdDisplay(lcd, menu),
+        oneWire(HVACTempSensorPin),
+        sensors(&oneWire)
+  {
+  }
 
   void begin()
   {
@@ -159,24 +166,35 @@ public:
 
     if (strcmp(topic, mqttManager.getTopic(F("/door/cmd"))) == 0)
     {
-      if (expired(lastDoorCmd, 2000UL))  // Debounce door commands to prevent rapid toggling
+      if (expired(lastDoorCmd, 2000UL)) // Debounce door commands to prevent rapid toggling
       {
         door.manualActivate();
         lastDoorCmd = now();
         lcdDisplay.SetDirty(true);
       }
     }
+    else if (strcmp(topic, mqttManager.getTopic(F("/door/duration/cmd"))) == 0)
+    {
+      int mins = payload.toInt();
+      if (mins > 0 && mins <= 120)
+      {
+        door.autoCloseDuration = (unsigned long)mins * 60000UL;
+        lcdDisplay.SetDirty(false);
+      }
+    }
     else if (strcmp(topic, mqttManager.getTopic(F("/light/cmd"))) == 0)
     {
-      if (expired(lastLightCmd, 500UL))  // Debounce light commands
+      if (expired(lastLightCmd, 500UL)) // Debounce light commands
       {
-        if (payload == F("ON")) {
+        if (payload == F("ON"))
+        {
           lights.turnOn();
-          lcdDisplay.SetDirty(true);   // wake backlight when light turns on
+          lcdDisplay.SetDirty(true); // wake backlight when light turns on
         }
-        if (payload == F("OFF")) {
+        if (payload == F("OFF"))
+        {
           lights.turnOff();
-          lcdDisplay.SetDirty(false);  // update display but don't wake backlight
+          lcdDisplay.SetDirty(false); // update display but don't wake backlight
           lcdDisplay.setBacklight(false);
         }
         lastLightCmd = now();
@@ -193,7 +211,7 @@ public:
     }
     else if (strcmp(topic, mqttManager.getTopic(F("/hvac/heat_set/cmd"))) == 0)
     {
-      if (expired(lastHvacCmd, 1000UL))  // Debounce HVAC commands
+      if (expired(lastHvacCmd, 1000UL)) // Debounce HVAC commands
       {
         float val = payload.toFloat();
         if (val > 30 && val < 100)
@@ -206,19 +224,23 @@ public:
     }
     else if (strcmp(topic, mqttManager.getTopic(F("/hvac/mode/cmd"))) == 0)
     {
-      if (expired(lastHvacCmd, 1000UL))  // Debounce HVAC commands
+      if (expired(lastHvacCmd, 1000UL)) // Debounce HVAC commands
       {
-        if      (payload == "off")       hvac.mode = GarageHVAC::Off;
-        else if (payload == "heat")      hvac.mode = GarageHVAC::Heat;
-        else if (payload == "heat_cool") hvac.mode = GarageHVAC::Heat_Cool;
-        else if (payload == "cool")      hvac.mode = GarageHVAC::Cool;
+        if (payload == "off")
+          hvac.mode = GarageHVAC::Off;
+        else if (payload == "heat")
+          hvac.mode = GarageHVAC::Heat;
+        else if (payload == "heat_cool")
+          hvac.mode = GarageHVAC::Heat_Cool;
+        else if (payload == "cool")
+          hvac.mode = GarageHVAC::Cool;
         lcdDisplay.SetDirty(false);
         lastHvacCmd = now();
       }
     }
     else if (strcmp(topic, mqttManager.getTopic(F("/hvac/cool_set/cmd"))) == 0)
     {
-      if (expired(lastHvacCmd, 1000UL))  // Debounce HVAC commands
+      if (expired(lastHvacCmd, 1000UL)) // Debounce HVAC commands
       {
         float val = payload.toFloat();
         if (val > 30 && val < 100)
@@ -283,20 +305,22 @@ public:
     }
 
     bool menuEvent = menu.poll(hvac, lights, door);
-    if (menuEvent) lcdDisplay.SetDirty(true);
+    if (menuEvent)
+      lcdDisplay.SetDirty(true);
 
 #if ENABLE_WIFI
     mqttManager.publishStateChanges(
-      lights.isOn(),
-      lights.duration / 60000UL,
-      doorStateCode(door),         // uint8_t code - no String allocation
-      tempF,
-      hvac.heatSet,
-      hvac.coolSet,
-      (uint8_t)hvac.mode,          // uint8_t mode
-      (uint8_t)hvacState,          // uint8_t runtime state
-      motion.isActive(),
-      hvac.lockout);
+        lights.isOn(),
+        lights.duration / 60000UL,
+        doorStateCode(door), // uint8_t code - no String allocation
+        door.autoCloseDuration,
+        tempF,
+        hvac.heatSet,
+        hvac.coolSet,
+        (uint8_t)hvac.mode, // uint8_t mode
+        (uint8_t)hvacState, // uint8_t runtime state
+        motion.isActive(),
+        hvac.lockout);
 #endif
 
     lcdDisplay.updateDisplay(hvac, door, lights, tempF);

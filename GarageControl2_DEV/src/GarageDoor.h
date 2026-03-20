@@ -29,32 +29,32 @@ public:
    */
   enum State
   {
-    Open, /**< Door is fully open */
-    Closed, /**< Door is fully closed */
-    Moving, /**< Door is in motion */
-    Error, /**< Door operation error */
+    Open,    /**< Door is fully open */
+    Closed,  /**< Door is fully closed */
+    Moving,  /**< Door is in motion */
+    Error,   /**< Door operation error */
     Disabled /**< Door control disabled */
   };
 
 private:
   byte buttonPin, openPin, closedPin; /**< Pin assignments for door control */
-  bool buttonActiveHigh = true; /**< Button activation polarity */
+  bool buttonActiveHigh = true;       /**< Button activation polarity */
 
-  State state = Error; /**< Current door state */
-  unsigned long lastOpen = 0; /**< Timestamp when door was last opened */
+  State state = Error;           /**< Current door state */
+  unsigned long lastOpen = 0;    /**< Timestamp when door was last opened */
   unsigned long buttonStart = 0; /**< Timestamp when button was pressed */
-  unsigned long errorStart = 0; /**< Timestamp when error started */
-  bool buttonPressed = false; /**< Flag for button press state */
+  unsigned long errorStart = 0;  /**< Timestamp when error started */
+  bool buttonPressed = false;    /**< Flag for button press state */
 
-  unsigned long autoCloseDuration = 30UL * 60000UL; /**< Auto-close timeout (30 minutes) */
   unsigned long doorTravelTime = 10000UL; /**< Door travel time in milliseconds */
-  int maxAttempts = 3; /**< Maximum retry attempts */
-  int attempts = 0; /**< Current attempt count */
+  int maxAttempts = 3;                    /**< Maximum retry attempts */
+  int attempts = 0;                       /**< Current attempt count */
 
   const unsigned long buttonPressTime = 500; /**< Button press duration */
-  MotionSensor &motion; /**< Reference to motion sensor */
+  MotionSensor &motion;                      /**< Reference to motion sensor */
 
 public:
+  unsigned long autoCloseDuration = 30UL * 60000UL; /**< Auto-close timeout (30 minutes) */
   /**
    * @brief Constructor for GarageDoor.
    * @param btn Button pin number.

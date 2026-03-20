@@ -57,5 +57,4 @@ public:
      */
     bool isActive();
 };
-
 #endif
