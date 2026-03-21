@@ -24,7 +24,7 @@
  */
 
 #include "src/Utility.h"
-const char *GC_VERSION = "2.7.1";
+const char *GC_VERSION = "2.7.2";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -313,7 +313,7 @@ public:
         lights.isOn(),
         lights.duration / 60000UL,
         doorStateCode(door), // uint8_t code - no String allocation
-        door.autoCloseDuration,
+        door.autoCloseDuration / 60000UL,
         tempF,
         hvac.heatSet,
         hvac.coolSet,

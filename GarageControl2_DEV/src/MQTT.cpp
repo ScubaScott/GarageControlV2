@@ -654,7 +654,7 @@ void MQTTManager::publishDiscovery()
   // Climate
   // ========================================================
   {
-    StaticJsonDocument<768> doc;
+    StaticJsonDocument<1024> doc;
 
     doc["name"] = "Garage Thermostat";
 

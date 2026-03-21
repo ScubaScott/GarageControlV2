@@ -43,9 +43,9 @@ MenuController::MenuController(byte up, byte down, byte set)
  */
 void MenuController::begin()
 {
-  pinMode(pinUp,   INPUT_PULLUP);
+  pinMode(pinUp, INPUT_PULLUP);
   pinMode(pinDown, INPUT_PULLUP);
-  pinMode(pinSet,  INPUT_PULLUP);
+  pinMode(pinSet, INPUT_PULLUP);
 }
 
 /**
@@ -70,10 +70,17 @@ void MenuController::noteActivity()
 bool MenuController::pressed(byte btnIndex)
 {
   byte pin;
-  switch (btnIndex) {
-    case BTN_UP:   pin = pinUp;   break;
-    case BTN_DOWN: pin = pinDown; break;
-    default:       pin = pinSet;  break;
+  switch (btnIndex)
+  {
+  case BTN_UP:
+    pin = pinUp;
+    break;
+  case BTN_DOWN:
+    pin = pinDown;
+    break;
+  default:
+    pin = pinSet;
+    break;
   }
 
   bool currentState = digitalRead(pin); // LOW = pressed (INPUT_PULLUP)
@@ -85,7 +92,7 @@ bool MenuController::pressed(byte btnIndex)
     if (expired(lastPressTime[btnIndex], DEBOUNCE_MS))
     {
       lastPressTime[btnIndex] = now();
-      lastPinState[btnIndex]  = currentState;
+      lastPinState[btnIndex] = currentState;
       return true;
     }
   }
@@ -104,7 +111,7 @@ bool MenuController::poll(GarageHVAC &hvac, GarageLight &lights, GarageDoor &doo
   if (current != Screen::Main && expired(lastActivity, MENU_TIMEOUT))
   {
     Serial.println(F("Menu:Timeout->Main"));
-    current  = Screen::Main;
+    current = Screen::Main;
     EditMode = false;
     activity = true;
   }
@@ -168,7 +175,7 @@ void MenuController::handleSet()
   switch (current)
   {
   case Screen::Main:
-    current  = Screen::HVACMenu;
+    current = Screen::HVACMenu;
     EditMode = false;
     break;
   case Screen::HVACMenu:
@@ -181,6 +188,9 @@ void MenuController::handleSet()
     EditMode = !EditMode;
     break;
   case Screen::SetSwing:
+    EditMode = !EditMode;
+    break;
+  case Screen::SetMode:
     EditMode = !EditMode;
     break;
   case Screen::HVACBack:
@@ -229,45 +239,73 @@ void MenuController::handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor 
 {
   switch (current)
   {
-  case Screen::LightMenu:   current = Screen::HVACMenu;  break;
-  case Screen::DoorMenu:    current = Screen::LightMenu;  break;
-  case Screen::MenuExit:    current = Screen::ConfigMenu;   break;
-  case Screen::HVACBack:    current = Screen::SetMode;  break;
-  case Screen::LightBack:   current = Screen::SetLightTimeout; break;
-  case Screen::DoorBack:    current = Screen::SetDoorAttempts; break;
-  case Screen::ConfigMenu:    current = Screen::DoorMenu; break;
-  case Screen::ConfigBack:    current = Screen::NetworkInfo; break;
+  case Screen::LightMenu:
+    current = Screen::HVACMenu;
+    break;
+  case Screen::DoorMenu:
+    current = Screen::LightMenu;
+    break;
+  case Screen::MenuExit:
+    current = Screen::ConfigMenu;
+    break;
+  case Screen::HVACBack:
+    current = Screen::SetMode;
+    break;
+  case Screen::LightBack:
+    current = Screen::SetLightTimeout;
+    break;
+  case Screen::DoorBack:
+    current = Screen::SetDoorAttempts;
+    break;
+  case Screen::ConfigMenu:
+    current = Screen::DoorMenu;
+    break;
+  case Screen::ConfigBack:
+    current = Screen::NetworkInfo;
+    break;
 
   case Screen::SetHeat:
-    if (EditMode) hvac.heatSet++;
+    if (EditMode)
+      hvac.heatSet++;
     break;
   case Screen::SetCool:
-    if (EditMode) hvac.coolSet++;
-    else          current = Screen::SetHeat;
+    if (EditMode)
+      hvac.coolSet++;
+    else
+      current = Screen::SetHeat;
     break;
   case Screen::SetSwing:
-    if (EditMode) hvac.HVACSwing++;
-    else          current = Screen::SetMode;
+    if (EditMode)
+      hvac.HVACSwing++;
+    else
+      current = Screen::SetMode;
     break;
   case Screen::SetMode:
-    if (EditMode) hvac.mode = (GarageHVAC::Mode)((hvac.mode + 1) % 4);
-    else          current = Screen::SetSwing;
+    if (EditMode)
+      hvac.mode = (GarageHVAC::Mode)((hvac.mode + 1) % 4);
+    else
+      current = Screen::SetSwing;
     break;
   case Screen::SetLightTimeout:
-    if (EditMode) lights.duration += 60000UL;
+    if (EditMode)
+      lights.duration += 60000UL;
     break;
   case Screen::SetDoorTimeout:
-    if (EditMode) door.setAutoClose(door.getAutoClose() + 60000UL);
+    if (EditMode)
+      door.setAutoClose(door.getAutoClose() + 60000UL);
     break;
   case Screen::SetDoorAttempts:
-    if (EditMode) door.setMaxAttempts(door.getMaxAttempts() + 1);
-    else          current = Screen::SetDoorTimeout;
+    if (EditMode)
+      door.setMaxAttempts(door.getMaxAttempts() + 1);
+    else
+      current = Screen::SetDoorTimeout;
     break;
   case Screen::NetworkInfo:
     if (EditMode)
     {
 #if ENABLE_WIFI
-      if (g_mqttManager) {
+      if (g_mqttManager)
+      {
         g_mqttManager->resetNetStatus();
         Serial.println(F("Menu:Network reset (retry connections)"));
       }
@@ -284,51 +322,75 @@ void MenuController::handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoo
 {
   switch (current)
   {
-  case Screen::HVACMenu:  current = Screen::LightMenu;  break;
-  case Screen::LightMenu: current = Screen::DoorMenu;   break;
-  case Screen::DoorMenu:  current = Screen::ConfigMenu;   break;
-  case Screen::ConfigMenu:  current = Screen::MenuExit;   break;
+  case Screen::HVACMenu:
+    current = Screen::LightMenu;
+    break;
+  case Screen::LightMenu:
+    current = Screen::DoorMenu;
+    break;
+  case Screen::DoorMenu:
+    current = Screen::ConfigMenu;
+    break;
+  case Screen::ConfigMenu:
+    current = Screen::MenuExit;
+    break;
 
   case Screen::SetHeat:
-    if (EditMode) hvac.heatSet--;
-    else          current = Screen::SetCool;
+    if (EditMode)
+      hvac.heatSet--;
+    else
+      current = Screen::SetCool;
     break;
   case Screen::SetCool:
-    if (EditMode) hvac.coolSet--;
-    else          current = Screen::SetSwing;
+    if (EditMode)
+      hvac.coolSet--;
+    else
+      current = Screen::SetSwing;
     break;
   case Screen::SetSwing:
-    if (EditMode) hvac.HVACSwing--;
-    else          current = Screen::SetMode;
+    if (EditMode)
+      hvac.HVACSwing--;
+    else
+      current = Screen::SetMode;
     break;
   case Screen::SetMode:
-    if (EditMode) hvac.mode = (GarageHVAC::Mode)((hvac.mode + 3) % 4);
-    else          current = Screen::HVACBack;
+    if (EditMode)
+      hvac.mode = (GarageHVAC::Mode)((hvac.mode + 3) % 4);
+    else
+      current = Screen::HVACBack;
     break;
   case Screen::SetLightTimeout:
-    if (EditMode) lights.duration -= 60000UL;
-    else          current = Screen::LightBack;
+    if (EditMode)
+      lights.duration -= 60000UL;
+    else
+      current = Screen::LightBack;
     break;
   case Screen::SetDoorTimeout:
-    if (EditMode) door.setAutoClose(door.getAutoClose() - 60000UL);
-    else          current = Screen::SetDoorAttempts;
+    if (EditMode)
+      door.setAutoClose(door.getAutoClose() - 60000UL);
+    else
+      current = Screen::SetDoorAttempts;
     break;
   case Screen::SetDoorAttempts:
-    if (EditMode) door.setMaxAttempts(door.getMaxAttempts() - 1);
-    else          current = Screen::DoorBack;
+    if (EditMode)
+      door.setMaxAttempts(door.getMaxAttempts() - 1);
+    else
+      current = Screen::DoorBack;
     break;
   case Screen::NetworkInfo:
     if (EditMode)
     {
 #if ENABLE_WIFI
-      if (g_mqttManager) {
+      if (g_mqttManager)
+      {
         g_mqttManager->disableNetwork();
         Serial.println(F("Menu:Network disabled"));
       }
 #endif
       EditMode = false;
     }
-    else current = Screen::ConfigBack;
+    else
+      current = Screen::ConfigBack;
     break;
   default:
     break;
