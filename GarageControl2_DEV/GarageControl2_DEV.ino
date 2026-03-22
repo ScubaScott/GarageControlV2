@@ -24,7 +24,7 @@
  */
 
 #include "src/Utility.h"
-const char *GC_VERSION = "2.7.2";
+const char *GC_VERSION = "2.8";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -312,8 +312,10 @@ public:
     mqttManager.publishStateChanges(
         lights.isOn(),
         lights.duration / 60000UL,
+        lights.lightRemaining() / 60000UL,
         doorStateCode(door), // uint8_t code - no String allocation
         door.autoCloseDuration / 60000UL,
+        door.getDoorRemainingTime() / 60000UL,
         tempF,
         hvac.heatSet,
         hvac.coolSet,

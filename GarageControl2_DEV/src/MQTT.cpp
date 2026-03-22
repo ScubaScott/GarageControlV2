@@ -181,18 +181,24 @@ void MQTTManager::loop()
  * @brief Publishes state changes to MQTT topics.
  * @param lightOn Current light state.
  * @param lightDurationMins Light timeout in minutes.
- * @param doorState Current door state string.
- * @param doorDurationMins Light timeout in minutes.
+ * @param lightRemainingMins Light timeout remaining in minutes.
+ * @param doorCode Current door state code.
+ * @param doorDurationMins Door timeout in minutes.
+ * @param doorRemainingMins Door timeout remaining in minutes.
  * @param tempF Current temperature.
  * @param heatSet Heat setpoint.
- * @param hvacMode HVAC mode string.
+ * @param coolSet Cool setpoint.
+ * @param mode HVAC mode code.
+ * @param hvacState HVAC state code.
  * @param motionActive Motion sensor state.
  * @param lockout HVAC lockout state.
  */
 void MQTTManager::publishStateChanges(bool lightOn,
                                       unsigned long lightDurationMins,
+                                      unsigned long lightRemainingMins,
                                       uint8_t doorCode,
                                       unsigned long doorDurationMins,
+                                      unsigned long doorRemainingMins,
                                       float tempF,
                                       float heatSet,
                                       float coolSet,
@@ -215,8 +221,10 @@ void MQTTManager::publishStateChanges(bool lightOn,
   {
     prevLightState = !lightOn;
     prevLightDuration = lightDurationMins + 1;
+    prevLightRemaining = lightRemainingMins + 1;
     prevDoorCode = 0xFF;
     prevDoorDuration = doorDurationMins + 1;
+    prevDoorRemaining = doorRemainingMins + 1;
     prevHeatSet = heatSet + 10.0f;
     prevCoolSet = coolSet + 10.0f;
     prevMode = 0xFF;
@@ -242,6 +250,13 @@ void MQTTManager::publishStateChanges(bool lightOn,
     snprintf(val, sizeof(val), "%lu", lightDurationMins);
     mqtt.publish(buildTopic(F("/light/duration/state")), val, true);
     prevLightDuration = lightDurationMins;
+  }
+
+  if (lightRemainingMins != prevLightRemaining)
+  {
+    snprintf(val, sizeof(val), "%lu", lightRemainingMins);
+    mqtt.publish(buildTopic(F("/light/remaining/state")), val, true);
+    prevLightRemaining = lightRemainingMins;
   }
 
   if (doorCode != prevDoorCode)
@@ -277,6 +292,13 @@ void MQTTManager::publishStateChanges(bool lightOn,
     snprintf(val, sizeof(val), "%lu", doorDurationMins);
     mqtt.publish(buildTopic(F("/door/duration/state")), val, true);
     prevDoorDuration = doorDurationMins;
+  }
+
+  if (doorRemainingMins != prevDoorRemaining)
+  {
+    snprintf(val, sizeof(val), "%lu", doorRemainingMins);
+    mqtt.publish(buildTopic(F("/door/remaining/state")), val, true);
+    prevDoorRemaining = doorRemainingMins;
   }
 
   // Temperature: validate before first publish.  Only this value is gated –
@@ -451,7 +473,7 @@ void MQTTManager::connectMQTT()
     mqtt.subscribe(buildTopic(F("/light/duration/cmd")));
     mqtt.subscribe(buildTopic(F("/hvac/heat_set/cmd")));
     mqtt.subscribe(buildTopic(F("/hvac/cool_set/cmd")));
-    mqtt.subscribe(buildTopic(F("/hvac/mode/cmd"))); 
+    mqtt.subscribe(buildTopic(F("/hvac/mode/cmd")));
 
     publishDiscovery();
 
@@ -586,6 +608,33 @@ void MQTTManager::publishDiscovery()
     Serial.println(F("Discovery: door timeout published"));
   }
 
+  {
+    StaticJsonDocument<256> doc;
+
+    doc["name"] = "Garage Door Remaining";
+
+    char uniq[32];
+    snprintf(uniq, sizeof(uniq), "%s_door_remaining", DEVICE_ID);
+    doc["uniq_id"] = uniq;
+
+    char topic[64];
+    makeTopic(topic, sizeof(topic), base, "door/remaining/state");
+    doc["state_topic"] = topic;
+
+    doc["min"] = 1;
+    doc["max"] = 120;
+    doc["step"] = 1;
+    doc["unit_of_measurement"] = "min";
+
+    doc["avty_t"] = avail;
+
+    addDevice(doc.createNestedObject("dev"));
+
+    serializeJson(doc, buf, sizeof(buf));
+    mqtt.publish(buildDiscoveryTopic(F("number"), F("_door_remaining")), buf, true);
+    Serial.println(F("Discovery: door remaining published"));
+  }
+
   // ========================================================
   // Light
   // ========================================================
@@ -648,6 +697,33 @@ void MQTTManager::publishDiscovery()
     serializeJson(doc, buf, sizeof(buf));
     mqtt.publish(buildDiscoveryTopic(F("number"), F("_light_timeout")), buf, true);
     Serial.println(F("Discovery: light timeout published"));
+  }
+
+  {
+    StaticJsonDocument<256> doc;
+
+    doc["name"] = "Garage Light Remaining";
+
+    char uniq[32];
+    snprintf(uniq, sizeof(uniq), "%s_light_remaining", DEVICE_ID);
+    doc["uniq_id"] = uniq;
+
+    char topic[64];
+    makeTopic(topic, sizeof(topic), base, "light/remaining/state");
+    doc["state_topic"] = topic;
+
+    doc["min"] = 1;
+    doc["max"] = 120;
+    doc["step"] = 1;
+    doc["unit_of_measurement"] = "min";
+
+    doc["avty_t"] = avail;
+
+    addDevice(doc.createNestedObject("dev"));
+
+    serializeJson(doc, buf, sizeof(buf));
+    mqtt.publish(buildDiscoveryTopic(F("number"), F("_light_remaining")), buf, true);
+    Serial.println(F("Discovery: Light remaining published"));
   }
 
   // ========================================================

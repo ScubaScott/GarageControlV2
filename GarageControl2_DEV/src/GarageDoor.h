@@ -95,6 +95,12 @@ public:
   unsigned long getDoorTravelTime() const;
 
   /**
+   * @brief Gets the door open time remaining.
+   * @return door open time remaining in milliseconds.
+   */
+  unsigned long getDoorRemainingTime();
+
+  /**
    * @brief Sets the door travel time.
    * @param ms Door travel time in milliseconds.
    */

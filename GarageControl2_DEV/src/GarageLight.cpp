@@ -64,3 +64,21 @@ void GarageLight::poll()
  * @return True if light is on, false otherwise.
  */
 bool GarageLight::isOn() { return digitalRead(pin) == onState; }
+
+/**
+ * @brief Gets the current light remaining time.
+ * @return number of milliseconds remaining before the light is turned off.
+ */
+unsigned long GarageLight::lightRemaining()
+{
+  if (isOn())
+  {
+    unsigned long elapsed = now() - lastOn;
+    if (elapsed < duration) {
+      return duration - elapsed;
+    } else {
+      return 0;
+    }
+  }
+  return 0;
+}

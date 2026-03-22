@@ -58,6 +58,12 @@ public:
    * @return True if light is on, false otherwise.
    */
   bool isOn();
+  
+  /**
+   * @brief Gets the current light remaing time.
+   * @return number of minutes remaining before the light is turned off.
+   */
+  unsigned long lightRemaining();
 };
 
 #endif

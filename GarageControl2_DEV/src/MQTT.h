@@ -75,8 +75,10 @@ private:
   // Use compact types instead of String objects to save heap.
   bool prevLightState = false;
   unsigned long prevLightDuration = 0;
+  unsigned long prevLightRemaining = 0;
   uint8_t prevDoorCode = 0xFF; // 0xFF = "not yet sent"
   unsigned long prevDoorDuration = 0;
+  unsigned long prevDoorRemaining = 0;
   float prevTemp = -999;
   float prevHeatSet = -999;
   float prevCoolSet = -999;
@@ -163,8 +165,10 @@ public:
    *
    * @param lightOn Current light relay state (true = on).
    * @param lightDurationMins Current light timeout duration in minutes.
+   * @param LightRemainingMins Current light timeout remaining in minutes.
    * @param doorCode Current door state code (0=open, 1=closed, 2=moving, 3=error).
-   * @param doorDurationMins Current light timeout duration in minutes.
+   * @param doorDurationMins Current door timeout duration in minutes.
+   * @param DoorRemainingMins Current door timeout remaining in minutes.
    * @param tempF Current temperature in Fahrenheit.
    * @param heatSet Current HVAC heating setpoint temperature.
    * @param coolSet Current HVAC cooling setpoint temperature.
@@ -175,8 +179,10 @@ public:
    */
   void publishStateChanges(bool lightOn,
                            unsigned long lightDurationMins,
+                           unsigned long lightRemainingMins,
                            uint8_t doorCode,
                            unsigned long doorDurationMins,
+                           unsigned long doorRemainingMins,
                            float tempF,
                            float heatSet,
                            float coolSet,
