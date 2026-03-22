@@ -631,7 +631,7 @@ void MQTTManager::publishDiscovery()
     addDevice(doc.createNestedObject("dev"));
 
     serializeJson(doc, buf, sizeof(buf));
-    mqtt.publish(buildDiscoveryTopic(F("number"), F("_door_remaining")), buf, true);
+    mqtt.publish(buildDiscoveryTopic(F("sensor"), F("_door_remaining")), buf, true);
     Serial.println(F("Discovery: door remaining published"));
   }
 
@@ -722,7 +722,7 @@ void MQTTManager::publishDiscovery()
     addDevice(doc.createNestedObject("dev"));
 
     serializeJson(doc, buf, sizeof(buf));
-    mqtt.publish(buildDiscoveryTopic(F("number"), F("_light_remaining")), buf, true);
+    mqtt.publish(buildDiscoveryTopic(F("sensor"), F("_light_remaining")), buf, true);
     Serial.println(F("Discovery: Light remaining published"));
   }
 
