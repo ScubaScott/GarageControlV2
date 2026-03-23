@@ -1,9 +1,14 @@
 /**
  * @file MenuController.h
- * @brief Header file for menu navigation controller.
+ * @brief Menu navigation controller with debounced button input.
  *
- * This file defines the MenuController class which handles LCD menu navigation,
- * button input processing, and timeout management for the garage control system.
+ * This file defines the MenuController class which manages the multi-level LCD menu system,
+ * handles debounced button input from the three navigation buttons (up/down/set),
+ * provides timeout-based auto-return to status display, and coordinates with
+ * the LCD display and controllable subsystems (door, lights, HVAC).
+ *
+ * The menu system is hierarchical with a main status screen, configuration submenus
+ * for each subsystem, and editing modes for numeric values (timeouts, temperatures).
  */
 
 #ifndef MENU_CONTROLLER_H
@@ -17,65 +22,112 @@ class GarageDoor;
 
 /**
  * @class MenuController
- * @brief Manages LCD menu navigation and button input processing.
+ * @brief Manages hierarchical LCD menu navigation and button input processing.
  *
- * This class handles menu screen transitions, button debouncing, timeout management,
- * and editing modes for configuring garage door, lighting, and HVAC settings.
+ * This class provides:
+ * - **Screen hierarchy** organizing status display and subsystem configuration
+ * - **Button debouncing** with independent state tracking for each of 3 buttons
+ * - **Menu timeout** (20 seconds) to auto-return to main status display
+ * - **Edit mode** for numeric values (temperatures, timeouts, retry counts)
+ * - **Activity tracking** to extend timeout when buttons are pressed or MQTT commands arrive
+ *
+ * Navigation Flow:
+ * - **Main** - Status screen showing current system state
+ * - Press **Set** → Enter configuration menu hierarchy
+ * - **HVAC/Light/Door/Config** - Submenu categories
+ * - **Set*** screens - Edit individual parameters
+ * - **Back** options - Return to parent menus
+ * - 20-second inactivity → Auto-return to Main
+ *
+ * Button assignments (INPUT_PULLUP, so unpressed=HIGH):
+ * - **Up**: Navigate menus up, decrease numeric values
+ * - **Down**: Navigate menus down, increase numeric values
+ * - **Set**: Enter submenu/edit mode, confirm changes
+ *
+ * @note EditMode flag indicates when a numeric parameter is being edited.
+ *       The LCD controller uses this to highlight the editable field.
  */
 class MenuController
 {
 public:
   /**
    * @enum Screen
-   * @brief Enumeration of available menu screens.
+   * @brief Enumeration of all available menu screens in the hierarchy.
    *
-   * The menu is driven by three hardware buttons (up/down/set) and is
-   * displayed on the I2C LCD. Screens are grouped into logical sections
-   * (HVAC, Light, Door, Config). Navigation generally works as:
-   *   - Main: status summary (door state, temp, motion, light state)
-   *   - Press Set -> enters the first submenu (HVAC)
-   *   - Up/Down moves between options, Set selects, timeout returns to Main
+   * The menu hierarchy is organized by subsystem function:
+   * - **Main**: Status summary screen (primary display)
+   * - **HVAC section**: Heating/cooling configuration
+   * - **Light section**: Lighting timeout configuration
+   * - **Door section**: Garage door auto-close configuration
+   * - **Config section**: Network status and diagnostics
+   * - **Navigation**: Back buttons and exit paths
+   *
+   * Each configuration section follows the pattern:
+   * - [Subsystem]Menu → lists configurable options
+   * - Set[Parameter] → edit individual parameters
+   * - [Subsystem]Back → return to Main
    */
   enum class Screen
   {
-    Main,               ///< Main status screen (door/light/HVAC/motion)
-    HVACMenu,           ///< HVAC menu (enable/disable, setpoint)
-    SetHeat,            ///< Set heat setpoint (temperature)
-    SetCool,            ///< Set cool setpoint (temperature)
-    SetSwing,           ///< Set temperature swing/hysteresis
-    SetMode,            ///< Set HVAC operation mode
-    HVACBack,           ///< Back option in HVAC menu
-    LightMenu,          ///< Light menu (timeout configuration)
-    SetLightTimeout,    ///< Set auto-off timeout for lights
-    LightBack,          ///< Back option in light menu
-    DoorMenu,           ///< Door menu (auto-close / retry settings)
-    SetDoorTimeout,     ///< Set auto-close timeout
-    SetDoorAttempts,    ///< Set max retry attempts for auto-close
-    DoorBack,           ///< Back option in door menu
-    ConfigMenu,         ///< Configuration menu (network/status)
-    NetworkInfo,        ///< Show network/WiFi/MQTT status
-    NetworkReset,       ///< Trigger network reconnect/reset
-    ConfigBack,         ///< Back option in config menu
-    MenuExit,           ///< Exit menu and return to Main status
-    Count               ///< Internal: number of screens
+    // ── Main Status Screen ──────────────────────────────────
+    Main,               ///< Main status screen (door/light/HVAC/motion/temperature)
+    
+    // ── HVAC Configuration Submenu ──────────────────────────
+    HVACMenu,           ///< HVAC menu: select what to configure (mode, setpoints, etc)
+    SetHeat,            ///< Edit heat setpoint temperature (°F)
+    SetCool,            ///< Edit cool setpoint temperature (°F)
+    SetSwing,           ///< Edit temperature hysteresis/swing (°F)
+    SetMode,            ///< Select HVAC mode (Off/Heat/Heat_Cool/Cool)
+    HVACBack,           ///< Return from HVAC menu to Main
+    
+    // ── Light Configuration Submenu ─────────────────────────
+    LightMenu,          ///< Light menu: select what to configure (timeout)
+    SetLightTimeout,    ///< Edit auto-off timeout duration (minutes)
+    LightBack,          ///< Return from Light menu to Main
+    
+    // ── Door Configuration Submenu ──────────────────────────
+    DoorMenu,           ///< Door menu: select what to configure (timeout, retries)
+    SetDoorTimeout,     ///< Edit auto-close timeout duration (minutes)
+    SetDoorAttempts,    ///< Edit max retry attempts for auto-close
+    DoorBack,           ///< Return from Door menu to Main
+    
+    // ── Network/Config Submenu ─────────────────────────────
+    ConfigMenu,         ///< Config menu: view status or trigger actions
+    NetworkInfo,        ///< Display network status (WiFi/MQTT connection state)
+    NetworkReset,       ///< Trigger network reconnection attempt
+    ConfigBack,         ///< Return from Config menu to Main
+    
+    // ── Menu Control ────────────────────────────────────────
+    MenuExit,           ///< Exit menu system and return to Main
+    Count               ///< Internal: total number of screens (for bounds checking)
   };
 
+  /**
+   * @brief Edit mode flag for numeric parameter editing.
+   *
+   * Set to true in the LCD controller when displaying an editable parameter.
+   * Used to highlight the field being edited on the LCD display.
+   */
   bool EditMode = false;
 
 private:
+  // Menu navigation state
   Screen current = Screen::Main;
 
-  unsigned long lastActivity = 0;          // drives menu timeout
-  const unsigned long MENU_TIMEOUT = 20000UL;
-  const unsigned long DEBOUNCE_MS  = 50UL; // reduced from 300 ms
+  // Timeout and debouncing configuration
+  unsigned long lastActivity = 0;           // Timestamp of last user activity
+  const unsigned long MENU_TIMEOUT = 20000UL; // Return to Main after 20 seconds of inactivity
+  const unsigned long DEBOUNCE_MS  = 50UL;  // Button debounce threshold (milliseconds)
 
+  // Hardware button pin assignments
   byte pinUp, pinDown, pinSet;
 
-  // Per-button debounce state - each button tracked independently
+  // Per-button debounce state tracking (accessed by btnIndex)
   enum { BTN_UP = 0, BTN_DOWN = 1, BTN_SET = 2, BTN_COUNT = 3 };
-  unsigned long lastPressTime[BTN_COUNT] = {0, 0, 0};
+  unsigned long lastPressTime[BTN_COUNT] = {0, 0, 0}; // Debounce timer per button
   bool          lastPinState[BTN_COUNT]  = {true, true, true}; // HIGH = unpressed (INPUT_PULLUP)
 
+  // Internal button and menu handlers (called by poll())
   bool pressed(byte btnIndex);
   void handleSet();
   void handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
@@ -84,34 +136,64 @@ private:
 public:
   /**
    * @brief Constructor for MenuController.
-   * @param up Pin number for up button.
-   * @param down Pin number for down button.
-   * @param set Pin number for set button.
+   *
+   * Initializes button pin assignments. Pins must be configured as INPUT_PULLUP
+   * externally before calling begin().
+   *
+   * @param up   GPIO pin number for "up" navigation button (active LOW, INPUT_PULLUP)
+   * @param down GPIO pin number for "down" navigation button (active LOW, INPUT_PULLUP)
+   * @param set  GPIO pin number for "set/select" button (active LOW, INPUT_PULLUP)
    */
   MenuController(byte up, byte down, byte set);
 
   /**
    * @brief Initializes the menu controller.
+   *
+   * Must be called once during setup after the MenuController is constructed.
+   * Configures button pins as INPUT_PULLUP.
    */
   void begin();
 
   /**
    * @brief Gets the current menu screen.
-   * @return Current Screen enum value.
+   *
+   * Used by the LCD display controller to determine what content to render.
+   *
+   * @return Current Screen enum value
+   *
+   * @see Screen enum for screen hierarchy and organization
    */
   Screen get() const;
 
   /**
    * @brief Polls button inputs and updates menu state.
-   * @param hvac Reference to GarageHVAC for settings.
-   * @param lights Reference to GarageLight for settings.
-   * @param door Reference to GarageDoor for settings.
-   * @return True if any button press or screen change occurred.
+   *
+   * Should be called once per main loop iteration (typically 100-200ms).
+   * Debounces button presses, detects transitions, calls appropriate handlers,
+   * manages menu screen navigation, and auto-timeout to Main screen.
+   *
+   * @param hvac   Reference to GarageHVAC instance for reading/updating HVAC settings
+   * @param lights Reference to GarageLight instance for reading/updating light timeout
+   * @param door   Reference to GarageDoor instance for reading/updating door settings
+   * @return True if any button press or screen change occurred, false if no activity
+   *         (useful for avoiding unnecessary LCD updates)
+   *
+   * @note This method modifies HVAC mode, setpoints, light timeout, and door
+   *       timeout/retry values directly. Called subsystems should not modify
+   *       these values externally during menu operation.
    */
   bool poll(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
 
   /**
    * @brief Resets the menu timeout due to external activity.
+   *
+   * Called by external systems when significant activity occurs (e.g., MQTT
+   * commands received, door button pressed manually). This extends the time
+   * before auto-returning to Main display, keeping the menu active during
+   * active system use.
+   *
+   * @note The menu timeout is automatically extended by button presses.
+   *       This method is for non-button activity notifications.
    */
   void noteActivity();
 };

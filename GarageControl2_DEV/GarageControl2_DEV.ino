@@ -24,7 +24,7 @@
  */
 
 #include "src/Utility.h"
-const char *GC_VERSION = "2.8.1";
+const char *GC_VERSION = "2.8.3";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -186,12 +186,12 @@ public:
     {
       if (expired(lastLightCmd, 500UL)) // Debounce light commands
       {
-        if (payload == F("ON"))
+        if (payload == F("on"))
         {
           lights.turnOn();
           lcdDisplay.SetDirty(true); // wake backlight when light turns on
         }
-        if (payload == F("OFF"))
+        if (payload == F("off"))
         {
           lights.turnOff();
           lcdDisplay.SetDirty(false); // update display but don't wake backlight

@@ -23,6 +23,7 @@
 #include <ArduinoJson.h>
 #include "Utility.h"
 #include "MQTT.h"
+#include "../config/Config.h"
 
 // Global for reporting network status to UI/menu.
 MQTTManager *g_mqttManager = nullptr;
@@ -39,20 +40,24 @@ MQTTManager *g_mqttManager = nullptr;
 
 /**
  * @brief Constructor for MQTTManager.
+ *
+ * Initializes WiFi and MQTT configuration from Config.h.
+ * All configuration values are stored in flash memory (PROGMEM) via F() macro,
+ * minimizing SRAM footprint of configuration pointers.
  */
 MQTTManager::MQTTManager()
     : mqtt(wifiClient)
 {
   // All literals go to flash; the pointers themselves cost 2 bytes each.
-  WIFI_SSID = "ScubaSpot";
-  WIFI_PASSWORD = "ScubaNet";
-  MQTT_SERVER = "192.168.0.130"; // 130
-  MQTT_PORT = 1883;
-  MQTT_USER = "mqtt_user";
-  MQTT_PASS = "mqtt_password";
-  DEVICE_ID = "garage_ctrl_01";
-  DEVICE_NAME = "Garage Controller";
-  DISCOVERY_PREFIX = "homeassistant";
+  WIFI_SSID = CONFIG_WIFI_SSID;
+  WIFI_PASSWORD = CONFIG_WIFI_PASSWORD;
+  MQTT_SERVER = CONFIG_MQTT_SERVER;
+  MQTT_PORT = CONFIG_MQTT_PORT;
+  MQTT_USER = CONFIG_MQTT_USER;
+  MQTT_PASS = CONFIG_MQTT_PASSWORD;
+  DEVICE_ID = CONFIG_DEVICE_ID;
+  DEVICE_NAME = CONFIG_DEVICE_NAME;
+  DISCOVERY_PREFIX = CONFIG_DISCOVERY_PREFIX;
 }
 
 // ============================================================
@@ -512,6 +517,21 @@ void MQTTManager::connectMQTT()
  */
 void MQTTManager::publishDiscovery()
 {
+
+  // Clear stale retained 'number' discovery entries for read-only remaining sensors.
+  // These were previously published as 'number' (which requires command_topic).
+  // Publishing an empty retained payload removes them from HA's registry.
+  {
+    char stale[72];
+    snprintf(stale, sizeof(stale), "%s/number/%s_door_remaining/config",
+             DISCOVERY_PREFIX, DEVICE_ID);
+    mqtt.publish(stale, "", true);
+
+    snprintf(stale, sizeof(stale), "%s/number/%s_light_remaining/config",
+             DISCOVERY_PREFIX, DEVICE_ID);
+    mqtt.publish(stale, "", true);
+  }
+
   // Shared payload buffer - reused for every entity
   char buf[1024];
 
