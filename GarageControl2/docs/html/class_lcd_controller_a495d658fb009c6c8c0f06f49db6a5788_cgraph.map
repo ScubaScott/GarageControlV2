@@ -1,0 +1,7 @@
+<map id="LcdController::updateDisplay" name="LcdController::updateDisplay">
+<area shape="rect" id="Node000001" title="Updates the LCD display with current system state." alt="" coords="5,31,195,57"/>
+<area shape="rect" id="Node000002" href="$class_garage_door.html#ad30d94f83150a4b61e953971ee6deaea" title="Gets the configured auto&#45;close duration." alt="" coords="251,5,430,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="195,31,238,29,233,30,196,37"/>
+<area shape="rect" id="Node000003" href="$class_garage_door.html#a5d5faa2abbefe3e86bba1934ef4a90ec" title="Gets the maximum auto&#45;close retry attempts." alt="" coords="243,56,438,83"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="195,51,230,57,225,58,195,57"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="GarageDoor::getDoorRemainingTime" name="GarageDoor::getDoorRemainingTime">
+<area shape="rect" id="Node000001" title="Gets remaining time until auto&#45;close timeout." alt="" coords="5,31,242,57"/>
+<area shape="rect" id="Node000002" href="$class_garage_door.html#a32010f3d4897a61ce963ab90031ab649" title="Gets the current door position/state." alt="" coords="290,5,438,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="242,29,277,28,272,28,243,34"/>
+<area shape="rect" id="Node000003" href="$_utility_8h.html#a0b367d87e38eb8541b95194a0d870322" title=" " alt="" coords="341,56,386,83"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="242,54,328,65,323,66,242,59"/>
+</map>

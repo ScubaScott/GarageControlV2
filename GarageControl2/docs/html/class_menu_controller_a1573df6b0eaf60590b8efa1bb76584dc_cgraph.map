@@ -1,0 +1,18 @@
+<map id="MenuController::poll" name="MenuController::poll">
+<area shape="rect" id="Node000001" title="Polls button inputs and updates menu state." alt="" coords="5,132,143,159"/>
+<area shape="rect" id="Node000002" href="$_utility_8h.html#a40e1498cfd1819c6e35d092a7ec96cf5" title="Checks if a time interval has expired since a given timestamp." alt="" coords="254,5,317,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="85,130,128,86,157,62,189,42,241,25,237,28,192,46,160,67,132,90,89,133"/>
+<area shape="rect" id="Node000003" href="$class_garage_light.html#a22b20dfc40a4a4cb6b8819e77ad97f95" title="Gets the current light on/off state." alt="" coords="222,56,348,83"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="102,129,190,92,215,86,211,89,192,97,105,134"/>
+<area shape="rect" id="Node000004" href="$class_garage_door.html#a9870dca3edc28f9217246f6f6d7b6ec2" title="Manually activates the door relay button." alt="" coords="191,107,380,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="142,135,177,132,173,135,144,140"/>
+<area shape="rect" id="Node000005" href="$class_menu_controller.html#ac5a7f6caf6a8eaeeec9f634e539cc3a0" title="Resets the menu timeout due to external activity." alt="" coords="192,157,378,184"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="143,151,179,157,174,159,144,156"/>
+<area shape="rect" id="Node000007" href="$class_garage_light.html#aa04933af970e45cd7d524c7ab69f64f5" title="Turns the light off immediately." alt="" coords="216,208,354,235"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="104,157,192,194,216,203,210,204,190,198,103,162"/>
+<area shape="rect" id="Node000008" href="$class_garage_light.html#a7e09277f75a4a1500048b20a156cc33f" title="Turns the light on and resets the timeout." alt="" coords="216,259,354,285"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="88,156,132,200,160,224,192,244,206,253,201,252,189,249,157,228,128,204,86,162"/>
+<area shape="rect" id="Node000006" href="$_utility_8h.html#a0b367d87e38eb8541b95194a0d870322" title=" " alt="" coords="428,208,473,235"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="341,182,381,193,416,208,411,208,379,199,341,187"/>
+<area shape="poly" id="edge8_Node000008_Node000006" title=" " alt="" coords="341,255,379,244,411,236,416,235,381,249,342,261"/>
+</map>

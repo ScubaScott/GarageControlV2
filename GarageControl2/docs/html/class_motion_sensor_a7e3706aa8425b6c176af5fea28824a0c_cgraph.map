@@ -1,0 +1,5 @@
+<map id="MotionSensor::poll" name="MotionSensor::poll">
+<area shape="rect" id="Node000001" title="Polls the motion sensor for new motion activity." alt="" coords="5,5,135,32"/>
+<area shape="rect" id="Node000002" href="$_utility_8h.html#a0b367d87e38eb8541b95194a0d870322" title=" " alt="" coords="183,5,228,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="135,16,170,18,164,19,135,21"/>
+</map>

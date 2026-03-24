@@ -1,0 +1,18 @@
+<map id="Motion.h" name="Motion.h">
+<area shape="rect" id="Node000001" title="PIR motion sensor with debouncing and electromagnetic interference rejection." alt="" coords="264,5,335,32"/>
+<area shape="rect" id="Node000002" href="$_garage_door_8cpp.html" title="Implementation of garage door control and state monitoring." alt="" coords="5,80,122,107"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,38,106,82,104,77,250,33"/>
+<area shape="rect" id="Node000003" href="$_garage_light_8cpp.html" title="Implementation of garage light controller." alt="" coords="145,80,262,107"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="273,40,221,82,219,77,269,43"/>
+<area shape="rect" id="Node000004" href="$_h_v_a_c_8cpp.html" title="Implementation of HVAC controller." alt="" coords="230,155,313,181"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="297,46,276,156,272,153,292,49"/>
+<area shape="rect" id="Node000005" href="$_h_v_a_c_8h.html" title="HVAC heating and cooling system control with temperature&#45;based switching." alt="" coords="337,80,406,107"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="324,41,362,80,356,79,322,46"/>
+<area shape="rect" id="Node000008" href="$_motion_8cpp.html" title="Implementation of motion sensor controller." alt="" coords="430,80,516,107"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="344,36,445,79,440,80,343,41"/>
+<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="344,115,290,156,288,152,339,117"/>
+<area shape="rect" id="Node000006" href="$_lcd_controller_8cpp.html" title="Implementation of LCD display controller for garage control system." alt="" coords="338,155,461,181"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="383,119,397,155,392,153,380,124"/>
+<area shape="rect" id="Node000007" href="$_menu_controller_8cpp.html" title="Button debounce approach ──────────────────────── Each button has its own lastPressTime and lastPinSt..." alt="" coords="486,155,620,181"/>
+<area shape="poly" id="edge7_Node000005_Node000007" title=" " alt="" coords="418,110,524,154,518,154,417,115"/>
+</map>

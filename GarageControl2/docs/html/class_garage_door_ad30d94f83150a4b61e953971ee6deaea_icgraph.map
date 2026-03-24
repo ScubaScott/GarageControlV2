@@ -1,0 +1,5 @@
+<map id="GarageDoor::getAutoClose" name="GarageDoor::getAutoClose">
+<area shape="rect" id="Node000001" title="Gets the configured auto&#45;close duration." alt="" coords="243,5,421,32"/>
+<area shape="rect" id="Node000002" href="$class_lcd_controller.html#a495d658fb009c6c8c0f06f49db6a5788" title="Updates the LCD display with current system state." alt="" coords="5,5,195,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="225,19,195,21,195,16,230,19"/>
+</map>

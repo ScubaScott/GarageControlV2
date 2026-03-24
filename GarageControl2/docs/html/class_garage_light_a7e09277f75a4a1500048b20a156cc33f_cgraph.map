@@ -1,0 +1,5 @@
+<map id="GarageLight::turnOn" name="GarageLight::turnOn">
+<area shape="rect" id="Node000001" title="Turns the light on and resets the timeout." alt="" coords="5,5,144,32"/>
+<area shape="rect" id="Node000002" href="$_utility_8h.html#a0b367d87e38eb8541b95194a0d870322" title=" " alt="" coords="192,5,237,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="144,16,179,19,174,19,144,21"/>
+</map>

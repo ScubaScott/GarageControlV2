@@ -1,0 +1,5 @@
+<map id="GarageDoor.h" name="GarageDoor.h">
+<area shape="rect" id="Node000001" title="Garage door controller with state detection and automatic closing." alt="" coords="5,5,108,32"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="18,80,95,107"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="58,30,59,65,54,64,55,35"/>
+</map>

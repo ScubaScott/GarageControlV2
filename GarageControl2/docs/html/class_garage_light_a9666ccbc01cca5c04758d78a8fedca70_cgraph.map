@@ -1,0 +1,7 @@
+<map id="GarageLight::lightRemaining" name="GarageLight::lightRemaining">
+<area shape="rect" id="Node000001" title="Gets time remaining before auto&#45;off timeout expires." alt="" coords="5,31,191,57"/>
+<area shape="rect" id="Node000002" href="$class_garage_light.html#a22b20dfc40a4a4cb6b8819e77ad97f95" title="Gets the current light on/off state." alt="" coords="239,5,365,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="191,30,226,28,221,29,192,35"/>
+<area shape="rect" id="Node000003" href="$_utility_8h.html#a0b367d87e38eb8541b95194a0d870322" title=" " alt="" coords="279,56,324,83"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="191,53,266,64,261,65,191,58"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="MenuController::noteActivity" name="MenuController::noteActivity">
+<area shape="rect" id="Node000001" title="Resets the menu timeout due to external activity." alt="" coords="5,5,192,32"/>
+<area shape="rect" id="Node000002" href="$_utility_8h.html#a0b367d87e38eb8541b95194a0d870322" title=" " alt="" coords="240,5,285,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="192,16,227,19,222,19,192,21"/>
+</map>

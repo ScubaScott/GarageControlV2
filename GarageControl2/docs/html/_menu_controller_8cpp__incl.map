@@ -1,0 +1,35 @@
+<map id="MenuController.cpp" name="MenuController.cpp">
+<area shape="rect" id="Node000001" title="Button debounce approach ──────────────────────── Each button has its own lastPressTime and lastPinSt..." alt="" coords="255,5,389,32"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="331,229,407,256"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="253,25,186,32,114,43,51,59,28,69,12,82,8,93,13,106,36,143,68,173,107,197,149,214,194,226,238,233,318,242,313,242,237,239,193,231,148,219,104,201,65,178,32,147,8,108,3,93,8,78,25,65,49,54,113,37,186,27,257,22"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="22,80,158,107"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="280,35,146,77,144,73,283,30"/>
+<area shape="rect" id="Node000004" href="$_menu_controller_8h.html" title="Menu navigation controller with debounced button input." alt="" coords="102,155,222,181"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="292,34,259,55,223,82,197,112,178,143,174,139,193,109,219,78,256,50,296,31"/>
+<area shape="rect" id="Node000005" href="$_h_v_a_c_8h.html" title="HVAC heating and cooling system control with temperature&#45;based switching." alt="" coords="233,80,302,107"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="315,31,288,69,284,66,311,34"/>
+<area shape="rect" id="Node000007" href="$_garage_light_8h.html" title="Garage light control with automatic timeout and motion&#45;based extension." alt="" coords="326,80,428,107"/>
+<area shape="poly" id="edge9_Node000001_Node000007" title=" " alt="" coords="333,30,361,68,356,67,331,35"/>
+<area shape="rect" id="Node000008" href="$_garage_door_8h.html" title="Garage door controller with state detection and automatic closing." alt="" coords="452,80,555,107"/>
+<area shape="poly" id="edge11_Node000001_Node000008" title=" " alt="" coords="354,30,460,73,455,74,354,35"/>
+<area shape="rect" id="Node000009" href="$_utility_8h.html" title="Utility functions for timing, version information, and build configuration." alt="" coords="495,155,560,181"/>
+<area shape="poly" id="edge13_Node000001_Node000009" title=" " alt="" coords="390,25,495,44,540,59,557,68,568,78,575,95,572,113,552,146,549,141,567,111,570,96,564,82,554,72,538,64,493,49,390,30"/>
+<area shape="rect" id="Node000010" href="$_m_q_t_t_8h.html" title=" " alt="" coords="645,80,714,107"/>
+<area shape="poly" id="edge15_Node000001_Node000010" title=" " alt="" coords="385,30,633,81,628,83,385,35"/>
+<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="199,179,321,223,316,225,198,184"/>
+<area shape="poly" id="edge6_Node000005_Node000002" title=" " alt="" coords="269,105,273,142,278,162,287,180,307,202,331,222,326,221,303,206,283,183,273,163,268,143,266,109"/>
+<area shape="rect" id="Node000006" href="$_motion_8h.html" title="PIR motion sensor with debouncing and electromagnetic interference rejection." alt="" coords="297,155,369,181"/>
+<area shape="poly" id="edge7_Node000005_Node000006" title=" " alt="" coords="280,105,314,143,309,143,278,110"/>
+<area shape="poly" id="edge8_Node000006_Node000002" title=" " alt="" coords="341,180,358,216,353,214,338,184"/>
+<area shape="poly" id="edge10_Node000007_Node000002" title=" " alt="" coords="380,105,384,141,384,182,378,216,374,212,378,181,379,141,377,109"/>
+<area shape="poly" id="edge12_Node000008_Node000002" title=" " alt="" coords="495,106,392,220,389,215,490,108"/>
+<area shape="poly" id="edge14_Node000009_Node000002" title=" " alt="" coords="503,181,412,225,410,220,497,182"/>
+<area shape="poly" id="edge16_Node000010_Node000002" title=" " alt="" coords="670,106,629,146,574,184,536,201,496,215,423,234,422,229,495,210,534,196,572,179,626,142,665,108"/>
+<area shape="poly" id="edge18_Node000010_Node000009" title=" " alt="" coords="656,106,569,150,567,145,651,108"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="635,155,740,181"/>
+<area shape="poly" id="edge17_Node000010_Node000011" title=" " alt="" coords="683,105,687,141,682,138,679,109"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="763,155,839,181"/>
+<area shape="poly" id="edge19_Node000010_Node000012" title=" " alt="" coords="701,105,769,147,764,146,700,110"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="862,155,974,181"/>
+<area shape="poly" id="edge20_Node000010_Node000013" title=" " alt="" coords="715,102,865,150,859,150,714,108"/>
+</map>

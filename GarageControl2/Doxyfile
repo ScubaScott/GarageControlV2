@@ -1,0 +1,68 @@
+#---------------------------------------------------------------------------
+# Project Identity
+#---------------------------------------------------------------------------
+
+PROJECT_NAME           = "Smart Garage Controller"
+PROJECT_NUMBER         = "2.0"
+PROJECT_BRIEF          = "An Arduino-based garage automation system"
+OUTPUT_DIRECTORY       = docs
+
+#---------------------------------------------------------------------------
+# Input / Output
+#---------------------------------------------------------------------------
+
+INPUT                  = .
+FILE_PATTERNS          = *.h *.cpp *.ino *.dox
+RECURSIVE              = YES
+EXCLUDE                = ./config/Config.h
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_LATEX         = NO
+
+#---------------------------------------------------------------------------
+# Documentation Options
+#---------------------------------------------------------------------------
+
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+
+FULL_PATH_NAMES        = NO
+STRIP_FROM_PATH        = .
+
+#---------------------------------------------------------------------------
+# Diagrams / Graphviz
+#---------------------------------------------------------------------------
+
+HAVE_DOT               = YES
+DOT_NUM_THREADS        = 4
+CLASS_DIAGRAMS         = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+
+#---------------------------------------------------------------------------
+# Formatting
+#---------------------------------------------------------------------------
+
+TAB_SIZE               = 4
+OPTIMIZE_OUTPUT_FOR_C  = YES
+JAVADOC_AUTOBRIEF      = YES
+MULTILINE_CPP_IS_BRIEF = YES
+
+#---------------------------------------------------------------------------
+# Warnings
+#---------------------------------------------------------------------------
+
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+
+#---------------------------------------------------------------------------
+# Main Page
+#---------------------------------------------------------------------------
+
+USE_MDFILE_AS_MAINPAGE = mainpage.dox

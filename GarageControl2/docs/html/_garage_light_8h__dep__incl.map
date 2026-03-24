@@ -1,0 +1,9 @@
+<map id="GarageLight.h" name="GarageLight.h">
+<area shape="rect" id="Node000001" title="Garage light control with automatic timeout and motion&#45;based extension." alt="" coords="156,5,259,32"/>
+<area shape="rect" id="Node000002" href="$_garage_light_8cpp.html" title="Implementation of garage light controller." alt="" coords="5,80,122,107"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="171,40,90,82,88,77,166,38"/>
+<area shape="rect" id="Node000003" href="$_lcd_controller_8cpp.html" title="Implementation of LCD display controller for garage control system." alt="" coords="146,80,269,107"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="209,46,210,81,205,78,206,50"/>
+<area shape="rect" id="Node000004" href="$_menu_controller_8cpp.html" title="Button debounce approach ──────────────────────── Each button has its own lastPressTime and lastPinSt..." alt="" coords="294,80,428,107"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="249,36,337,79,331,80,247,42"/>
+</map>

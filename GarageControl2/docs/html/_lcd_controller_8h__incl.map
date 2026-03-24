@@ -1,0 +1,7 @@
+<map id="LcdController.h" name="LcdController.h">
+<area shape="rect" id="Node000001" title="LCD display manager for 4x20 I2C backlit display." alt="" coords="54,5,164,32"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,80,82,107"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="100,31,67,70,63,67,95,34"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="106,80,242,107"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="121,30,156,68,150,69,119,35"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="expired" name="expired">
+<area shape="rect" id="Node000001" title="Checks if a time interval has expired since a given timestamp." alt="" coords="191,56,254,83"/>
+<area shape="rect" id="Node000002" href="$class_garage_door.html#a74913ffd9a17b595220242308a1bc8f5" title="Polls door sensors and updates internal state." alt="" coords="14,5,134,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="174,55,115,35,115,30,178,53"/>
+<area shape="rect" id="Node000003" href="$class_garage_light.html#a5e09a2c1ca7576de73bd979a90aa0442" title="Checks timeout and automatically turns off light if expired." alt="" coords="14,56,134,83"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="172,70,134,72,133,67,178,69"/>
+<area shape="rect" id="Node000004" href="$class_menu_controller.html#a1573df6b0eaf60590b8efa1bb76584dc" title="Polls button inputs and updates menu state." alt="" coords="5,107,143,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="179,84,116,109,114,104,173,86"/>
+</map>

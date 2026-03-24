@@ -1,0 +1,11 @@
+<map id="Motion.cpp" name="Motion.cpp">
+<area shape="rect" id="Node000001" title="Implementation of motion sensor controller." alt="" coords="13,5,99,32"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="18,155,94,181"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="40,35,25,55,10,81,9,97,13,113,33,143,28,145,8,115,3,97,5,79,21,52,42,30"/>
+<area shape="rect" id="Node000003" href="$_motion_8h.html" title="PIR motion sensor with debouncing and electromagnetic interference rejection." alt="" coords="20,80,92,107"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="57,30,59,65,53,64,55,35"/>
+<area shape="rect" id="Node000004" href="$_utility_8h.html" title="Utility functions for timing, version information, and build configuration." alt="" coords="115,80,181,107"/>
+<area shape="poly" id="edge4_Node000001_Node000004" title=" " alt="" coords="72,30,123,69,118,71,72,35"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="58,105,58,140,53,138,54,109"/>
+<area shape="poly" id="edge5_Node000004_Node000002" title=" " alt="" coords="134,106,85,147,82,143,129,108"/>
+</map>

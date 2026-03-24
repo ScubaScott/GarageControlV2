@@ -1,0 +1,5 @@
+<map id="MenuController::noteActivity" name="MenuController::noteActivity">
+<area shape="rect" id="Node000001" title="Resets the menu timeout due to external activity." alt="" coords="191,5,377,32"/>
+<area shape="rect" id="Node000002" href="$class_menu_controller.html#a1573df6b0eaf60590b8efa1bb76584dc" title="Polls button inputs and updates menu state." alt="" coords="5,5,143,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="173,19,143,21,143,16,178,18"/>
+</map>

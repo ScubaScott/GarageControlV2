@@ -1,0 +1,7 @@
+<map id="MenuController.h" name="MenuController.h">
+<area shape="rect" id="Node000001" title="Menu navigation controller with debounced button input." alt="" coords="83,5,203,32"/>
+<area shape="rect" id="Node000002" href="$_lcd_controller_8cpp.html" title="Implementation of LCD display controller for garage control system." alt="" coords="5,80,129,107"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="121,42,82,82,78,78,116,44"/>
+<area shape="rect" id="Node000003" href="$_menu_controller_8cpp.html" title="Button debounce approach ──────────────────────── Each button has its own lastPressTime and lastPinSt..." alt="" coords="153,80,288,107"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="169,40,210,80,204,80,167,45"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="LcdController::SetDirty" name="LcdController::SetDirty">
+<area shape="rect" id="Node000001" title="Marks the display as needing an update." alt="" coords="5,5,160,32"/>
+<area shape="rect" id="Node000002" href="$class_lcd_controller.html#afa36e9171638184325b2d296e469dbed" title="Controls the LCD backlight on/off state." alt="" coords="208,5,386,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="160,16,195,19,190,19,160,21"/>
+</map>

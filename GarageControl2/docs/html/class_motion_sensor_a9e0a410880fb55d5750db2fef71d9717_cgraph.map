@@ -1,0 +1,5 @@
+<map id="MotionSensor::recentlyActive" name="MotionSensor::recentlyActive">
+<area shape="rect" id="Node000001" title="Checks if motion was detected within a specified timeout window." alt="" coords="5,5,198,32"/>
+<area shape="rect" id="Node000002" href="$_utility_8h.html#a0b367d87e38eb8541b95194a0d870322" title=" " alt="" coords="246,5,291,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="198,16,232,19,227,19,198,21"/>
+</map>

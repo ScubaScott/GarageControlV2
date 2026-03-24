@@ -1,0 +1,7 @@
+<map id="GarageDoor::poll" name="GarageDoor::poll">
+<area shape="rect" id="Node000001" title="Polls door sensors and updates internal state." alt="" coords="5,31,125,57"/>
+<area shape="rect" id="Node000002" href="$_utility_8h.html#a40e1498cfd1819c6e35d092a7ec96cf5" title="Checks if a time interval has expired since a given timestamp." alt="" coords="173,5,236,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="124,31,160,26,155,28,126,36"/>
+<area shape="rect" id="Node000003" href="$_utility_8h.html#a0b367d87e38eb8541b95194a0d870322" title=" " alt="" coords="182,56,227,83"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="125,52,169,62,164,63,125,58"/>
+</map>
