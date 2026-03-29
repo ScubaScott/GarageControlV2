@@ -103,7 +103,7 @@ bool MenuController::pressed(byte btnIndex)
 
 // ── Main poll ─────────────────────────────────────────────────────────────────
 
-bool MenuController::poll(GarageController &controller, GarageHVAC &hvac, GarageLight &lights, GarageDoor &door)
+bool MenuController::poll(IMenuHost &controller, GarageHVAC &hvac, GarageLight &lights, GarageDoor &door)
 {
   bool activity = false;
 
@@ -170,7 +170,7 @@ bool MenuController::poll(GarageController &controller, GarageHVAC &hvac, Garage
 
 // ── Button action handlers ────────────────────────────────────────────────────
 
-void MenuController::handleSet(GarageController &controller)
+void MenuController::handleSet(IMenuHost &controller)
 {
   switch (current)
   {

@@ -16,6 +16,13 @@
 
 #include <Arduino.h>
 
+class IMenuHost
+{
+public:
+  virtual void reloadNV() = 0;
+  virtual ~IMenuHost() = default;
+};
+
 class GarageHVAC;
 class GarageLight;
 class GarageDoor;
@@ -130,7 +137,7 @@ private:
 
   // Internal button and menu handlers (called by poll())
   bool pressed(byte btnIndex);
-  void handleSet(GarageController &controller);
+  void handleSet(IMenuHost &controller);
   void handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
   void handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
 
@@ -184,7 +191,7 @@ public:
    *       timeout/retry values directly. Called subsystems should not modify
    *       these values externally during menu operation.
    */
-  bool poll(GarageController &controller, GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
+  bool poll(IMenuHost &controller, GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
 
   /**
    * @brief Resets the menu timeout due to external activity.
