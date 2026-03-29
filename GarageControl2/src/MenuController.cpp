@@ -103,7 +103,7 @@ bool MenuController::pressed(byte btnIndex)
 
 // ── Main poll ─────────────────────────────────────────────────────────────────
 
-bool MenuController::poll(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door)
+bool MenuController::poll(GarageController &controller, GarageHVAC &hvac, GarageLight &lights, GarageDoor &door)
 {
   bool activity = false;
 
@@ -136,7 +136,7 @@ bool MenuController::poll(GarageHVAC &hvac, GarageLight &lights, GarageDoor &doo
     if (pressed(BTN_SET))
     {
       noteActivity();
-      handleSet();
+      handleSet(controller);
       activity = true;
     }
   }
@@ -160,7 +160,7 @@ bool MenuController::poll(GarageHVAC &hvac, GarageLight &lights, GarageDoor &doo
     {
       noteActivity();
       Serial.println(F("Menu:SET"));
-      handleSet();
+      handleSet(controller);
       activity = true;
     }
   }
@@ -170,7 +170,7 @@ bool MenuController::poll(GarageHVAC &hvac, GarageLight &lights, GarageDoor &doo
 
 // ── Button action handlers ────────────────────────────────────────────────────
 
-void MenuController::handleSet()
+void MenuController::handleSet(GarageController &controller)
 {
   switch (current)
   {
@@ -192,6 +192,9 @@ void MenuController::handleSet()
     break;
   case Screen::SetMode:
     EditMode = !EditMode;
+    break;
+  case Screen::ReloadNV:
+    controller.reloadNV();
     break;
   case Screen::HVACBack:
     current = Screen::HVACMenu;
@@ -249,7 +252,7 @@ void MenuController::handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor 
     current = Screen::ConfigMenu;
     break;
   case Screen::HVACBack:
-    current = Screen::SetMode;
+    current = Screen::ReloadNV;
     break;
   case Screen::LightBack:
     current = Screen::SetLightTimeout;
@@ -284,7 +287,10 @@ void MenuController::handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor 
     if (EditMode)
       hvac.mode = (GarageHVAC::Mode)((hvac.mode + 1) % 4);
     else
-      current = Screen::SetSwing;
+      current = Screen::ReloadNV;
+    break;
+  case Screen::ReloadNV:
+    current = Screen::SetMode;
     break;
   case Screen::SetLightTimeout:
     if (EditMode)
@@ -357,7 +363,10 @@ void MenuController::handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoo
     if (EditMode)
       hvac.mode = (GarageHVAC::Mode)((hvac.mode + 3) % 4);
     else
-      current = Screen::HVACBack;
+      current = Screen::ReloadNV;
+    break;
+  case Screen::ReloadNV:
+    current = Screen::HVACBack;
     break;
   case Screen::SetLightTimeout:
     if (EditMode)

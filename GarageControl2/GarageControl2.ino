@@ -24,7 +24,8 @@
  */
 
 #include "src/Utility.h"
-const char *GC_VERSION = "2.9";
+#include <EEPROM.h>
+const char *GC_VERSION = "2.11";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -116,8 +117,24 @@ public:
   OneWire oneWire;
   DallasTemperature sensors;
 
+  // NV values (stored in EEPROM)
+  float nvHeatSet = 65;
+  float nvCoolSet = 85;
+
   unsigned long lastTempPoll = 0;
   float tempF = 0;
+
+  // NV (EEPROM) storage layout
+  static constexpr uint32_t NV_MAGIC = 0x47434E56U; // 'GCNV'
+  static constexpr int NV_ADDR_MAGIC = 0;
+  static constexpr int NV_ADDR_HEAT_SET = NV_ADDR_MAGIC + sizeof(NV_MAGIC);
+  static constexpr int NV_ADDR_COOL_SET = NV_ADDR_HEAT_SET + sizeof(float);
+  static constexpr int NV_ADDR_DOOR_TIMEOUT = NV_ADDR_COOL_SET + sizeof(float);
+  static constexpr int NV_ADDR_LIGHT_TIMEOUT = NV_ADDR_DOOR_TIMEOUT + sizeof(uint16_t);
+
+  bool loadNV();
+  bool saveNV();
+  void reloadNV();
 
 #if ENABLE_WIFI
   unsigned long lastDoorCmd = 0;
@@ -150,6 +167,16 @@ public:
     lcdDisplay.begin();
     lcdDisplay.SetDirty(true);
     Serial.println(F("Controller:LCD ready"));
+
+    if (loadNV())
+    {
+      Serial.println(F("Controller:Loaded NV settings"));
+    }
+    else
+    {
+      Serial.println(F("Controller:NV settings missing or invalid, using defaults"));
+      saveNV();
+    }
 
 #if ENABLE_WIFI
     mqttManager.init(this, GarageController::mqttCallback);
@@ -251,6 +278,51 @@ public:
         lastHvacCmd = now();
       }
     }
+    else if (strcmp(topic, mqttManager.getTopic(F("/nv/hvac/heat_set/cmd"))) == 0)
+    {
+      float val = payload.toFloat();
+      if (val > 30 && val < 100)
+      {
+        nvHeatSet = val;
+        saveNV();
+        lcdDisplay.SetDirty(false);
+      }
+    }
+    else if (strcmp(topic, mqttManager.getTopic(F("/nv/hvac/cool_set/cmd"))) == 0)
+    {
+      float val = payload.toFloat();
+      if (val > 30 && val < 100)
+      {
+        nvCoolSet = val;
+        saveNV();
+        lcdDisplay.SetDirty(false);
+      }
+    }
+    else if (strcmp(topic, mqttManager.getTopic(F("/nv/door_timeout/cmd"))) == 0)
+    {
+      int mins = payload.toInt();
+      if (mins > 0 && mins <= 120)
+      {
+        door.autoCloseDuration = (unsigned long)mins * 60000UL;
+        saveNV();
+        lcdDisplay.SetDirty(false);
+      }
+    }
+    else if (strcmp(topic, mqttManager.getTopic(F("/nv/light_timeout/cmd"))) == 0)
+    {
+      int mins = payload.toInt();
+      if (mins > 0 && mins <= 120)
+      {
+        lights.duration = (unsigned long)mins * 60000UL;
+        saveNV();
+        lcdDisplay.SetDirty(false);
+      }
+    }
+    else if (strcmp(topic, mqttManager.getTopic(F("/nv/reload/cmd"))) == 0)
+    {
+      reloadNV();
+      lcdDisplay.SetDirty(false);
+    }
   }
 
   static void mqttCallback(char *topic, byte *payload, unsigned int length)
@@ -304,7 +376,7 @@ public:
       lcdDisplay.SetDirty(false);
     }
 
-    bool menuEvent = menu.poll(hvac, lights, door);
+    bool menuEvent = menu.poll(controller, hvac, lights, door);
     if (menuEvent)
       lcdDisplay.SetDirty(true);
 
@@ -319,6 +391,8 @@ public:
         tempF,
         hvac.heatSet,
         hvac.coolSet,
+        nvHeatSet,
+        nvCoolSet,
         (uint8_t)hvac.mode, // uint8_t mode
         (uint8_t)hvacState, // uint8_t runtime state
         motion.isActive(),
@@ -328,6 +402,77 @@ public:
     lcdDisplay.updateDisplay(hvac, door, lights, tempF);
   }
 };
+
+bool GarageController::loadNV()
+{
+  uint32_t magic = 0;
+  EEPROM.get(NV_ADDR_MAGIC, magic);
+  if (magic != NV_MAGIC)
+    return false;
+
+  float heatSetNV = 0.0f;
+  float coolSetNV = 0.0f;
+  uint16_t doorTimeoutMins = 0;
+  uint16_t lightTimeoutMins = 0;
+
+  EEPROM.get(NV_ADDR_HEAT_SET, heatSetNV);
+  EEPROM.get(NV_ADDR_COOL_SET, coolSetNV);
+  EEPROM.get(NV_ADDR_DOOR_TIMEOUT, doorTimeoutMins);
+  EEPROM.get(NV_ADDR_LIGHT_TIMEOUT, lightTimeoutMins);
+
+  if (heatSetNV < 30.0f || heatSetNV > 100.0f ||
+      coolSetNV < 30.0f || coolSetNV > 100.0f ||
+      doorTimeoutMins < 1 || doorTimeoutMins > 120 ||
+      lightTimeoutMins < 1 || lightTimeoutMins > 120)
+  {
+    return false;
+  }
+
+  // Store NV values
+  nvHeatSet = heatSetNV;
+  nvCoolSet = coolSetNV;
+  
+  // Set current values from NV
+  hvac.heatSet = nvHeatSet;
+  hvac.coolSet = nvCoolSet;
+  door.autoCloseDuration = (unsigned long)doorTimeoutMins * 60000UL;
+  lights.duration = (unsigned long)lightTimeoutMins * 60000UL;
+  return true;
+}
+
+bool GarageController::saveNV()
+{
+  uint16_t doorTimeoutMins = (uint16_t)(door.autoCloseDuration / 60000UL);
+  uint16_t lightTimeoutMins = (uint16_t)(lights.duration / 60000UL);
+
+  // Sanity trim in case in-memory values are out of expected limits
+  if (doorTimeoutMins < 1)
+    doorTimeoutMins = 1;
+  if (doorTimeoutMins > 120)
+    doorTimeoutMins = 120;
+  if (lightTimeoutMins < 1)
+    lightTimeoutMins = 1;
+  if (lightTimeoutMins > 120)
+    lightTimeoutMins = 120;
+
+  EEPROM.put(NV_ADDR_MAGIC, NV_MAGIC);
+  EEPROM.put(NV_ADDR_HEAT_SET, nvHeatSet);
+  EEPROM.put(NV_ADDR_COOL_SET, nvCoolSet);
+  EEPROM.put(NV_ADDR_DOOR_TIMEOUT, doorTimeoutMins);
+  EEPROM.put(NV_ADDR_LIGHT_TIMEOUT, lightTimeoutMins);
+
+#if defined(ESP8266) || defined(ESP32)
+  EEPROM.commit();
+#endif
+
+  return true;
+}
+
+void GarageController::reloadNV()
+{
+  hvac.heatSet = nvHeatSet;
+  hvac.coolSet = nvCoolSet;
+}
 
 GarageController controller;
 

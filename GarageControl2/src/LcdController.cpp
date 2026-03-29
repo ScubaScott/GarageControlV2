@@ -271,10 +271,11 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     printLCDText(3, true, modeStr);
     break;
 
-    // case MenuController::Screen::HVACBack:
-    //   printLCDText(1, true, "Back...");
-    //   printLCDText(4, false, "\x00");
-    //   break;
+  case MenuController::Screen::ReloadNV:
+    printLCDText(1, true, "Reload from NV");
+    printLCDText(3, true, "Press SET to reload");
+    printLCDText(4, false, "\x00");
+    break;
 
   case MenuController::Screen::LightMenu:
     printLCDText(1, true, "Light Settings");
@@ -289,11 +290,6 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     snprintf(buf, sizeof(buf), "%lu minutes", lights.duration / 60000UL);
     printLCDText(3, true, buf);
     break;
-
-    // case MenuController::Screen::LightBack:
-    //   printLCDText(1, true, "Back...");
-    //   printLCDText(4, false, "\x00");
-    //   break;
 
   case MenuController::Screen::DoorMenu:
     printLCDText(1, true, "Door Settings");
@@ -319,7 +315,9 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
 
   case MenuController::Screen::ConfigMenu:
     printLCDText(1, true, "Config Settings");
-    printLCDText(3, true, "General Settings");
+    printLCDText(2, true, "General Settings");
+    snprintf(buf, sizeof(buf), "Version: %s", GC_VERSION);
+    printLCDText(3, true, buf); 
     printLCDText(4, false, "\x02");
     break;
 

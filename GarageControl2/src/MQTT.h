@@ -82,6 +82,10 @@ private:
   float prevTemp = -999;
   float prevHeatSet = -999;
   float prevCoolSet = -999;
+  float prevNvHeatSet = -999;
+  float prevNvCoolSet = -999;
+  unsigned long prevNvDoorTimeout = 0;
+  unsigned long prevNvLightTimeout = 0;
   bool prevMotion = false;
   bool prevLockout = false;
   uint8_t prevMode = 0xFF;      // 0xFF = "not yet sent"
@@ -172,6 +176,8 @@ public:
    * @param tempF Current temperature in Fahrenheit.
    * @param heatSet Current HVAC heating setpoint temperature.
    * @param coolSet Current HVAC cooling setpoint temperature.
+   * @param nvHeatSet NV HVAC heating setpoint temperature.
+   * @param nvCoolSet NV HVAC cooling setpoint temperature.
    * @param mode HVAC mode (0=Off, 1=Auto, 2=On).
    * @param hvacState HVAC runtime state (0=Waiting, 1=Heating, 2=Cooling, 3=Pending).
    * @param motionActive Motion sensor state (true = motion detected).
@@ -186,6 +192,8 @@ public:
                            float tempF,
                            float heatSet,
                            float coolSet,
+                           float nvHeatSet,
+                           float nvCoolSet,
                            uint8_t mode,
                            uint8_t hvacState,
                            bool motionActive,

@@ -78,6 +78,7 @@ public:
     SetCool,            ///< Edit cool setpoint temperature (°F)
     SetSwing,           ///< Edit temperature hysteresis/swing (°F)
     SetMode,            ///< Select HVAC mode (Off/Heat/Heat_Cool/Cool)
+    ReloadNV,           ///< Reload settings from NV storage
     HVACBack,           ///< Return from HVAC menu to Main
     
     // ── Light Configuration Submenu ─────────────────────────
@@ -129,7 +130,7 @@ private:
 
   // Internal button and menu handlers (called by poll())
   bool pressed(byte btnIndex);
-  void handleSet();
+  void handleSet(GarageController &controller);
   void handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
   void handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
 
@@ -172,6 +173,7 @@ public:
    * Debounces button presses, detects transitions, calls appropriate handlers,
    * manages menu screen navigation, and auto-timeout to Main screen.
    *
+   * @param controller Reference to GarageController for reloadNV functionality
    * @param hvac   Reference to GarageHVAC instance for reading/updating HVAC settings
    * @param lights Reference to GarageLight instance for reading/updating light timeout
    * @param door   Reference to GarageDoor instance for reading/updating door settings
@@ -182,7 +184,7 @@ public:
    *       timeout/retry values directly. Called subsystems should not modify
    *       these values externally during menu operation.
    */
-  bool poll(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
+  bool poll(GarageController &controller, GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
 
   /**
    * @brief Resets the menu timeout due to external activity.

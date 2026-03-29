@@ -193,6 +193,8 @@ void MQTTManager::loop()
  * @param tempF Current temperature.
  * @param heatSet Heat setpoint.
  * @param coolSet Cool setpoint.
+ * @param nvHeatSet NV heat setpoint.
+ * @param nvCoolSet NV cool setpoint.
  * @param mode HVAC mode code.
  * @param hvacState HVAC state code.
  * @param motionActive Motion sensor state.
@@ -207,6 +209,8 @@ void MQTTManager::publishStateChanges(bool lightOn,
                                       float tempF,
                                       float heatSet,
                                       float coolSet,
+                                      float nvHeatSet,
+                                      float nvCoolSet,
                                       uint8_t mode,
                                       uint8_t hvacState,
                                       bool motionActive,
@@ -232,6 +236,8 @@ void MQTTManager::publishStateChanges(bool lightOn,
     prevDoorRemaining = doorRemainingMins + 1;
     prevHeatSet = heatSet + 10.0f;
     prevCoolSet = coolSet + 10.0f;
+    prevNvHeatSet = nvHeatSet + 10.0f;
+    prevNvCoolSet = nvCoolSet + 10.0f;
     prevMode = 0xFF;
     prevHvacState = 0xFF;
     prevMotion = !motionActive;
@@ -333,6 +339,34 @@ void MQTTManager::publishStateChanges(bool lightOn,
     dtostrf(coolSet, 4, 1, val);
     mqtt.publish(buildTopic(F("/hvac/cool_set/state")), val, true);
     prevCoolSet = coolSet;
+  }
+
+  if (abs(nvHeatSet - prevNvHeatSet) >= 0.5f)
+  {
+    dtostrf(nvHeatSet, 4, 1, val);
+    mqtt.publish(buildTopic(F("/nv/hvac/heat_set/state")), val, true);
+    prevNvHeatSet = nvHeatSet;
+  }
+
+  if (abs(nvCoolSet - prevNvCoolSet) >= 0.5f)
+  {
+    dtostrf(nvCoolSet, 4, 1, val);
+    mqtt.publish(buildTopic(F("/nv/hvac/cool_set/state")), val, true);
+    prevNvCoolSet = nvCoolSet;
+  }
+
+  if (doorDurationMins != prevNvDoorTimeout)
+  {
+    snprintf(val, sizeof(val), "%lu", doorDurationMins);
+    mqtt.publish(buildTopic(F("/nv/door_timeout/state")), val, true);
+    prevNvDoorTimeout = doorDurationMins;
+  }
+
+  if (lightDurationMins != prevNvLightTimeout)
+  {
+    snprintf(val, sizeof(val), "%lu", lightDurationMins);
+    mqtt.publish(buildTopic(F("/nv/light_timeout/state")), val, true);
+    prevNvLightTimeout = lightDurationMins;
   }
 
   if (mode != prevMode)
@@ -479,6 +513,11 @@ void MQTTManager::connectMQTT()
     mqtt.subscribe(buildTopic(F("/hvac/heat_set/cmd")));
     mqtt.subscribe(buildTopic(F("/hvac/cool_set/cmd")));
     mqtt.subscribe(buildTopic(F("/hvac/mode/cmd")));
+    mqtt.subscribe(buildTopic(F("/nv/hvac/heat_set/cmd")));
+    mqtt.subscribe(buildTopic(F("/nv/hvac/cool_set/cmd")));
+    mqtt.subscribe(buildTopic(F("/nv/door_timeout/cmd")));
+    mqtt.subscribe(buildTopic(F("/nv/light_timeout/cmd")));
+    mqtt.subscribe(buildTopic(F("/nv/reload/cmd")));
 
     publishDiscovery();
 
@@ -626,6 +665,117 @@ void MQTTManager::publishDiscovery()
     serializeJson(doc, buf, sizeof(buf));
     mqtt.publish(buildDiscoveryTopic(F("number"), F("_door_timeout")), buf, true);
     Serial.println(F("Discovery: door timeout published"));
+  }
+
+  // ========================================================
+  // NV Configuration: HVAC and timeouts
+  // ========================================================
+  {
+    StaticJsonDocument<256> doc;
+
+    doc["name"] = "NV Heat Setpoint";
+    char uniq[32];
+    snprintf(uniq, sizeof(uniq), "%s_nv_heat_set", DEVICE_ID);
+    doc["uniq_id"] = uniq;
+
+    char topic[64];
+    makeTopic(topic, sizeof(topic), base, "nv/hvac/heat_set/state");
+    doc["state_topic"] = topic;
+
+    makeTopic(topic, sizeof(topic), base, "nv/hvac/heat_set/cmd");
+    doc["command_topic"] = topic;
+
+    doc["min"] = 30;
+    doc["max"] = 100;
+    doc["step"] = 0.5;
+    doc["unit_of_measurement"] = "°F";
+    doc["avty_t"] = avail;
+    addDevice(doc.createNestedObject("dev"));
+
+    serializeJson(doc, buf, sizeof(buf));
+    mqtt.publish(buildDiscoveryTopic(F("number"), F("_nv_heat_set")), buf, true);
+    Serial.println(F("Discovery: nv heat setpoint published"));
+  }
+
+  {
+    StaticJsonDocument<256> doc;
+
+    doc["name"] = "NV Cool Setpoint";
+    char uniq[32];
+    snprintf(uniq, sizeof(uniq), "%s_nv_cool_set", DEVICE_ID);
+    doc["uniq_id"] = uniq;
+
+    char topic[64];
+    makeTopic(topic, sizeof(topic), base, "nv/hvac/cool_set/state");
+    doc["state_topic"] = topic;
+
+    makeTopic(topic, sizeof(topic), base, "nv/hvac/cool_set/cmd");
+    doc["command_topic"] = topic;
+
+    doc["min"] = 30;
+    doc["max"] = 100;
+    doc["step"] = 0.5;
+    doc["unit_of_measurement"] = "°F";
+    doc["avty_t"] = avail;
+    addDevice(doc.createNestedObject("dev"));
+
+    serializeJson(doc, buf, sizeof(buf));
+    mqtt.publish(buildDiscoveryTopic(F("number"), F("_nv_cool_set")), buf, true);
+    Serial.println(F("Discovery: nv cool setpoint published"));
+  }
+
+  {
+    StaticJsonDocument<256> doc;
+
+    doc["name"] = "NV Door Timeout";
+    char uniq[32];
+    snprintf(uniq, sizeof(uniq), "%s_nv_door_timeout", DEVICE_ID);
+    doc["uniq_id"] = uniq;
+
+    char topic[64];
+    makeTopic(topic, sizeof(topic), base, "nv/door_timeout/state");
+    doc["state_topic"] = topic;
+
+    makeTopic(topic, sizeof(topic), base, "nv/door_timeout/cmd");
+    doc["command_topic"] = topic;
+
+    doc["min"] = 1;
+    doc["max"] = 120;
+    doc["step"] = 1;
+    doc["unit_of_measurement"] = "min";
+    doc["avty_t"] = avail;
+    addDevice(doc.createNestedObject("dev"));
+
+    serializeJson(doc, buf, sizeof(buf));
+    mqtt.publish(buildDiscoveryTopic(F("number"), F("_nv_door_timeout")), buf, true);
+    Serial.println(F("Discovery: nv door timeout published"));
+  }
+
+  {
+    StaticJsonDocument<256> doc;
+
+    doc["name"] = "NV Light Timeout";
+    char uniq[32];
+    snprintf(uniq, sizeof(uniq), "%s_nv_light_timeout", DEVICE_ID);
+    doc["uniq_id"] = uniq;
+
+    char topic[64];
+    makeTopic(topic, sizeof(topic), base, "nv/light_timeout/state");
+    doc["state_topic"] = topic;
+
+    makeTopic(topic, sizeof(topic), base, "nv/light_timeout/cmd");
+    doc["command_topic"] = topic;
+
+    doc["min"] = 1;
+    doc["max"] = 120;
+    doc["step"] = 1;
+    doc["unit_of_measurement"] = "min";
+    doc["avty_t"] = avail;
+    addDevice(doc.createNestedObject("dev"));
+
+    serializeJson(doc, buf, sizeof(buf));
+    mqtt.publish(buildDiscoveryTopic(F("number"), F("_nv_light_timeout")), buf, true);
+    Serial.println(F("Discovery: nv light timeout published"));
   }
 
   {
