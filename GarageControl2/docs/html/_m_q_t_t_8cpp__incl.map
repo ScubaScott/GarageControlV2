@@ -1,5 +1,5 @@
 <map id="MQTT.cpp" name="MQTT.cpp">
-<area shape="rect" id="Node000001" title="MQTTManager implementation &#45; compiled only when ENABLE_WIFI is 1." alt="" coords="235,5,317,32"/>
+<area shape="rect" id="Node000001" title="MQTTManager implementation – compiled only when ENABLE_WIFI is 1." alt="" coords="235,5,317,32"/>
 <area shape="rect" id="Node000002" title=" " alt="" coords="5,155,110,181"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="258,35,90,148,87,144,257,30"/>
 <area shape="rect" id="Node000003" href="$_utility_8h.html" title="Utility functions for timing, version information, and build configuration." alt="" coords="420,155,485,181"/>

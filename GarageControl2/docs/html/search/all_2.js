@@ -18,5 +18,6 @@ var searchData=
   ['cool_15',['Cool',['../class_garage_h_v_a_c.html#a48a45772ff90abfd38cdd500174d47aaab09a8a82a36ef66340d33d60c1fe54f7',1,'GarageHVAC']]],
   ['cooling_16',['Cooling',['../class_garage_h_v_a_c.html#ac43a9082b29130623b1555c629fbab1ca2153b4d6e7d26b055649b1859ab2e0d4',1,'GarageHVAC']]],
   ['coolset_17',['coolSet',['../class_garage_h_v_a_c.html#a3cd28f25be231c1637678c1f19667528',1,'GarageHVAC']]],
-  ['count_18',['Count',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40ae93f994f01c537c4e2f7d8528c3eb5e9',1,'MenuController']]]
+  ['count_18',['Count',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40ae93f994f01c537c4e2f7d8528c3eb5e9',1,'MenuController']]],
+  ['current_20value_20separation_19',['NV vs current value separation',['../_m_q_t_t_8cpp.html#NVSeparation',1,'']]]
 ];

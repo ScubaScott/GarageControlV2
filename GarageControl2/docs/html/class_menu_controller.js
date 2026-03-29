@@ -7,6 +7,7 @@ var class_menu_controller =
       [ "SetCool", "class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a365a34a1a8cdda07b5268a58bc859b6f", null ],
       [ "SetSwing", "class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a485646c5eeb643f9507cc003d6c5193d", null ],
       [ "SetMode", "class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40ad6726dd19bebc50d7293e04a0c949677", null ],
+      [ "ReloadNV", "class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a975edf87794b2353ee341cc8969dd676", null ],
       [ "HVACBack", "class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40af022f4b3211de36dab0296a50f8d381c", null ],
       [ "LightMenu", "class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a653aaa989f0cda1da0866ca8b5ce75d9", null ],
       [ "SetLightTimeout", "class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a7c0c93d7c682d7e34d6f71887d567208", null ],
@@ -26,6 +27,6 @@ var class_menu_controller =
     [ "begin", "class_menu_controller.html#aac92364e3f5854b59e7f8b98f23eb62a", null ],
     [ "get", "class_menu_controller.html#a2a8db8f916e0752bcdbf69dc9479bc5c", null ],
     [ "noteActivity", "class_menu_controller.html#ac5a7f6caf6a8eaeeec9f634e539cc3a0", null ],
-    [ "poll", "class_menu_controller.html#a1573df6b0eaf60590b8efa1bb76584dc", null ],
+    [ "poll", "class_menu_controller.html#a8c93f46cbd85fde1905cc3acea074722", null ],
     [ "EditMode", "class_menu_controller.html#a72ffa69d5fe0e1a81fa57856ca6c463d", null ]
 ];

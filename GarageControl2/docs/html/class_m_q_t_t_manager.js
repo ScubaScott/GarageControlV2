@@ -17,6 +17,6 @@ var class_m_q_t_t_manager =
     [ "isNetworkEnabled", "class_m_q_t_t_manager.html#a8aaba8f0e2a9f1f7f0f3ef753bf06ce3", null ],
     [ "loop", "class_m_q_t_t_manager.html#a9266e647933501851b411b6d2a9a1f95", null ],
     [ "makeTopic", "class_m_q_t_t_manager.html#af4014a04e79b8b584de3d58d266cae9e", null ],
-    [ "publishStateChanges", "class_m_q_t_t_manager.html#af559afb1611ffa75aef300fd1af078a1", null ],
+    [ "publishStateChanges", "class_m_q_t_t_manager.html#a3fc251b03ae7d9184f43bd9d705a12c7", null ],
     [ "resetNetStatus", "class_m_q_t_t_manager.html#ad8fda8cc488bead14900c70fe723a4f3", null ]
 ];

@@ -104,34 +104,55 @@ Public Types</h2></td></tr>
 , <a class="el" href="#a5e3dcf779c5858b144b624558ef88c78a2ec0d16e4ca169baedb9b2d50ec5c6d7">Connected</a>
 , <a class="el" href="#a5e3dcf779c5858b144b624558ef88c78ab9f5c797ebbf55adccdd8539a65a0241">Disabled</a>
  }</td></tr>
-<tr class="memdesc:a5e3dcf779c5858b144b624558ef88c78"><td class="mdescLeft">&#160;</td><td class="mdescRight">Status of the network stack (WiFi + MQTT).  <a href="#a5e3dcf779c5858b144b624558ef88c78">More...</a><br /></td></tr>
+<tr class="memdesc:a5e3dcf779c5858b144b624558ef88c78"><td class="mdescLeft">&#160;</td><td class="mdescRight">Aggregated status of the WiFi + MQTT network stack.  <a href="#a5e3dcf779c5858b144b624558ef88c78">More...</a><br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a84fe61d82134dc33feb2e76ed30ef25d" id="r_a84fe61d82134dc33feb2e76ed30ef25d"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#a84fe61d82134dc33feb2e76ed30ef25d">MQTTManager</a> ()</td></tr>
-<tr class="memdesc:a84fe61d82134dc33feb2e76ed30ef25d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs the <a class="el" href="class_m_q_t_t_manager.html" title="Manages WiFi and MQTT connectivity for Home Assistant integration.">MQTTManager</a> instance.  <br /></td></tr>
+<tr class="memdesc:a84fe61d82134dc33feb2e76ed30ef25d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs the <a class="el" href="class_m_q_t_t_manager.html" title="Manages WiFi and MQTT connectivity for Home Assistant integration.">MQTTManager</a> and loads compile-time configuration.  <br /></td></tr>
 <tr class="memitem:a6ae3f49601f025edbd1719b3c73aab72" id="r_a6ae3f49601f025edbd1719b3c73aab72"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a6ae3f49601f025edbd1719b3c73aab72">init</a> (GarageController *ctrl, void(*callback)(char *, byte *, unsigned int))</td></tr>
-<tr class="memdesc:a6ae3f49601f025edbd1719b3c73aab72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initializes WiFi, MQTT, and Home Assistant discovery.  <br /></td></tr>
+<tr class="memdesc:a6ae3f49601f025edbd1719b3c73aab72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises WiFi, MQTT, and publishes HA discovery configs.  <br /></td></tr>
 <tr class="memitem:a9266e647933501851b411b6d2a9a1f95" id="r_a9266e647933501851b411b6d2a9a1f95"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a9266e647933501851b411b6d2a9a1f95">loop</a> ()</td></tr>
-<tr class="memdesc:a9266e647933501851b411b6d2a9a1f95"><td class="mdescLeft">&#160;</td><td class="mdescRight">Main loop handler for MQTT processing.  <br /></td></tr>
+<tr class="memdesc:a9266e647933501851b411b6d2a9a1f95"><td class="mdescLeft">&#160;</td><td class="mdescRight">Main loop handler – services MQTT and reconnects as needed.  <br /></td></tr>
 <tr class="memitem:a188c5e06c32dcb12713992084fb48825" id="r_a188c5e06c32dcb12713992084fb48825"><td class="memItemLeft"><a class="el" href="#a5e3dcf779c5858b144b624558ef88c78">NetStatus</a>&#160;</td><td class="memItemRight"><a class="el" href="#a188c5e06c32dcb12713992084fb48825">getNetStatus</a> () const</td></tr>
 <tr class="memitem:ad59c42bd6cf76d8aa3351c47ea0c0458" id="r_ad59c42bd6cf76d8aa3351c47ea0c0458"><td class="memItemLeft">const char *&#160;</td><td class="memItemRight"><a class="el" href="#ad59c42bd6cf76d8aa3351c47ea0c0458">getNetStatusString</a> () const</td></tr>
 <tr class="memitem:a8aaba8f0e2a9f1f7f0f3ef753bf06ce3" id="r_a8aaba8f0e2a9f1f7f0f3ef753bf06ce3"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a8aaba8f0e2a9f1f7f0f3ef753bf06ce3">isNetworkEnabled</a> () const</td></tr>
 <tr class="memitem:ad8fda8cc488bead14900c70fe723a4f3" id="r_ad8fda8cc488bead14900c70fe723a4f3"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#ad8fda8cc488bead14900c70fe723a4f3">resetNetStatus</a> ()</td></tr>
+<tr class="memdesc:ad8fda8cc488bead14900c70fe723a4f3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reset failure counter and retry connections.  <br /></td></tr>
 <tr class="memitem:aa89d67fb249d57e1f803e407da9c5d37" id="r_aa89d67fb249d57e1f803e407da9c5d37"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#aa89d67fb249d57e1f803e407da9c5d37">disableNetwork</a> ()</td></tr>
+<tr class="memdesc:aa89d67fb249d57e1f803e407da9c5d37"><td class="mdescLeft">&#160;</td><td class="mdescRight">Force-disable all network activity.  <br /></td></tr>
 <tr class="memitem:a6a23264f52f69d81ff3df08da2c76428" id="r_a6a23264f52f69d81ff3df08da2c76428"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a6a23264f52f69d81ff3df08da2c76428">getLocalIP</a> (char *buf, size_t len) const</td></tr>
+<tr class="memdesc:a6a23264f52f69d81ff3df08da2c76428"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes the local IP address into buf.  <br /></td></tr>
 <tr class="memitem:adcfdc7f643db3fc7ec24a44e78bb36aa" id="r_adcfdc7f643db3fc7ec24a44e78bb36aa"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#adcfdc7f643db3fc7ec24a44e78bb36aa">getMqttServerIP</a> (char *buf, size_t len) const</td></tr>
+<tr class="memdesc:adcfdc7f643db3fc7ec24a44e78bb36aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes the configured MQTT server address into buf.  <br /></td></tr>
 <tr class="memitem:ad86d91717c783e0b597409618051d1f5" id="r_ad86d91717c783e0b597409618051d1f5"><td class="memItemLeft">const char *&#160;</td><td class="memItemRight"><a class="el" href="#ad86d91717c783e0b597409618051d1f5">getTopic</a> (const __FlashStringHelper *suffix)</td></tr>
-<tr class="memdesc:ad86d91717c783e0b597409618051d1f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Public accessor used by GarageController::handleMQTT().  <br /></td></tr>
-<tr class="memitem:af559afb1611ffa75aef300fd1af078a1" id="r_af559afb1611ffa75aef300fd1af078a1"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#af559afb1611ffa75aef300fd1af078a1">publishStateChanges</a> (bool lightOn, unsigned long lightDurationMins, unsigned long lightRemainingMins, uint8_t doorCode, unsigned long doorDurationMins, unsigned long doorRemainingMins, float tempF, float heatSet, float coolSet, uint8_t mode, uint8_t hvacState, bool motionActive, bool lockout)</td></tr>
-<tr class="memdesc:af559afb1611ffa75aef300fd1af078a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publishes sensor and state updates to MQTT.  <br /></td></tr>
+<tr class="memdesc:ad86d91717c783e0b597409618051d1f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns _topicBuf containing the requested runtime topic.  <br /></td></tr>
+<tr class="memitem:a3fc251b03ae7d9184f43bd9d705a12c7" id="r_a3fc251b03ae7d9184f43bd9d705a12c7"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a3fc251b03ae7d9184f43bd9d705a12c7">publishStateChanges</a> (bool lightOn, unsigned long lightDurationMins, unsigned long lightRemainingMins, uint8_t doorCode, unsigned long doorDurationMins, unsigned long doorRemainingMins, float tempF, float heatSet, float coolSet, float nvHeatSet, float nvCoolSet, unsigned long nvDoorTimeoutMins, unsigned long nvLightTimeoutMins, uint8_t mode, uint8_t hvacState, bool motionActive, bool lockout)</td></tr>
+<tr class="memdesc:a3fc251b03ae7d9184f43bd9d705a12c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publishes changed sensor and state values to MQTT.  <br /></td></tr>
 <tr class="memitem:a31383885c0192542564f196bd75ad606" id="r_a31383885c0192542564f196bd75ad606"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a31383885c0192542564f196bd75ad606">addDevice</a> (JsonObject dev)</td></tr>
+<tr class="memdesc:a31383885c0192542564f196bd75ad606"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populates a JSON "dev" object with device identity fields.  <br /></td></tr>
 <tr class="memitem:af4014a04e79b8b584de3d58d266cae9e" id="r_af4014a04e79b8b584de3d58d266cae9e"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#af4014a04e79b8b584de3d58d266cae9e">makeTopic</a> (char *out, size_t len, const char *base, const char *suffix)</td></tr>
+<tr class="memdesc:af4014a04e79b8b584de3d58d266cae9e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Builds a topic string by concatenating base and suffix.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Manages WiFi and MQTT connectivity for Home Assistant integration. </p>
 <p>Compiled only when ENABLE_WIFI is 1. Set ENABLE_WIFI to 0 in <a class="el" href="_utility_8h.html" title="Utility functions for timing, version information, and build configuration.">Utility.h</a> for a DEV build that omits all network code.</p>
-<p>Memory notes ───────────── • All string literals are stored in flash via F() / PROGMEM - not SRAM. • MQTT topics are NOT stored as persistent String members. They are built on-demand from the DEVICE_ID root each time they are needed, using a small shared char buffer. This removes ~400 bytes of heap strings. • prevDoorState and prevHvacMode are stored as single bytes (enum/flag) instead of heap-allocated String objects. </p>
+<h1 class="doxsection"><a class="anchor" id="Memory"></a>
+Memory</h1>
+<ul>
+<li>All string literals are stored in flash via F() / PROGMEM.</li>
+<li>MQTT topics are built on-demand into a single 64-byte char buffer (_topicBuf) rather than persistent String members (~400 bytes of heap).</li>
+<li>prevDoorState and prevHvacMode are stored as uint8_t / bool instead of heap-allocated Strings (~60 bytes saved).</li>
+<li>dtostrf() replaces String(float,n) for float→char conversion.</li>
+</ul>
+<h1 class="doxsection"><a class="anchor" id="NVvsCurrent"></a>
+NVvsCurrent</h1>
+<p><a class="el" href="#a3fc251b03ae7d9184f43bd9d705a12c7" title="Publishes changed sensor and state values to MQTT.">publishStateChanges()</a> receives BOTH current values (live subsystem state) AND NV values (non-volatile EEPROM copies) for door timeout and light timeout. These are published to separate MQTT topics so that Home Assistant can independently display and control each:</p><ul>
+<li>/door/duration/state – current door auto-close timeout</li>
+<li>/nv/door_timeout/state – NV (persisted) door auto-close timeout</li>
+<li>/light/duration/state – current light auto-off timeout</li>
+<li>/nv/light_timeout/state – NV (persisted) light auto-off timeout </li>
+</ul>
 </div><a name="doc-enum-members" id="doc-enum-members"></a><h2 id="header-doc-enum-members" class="groupheader">Member Enumeration Documentation</h2>
 <a id="a5e3dcf779c5858b144b624558ef88c78" name="a5e3dcf779c5858b144b624558ef88c78"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5e3dcf779c5858b144b624558ef88c78">&#9670;&#160;</a></span>NetStatus</h2>
@@ -153,11 +174,14 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Status of the network stack (WiFi + MQTT). </p>
+<p>Aggregated status of the WiFi + MQTT network stack. </p>
 <table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a5e3dcf779c5858b144b624558ef88c78ae321c53b354930ba96f0243e652df458" name="a5e3dcf779c5858b144b624558ef88c78ae321c53b354930ba96f0243e652df458"></a>Connecting&#160;</td><td class="fielddoc"></td></tr>
-<tr><td class="fieldname"><a id="a5e3dcf779c5858b144b624558ef88c78a2ec0d16e4ca169baedb9b2d50ec5c6d7" name="a5e3dcf779c5858b144b624558ef88c78a2ec0d16e4ca169baedb9b2d50ec5c6d7"></a>Connected&#160;</td><td class="fielddoc"></td></tr>
-<tr><td class="fieldname"><a id="a5e3dcf779c5858b144b624558ef88c78ab9f5c797ebbf55adccdd8539a65a0241" name="a5e3dcf779c5858b144b624558ef88c78ab9f5c797ebbf55adccdd8539a65a0241"></a>Disabled&#160;</td><td class="fielddoc"></td></tr>
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a5e3dcf779c5858b144b624558ef88c78ae321c53b354930ba96f0243e652df458" name="a5e3dcf779c5858b144b624558ef88c78ae321c53b354930ba96f0243e652df458"></a>Connecting&#160;</td><td class="fielddoc"><p>Attempting to connect (initial state or after failure). </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a5e3dcf779c5858b144b624558ef88c78a2ec0d16e4ca169baedb9b2d50ec5c6d7" name="a5e3dcf779c5858b144b624558ef88c78a2ec0d16e4ca169baedb9b2d50ec5c6d7"></a>Connected&#160;</td><td class="fielddoc"><p>WiFi up and MQTT broker connected. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a5e3dcf779c5858b144b624558ef88c78ab9f5c797ebbf55adccdd8539a65a0241" name="a5e3dcf779c5858b144b624558ef88c78ab9f5c797ebbf55adccdd8539a65a0241"></a>Disabled&#160;</td><td class="fielddoc"><p>Permanently disabled after MAX_FAILURES consecutive failures. </p>
+</td></tr>
 </table>
 
 </div>
@@ -178,10 +202,10 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Constructs the <a class="el" href="class_m_q_t_t_manager.html" title="Manages WiFi and MQTT connectivity for Home Assistant integration.">MQTTManager</a> instance. </p>
-<p>Constructor for <a class="el" href="class_m_q_t_t_manager.html" title="Manages WiFi and MQTT connectivity for Home Assistant integration.">MQTTManager</a>.</p>
-<p>Configuration values (WiFi/MQTT credentials, device IDs) are hardcoded into the implementation for simplicity.</p>
-<p>Initializes WiFi and MQTT configuration from Config.h. All configuration values are stored in flash memory (PROGMEM) via F() macro, minimizing SRAM footprint of configuration pointers. </p>
+<p>Constructs the <a class="el" href="class_m_q_t_t_manager.html" title="Manages WiFi and MQTT connectivity for Home Assistant integration.">MQTTManager</a> and loads compile-time configuration. </p>
+<p>Constructs <a class="el" href="class_m_q_t_t_manager.html" title="Manages WiFi and MQTT connectivity for Home Assistant integration.">MQTTManager</a> and loads compile-time credentials from Config.h.</p>
+<p>All credential strings are read from Config.h macros.</p>
+<p>All credential macros resolve to string literals that live in flash; only the 2-byte pointers themselves occupy SRAM. </p>
 
 </div>
 </div>
@@ -201,6 +225,15 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Populates a JSON "dev" object with device identity fields. </p>
+<p>Appends device identity info to a JsonObject for HA discovery.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">dev</td><td>ArduinoJson JsonObject to populate. </td></tr>
+  </table>
+  </dd>
+</dl>
+
 </div>
 </div>
 <a id="aa89d67fb249d57e1f803e407da9c5d37" name="aa89d67fb249d57e1f803e407da9c5d37"></a>
@@ -217,6 +250,9 @@ Public Member Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Force-disable all network activity. </p>
+<p>Immediately disconnects WiFi and MQTT and sets Disabled state. </p>
 
 </div>
 </div>
@@ -239,6 +275,15 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Writes the local IP address into buf. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">buf</td><td>Output buffer. </td></tr>
+    <tr><td class="paramname">len</td><td>Buffer length in bytes. </td></tr>
+  </table>
+  </dd>
+</dl>
+
 </div>
 </div>
 <a id="adcfdc7f643db3fc7ec24a44e78bb36aa" name="adcfdc7f643db3fc7ec24a44e78bb36aa"></a>
@@ -259,6 +304,15 @@ Public Member Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Writes the configured MQTT server address into buf. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">buf</td><td>Output buffer. </td></tr>
+    <tr><td class="paramname">len</td><td>Buffer length in bytes. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -311,7 +365,15 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Public accessor used by GarageController::handleMQTT(). </p>
+<p>Returns _topicBuf containing the requested runtime topic. </p>
+<p>Public alias for buildTopic() used by GarageController::handleMQTT().</p>
+<p>Valid only until the next buildTopic() call – use immediately.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">suffix</td><td>Flash suffix string, e.g. F("/door/cmd"). </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -334,11 +396,14 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Initializes WiFi, MQTT, and Home Assistant discovery. </p>
+<p>Initialises WiFi, MQTT, and publishes HA discovery configs. </p>
+<p>Initialises WiFi, MQTT, and publishes HA discovery payloads.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">ctrl</td><td>Pointer to the main GarageController instance. </td></tr>
-    <tr><td class="paramname">callback</td><td>Callback invoked on received MQTT messages. </td></tr>
+    <tr><td class="paramname">ctrl</td><td>Pointer to the owning GarageController instance. </td></tr>
+    <tr><td class="paramname">callback</td><td>PubSubClient message callback for inbound commands.</td></tr>
+    <tr><td class="paramname">ctrl</td><td>Owning GarageController instance. </td></tr>
+    <tr><td class="paramname">callback</td><td>PubSubClient inbound-message callback. </td></tr>
   </table>
   </dd>
 </dl>
@@ -377,8 +442,10 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Main loop handler for MQTT processing. </p>
-<p>Must be called frequently from the main loop to service MQTT and reconnect if disconnected. </p>
+<p>Main loop handler – services MQTT and reconnects as needed. </p>
+<p>Services the MQTT connection and reconnects as needed.</p>
+<p>Must be called frequently from the main loop. When WiFi is disconnected, connectWiFi() may block up to ~15 s. For this reason the main loop calls this AFTER the time-critical motion/light code.</p>
+<p>When Disabled, attempts a full reconnect once per hour. When WiFi drops, connectWiFi() may block up to 15 s – this is why the main loop calls mqttManager.loop() AFTER the time-critical motion/light code. </p>
 
 </div>
 </div>
@@ -411,10 +478,26 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p>Builds a topic string by concatenating base and suffix. </p>
+<p>Concatenates base + "/" + suffix into out.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">out</td><td>Output buffer. </td></tr>
+    <tr><td class="paramname">len</td><td>Buffer length. </td></tr>
+    <tr><td class="paramname">base</td><td>Base path string. </td></tr>
+    <tr><td class="paramname">suffix</td><td>Suffix to append after '/'.</td></tr>
+    <tr><td class="paramname">out</td><td>Output buffer. </td></tr>
+    <tr><td class="paramname">len</td><td>Buffer length in bytes. </td></tr>
+    <tr><td class="paramname">base</td><td>Base path. </td></tr>
+    <tr><td class="paramname">suffix</td><td>Suffix string. </td></tr>
+  </table>
+  </dd>
+</dl>
+
 </div>
 </div>
-<a id="af559afb1611ffa75aef300fd1af078a1" name="af559afb1611ffa75aef300fd1af078a1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af559afb1611ffa75aef300fd1af078a1">&#9670;&#160;</a></span>publishStateChanges()</h2>
+<a id="a3fc251b03ae7d9184f43bd9d705a12c7" name="a3fc251b03ae7d9184f43bd9d705a12c7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3fc251b03ae7d9184f43bd9d705a12c7">&#9670;&#160;</a></span>publishStateChanges()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -467,6 +550,26 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>nvHeatSet</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>nvCoolSet</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">unsigned long</td>          <td class="paramname"><span class="paramname"><em>nvDoorTimeoutMins</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">unsigned long</td>          <td class="paramname"><span class="paramname"><em>nvLightTimeoutMins</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">uint8_t</td>          <td class="paramname"><span class="paramname"><em>mode</em></span>, </td>
         </tr>
         <tr>
@@ -487,38 +590,53 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Publishes sensor and state updates to MQTT. </p>
-<p>Publishes state changes to MQTT topics.</p>
-<p>Only changed values are published to reduce traffic and avoid unnecessary state churn.</p>
-<p>Publishing is gated until a valid temperature reading is available to avoid sending stale/invalid data on startup.</p>
+<p>Publishes changed sensor and state values to MQTT. </p>
+<p>Change-detected: only values that differ from the previous publish are transmitted. On (re)connect, all prev-state sentinels are invalidated via pendingFullPublish so the next call publishes everything.</p>
+<p>Temperature publication is additionally gated until a valid DS18B20 reading is received (hasValidTemp) to avoid sending DEVICE_DISCONNECTED sentinel values to Home Assistant on startup.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">lightOn</td><td>Current light relay state (true = on). </td></tr>
-    <tr><td class="paramname">lightDurationMins</td><td>Current light timeout duration in minutes. </td></tr>
-    <tr><td class="paramname">LightRemainingMins</td><td>Current light timeout remaining in minutes. </td></tr>
-    <tr><td class="paramname">doorCode</td><td>Current door state code (0=open, 1=closed, 2=moving, 3=error). </td></tr>
-    <tr><td class="paramname">doorDurationMins</td><td>Current door timeout duration in minutes. </td></tr>
-    <tr><td class="paramname">DoorRemainingMins</td><td>Current door timeout remaining in minutes. </td></tr>
-    <tr><td class="paramname">tempF</td><td>Current temperature in Fahrenheit. </td></tr>
-    <tr><td class="paramname">heatSet</td><td>Current HVAC heating setpoint temperature. </td></tr>
-    <tr><td class="paramname">coolSet</td><td>Current HVAC cooling setpoint temperature. </td></tr>
-    <tr><td class="paramname">mode</td><td>HVAC mode (0=Off, 1=Auto, 2=On). </td></tr>
-    <tr><td class="paramname">hvacState</td><td>HVAC runtime state (0=Waiting, 1=Heating, 2=Cooling, 3=Pending). </td></tr>
-    <tr><td class="paramname">motionActive</td><td>Motion sensor state (true = motion detected). </td></tr>
-    <tr><td class="paramname">lockout</td><td>HVAC lockout state (true = lockout active).</td></tr>
-    <tr><td class="paramname">lightOn</td><td>Current light state. </td></tr>
-    <tr><td class="paramname">lightDurationMins</td><td>Light timeout in minutes. </td></tr>
-    <tr><td class="paramname">lightRemainingMins</td><td>Light timeout remaining in minutes. </td></tr>
-    <tr><td class="paramname">doorCode</td><td>Current door state code. </td></tr>
-    <tr><td class="paramname">doorDurationMins</td><td>Door timeout in minutes. </td></tr>
-    <tr><td class="paramname">doorRemainingMins</td><td>Door timeout remaining in minutes. </td></tr>
-    <tr><td class="paramname">tempF</td><td>Current temperature. </td></tr>
-    <tr><td class="paramname">heatSet</td><td>Heat setpoint. </td></tr>
-    <tr><td class="paramname">coolSet</td><td>Cool setpoint. </td></tr>
-    <tr><td class="paramname">mode</td><td>HVAC mode code. </td></tr>
-    <tr><td class="paramname">hvacState</td><td>HVAC state code. </td></tr>
-    <tr><td class="paramname">motionActive</td><td>Motion sensor state. </td></tr>
-    <tr><td class="paramname">lockout</td><td>HVAC lockout state. </td></tr>
+    <tr><td class="paramname">lightDurationMins</td><td>Current live light auto-off timeout (minutes). </td></tr>
+    <tr><td class="paramname">lightRemainingMins</td><td>Minutes remaining before light auto-off. </td></tr>
+    <tr><td class="paramname">doorCode</td><td>Door state: 0=open, 1=closed, 2=moving, 3=error, 4=disabled. </td></tr>
+    <tr><td class="paramname">doorDurationMins</td><td>Current live door auto-close timeout (minutes). </td></tr>
+    <tr><td class="paramname">doorRemainingMins</td><td>Minutes remaining before door auto-close. </td></tr>
+    <tr><td class="paramname">tempF</td><td>Current temperature reading (°F). </td></tr>
+    <tr><td class="paramname">heatSet</td><td>Current live HVAC heat setpoint (°F). </td></tr>
+    <tr><td class="paramname">coolSet</td><td>Current live HVAC cool setpoint (°F). </td></tr>
+    <tr><td class="paramname">nvHeatSet</td><td>NV (persisted) HVAC heat setpoint (°F). </td></tr>
+    <tr><td class="paramname">nvCoolSet</td><td>NV (persisted) HVAC cool setpoint (°F). </td></tr>
+    <tr><td class="paramname">nvDoorTimeoutMins</td><td>NV (persisted) door auto-close timeout (minutes). Independent of doorDurationMins – may differ when the user has changed the current setting without saving it back to NV. </td></tr>
+    <tr><td class="paramname">nvLightTimeoutMins</td><td>NV (persisted) light auto-off timeout (minutes). Independent of lightDurationMins – may differ when the user has changed the current setting without saving it back to NV. </td></tr>
+    <tr><td class="paramname">mode</td><td>HVAC mode: 0=Off, 1=Heat, 2=Heat_Cool, 3=Cool. </td></tr>
+    <tr><td class="paramname">hvacState</td><td>HVAC runtime state: 0=Waiting, 1=Heating, 2=Cooling, 3=Pending. </td></tr>
+    <tr><td class="paramname">motionActive</td><td>True if PIR sensor is currently reading HIGH. </td></tr>
+    <tr><td class="paramname">lockout</td><td>True when HVAC is locked out (door not closed).</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>Only values that differ from the previous publish are transmitted (change detection). On (re)connect, pendingFullPublish invalidates all prev-state sentinels so the next call immediately overwrites any stale retained values in Home Assistant.</p>
+<p>Temperature publication is additionally gated until the first valid DS18B20 reading arrives (hasValidTemp), preventing DEVICE_DISCONNECTED sentinels (–196.6 °F) from reaching HA during startup.</p>
+<p>NV door and light timeouts use SEPARATE prev-state members from the current live timeouts so that both HA entities track their correct independent values.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">lightOn</td><td>Current light relay state. </td></tr>
+    <tr><td class="paramname">lightDurationMins</td><td>Current live light auto-off timeout (min). </td></tr>
+    <tr><td class="paramname">lightRemainingMins</td><td>Minutes remaining until light auto-off. </td></tr>
+    <tr><td class="paramname">doorCode</td><td>Door state code (0–4). </td></tr>
+    <tr><td class="paramname">doorDurationMins</td><td>Current live door auto-close timeout (min). </td></tr>
+    <tr><td class="paramname">doorRemainingMins</td><td>Minutes remaining until door auto-close. </td></tr>
+    <tr><td class="paramname">tempF</td><td>Current temperature (°F). </td></tr>
+    <tr><td class="paramname">heatSet</td><td>Current live HVAC heat setpoint (°F). </td></tr>
+    <tr><td class="paramname">coolSet</td><td>Current live HVAC cool setpoint (°F). </td></tr>
+    <tr><td class="paramname">nvHeatSet</td><td>NV HVAC heat setpoint (°F). </td></tr>
+    <tr><td class="paramname">nvCoolSet</td><td>NV HVAC cool setpoint (°F). </td></tr>
+    <tr><td class="paramname">nvDoorTimeoutMins</td><td>NV door auto-close timeout (min) – independent of doorDurationMins. </td></tr>
+    <tr><td class="paramname">nvLightTimeoutMins</td><td>NV light auto-off timeout (min) – independent of lightDurationMins. </td></tr>
+    <tr><td class="paramname">mode</td><td>HVAC mode code (0–3). </td></tr>
+    <tr><td class="paramname">hvacState</td><td>HVAC runtime state code (0–3). </td></tr>
+    <tr><td class="paramname">motionActive</td><td>True if PIR sensor reads HIGH. </td></tr>
+    <tr><td class="paramname">lockout</td><td>True when HVAC is locked out. </td></tr>
   </table>
   </dd>
 </dl>
@@ -539,6 +657,9 @@ Public Member Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Reset failure counter and retry connections. </p>
+<p>Resets the failure counter and re-enters Connecting state. </p>
 
 </div>
 </div>

@@ -164,7 +164,7 @@
 <!-- Node6 -->
 <g id="Node000006" class="node">
 <title>Node6</title>
-<g id="a_Node000006"><a xlink:href="class_menu_controller.html#a1573df6b0eaf60590b8efa1bb76584dc" target="_top" xlink:title="Polls button inputs and updates menu state.">
+<g id="a_Node000006"><a xlink:href="class_menu_controller.html#a8c93f46cbd85fde1905cc3acea074722" target="_top" xlink:title="Polls button inputs and updates menu state.">
 <polygon fill="white" stroke="#666666" points="103,-96 0,-96 0,-76 103,-76 103,-96"/>
 <text xml:space="preserve" text-anchor="middle" x="51.5" y="-82.5" font-family="Helvetica,sans-Serif" font-size="10.00">MenuController::poll</text>
 </a>

@@ -16,7 +16,7 @@
 <area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="487,222,464,264,448,283,428,300,406,311,404,306,426,295,444,280,459,261,482,225"/>
 <area shape="rect" id="Node000010" href="$class_garage_light.html#a7e09277f75a4a1500048b20a156cc33f" title="Turns the light on and resets the timeout." alt="" coords="240,360,378,387"/>
 <area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="493,223,486,255,473,289,454,322,429,350,405,364,379,372,378,367,403,359,425,346,450,319,468,287,481,254,489,227"/>
-<area shape="rect" id="Node000006" href="$class_menu_controller.html#a1573df6b0eaf60590b8efa1bb76584dc" title="Polls button inputs and updates menu state." alt="" coords="5,259,143,285"/>
+<area shape="rect" id="Node000006" href="$class_menu_controller.html#a8c93f46cbd85fde1905cc3acea074722" title="Polls button inputs and updates menu state." alt="" coords="5,259,143,285"/>
 <area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="208,190,192,198,136,229,94,260,90,256,133,224,190,194,212,187"/>
 <area shape="poly" id="edge10_Node000010_Node000006" title=" " alt="" coords="222,359,190,350,133,320,91,288,92,283,136,315,192,346,227,359"/>
 </map>

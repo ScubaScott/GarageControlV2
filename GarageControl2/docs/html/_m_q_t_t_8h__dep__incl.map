@@ -2,7 +2,7 @@
 <area shape="rect" id="Node000001" title=" " alt="" coords="160,5,228,32"/>
 <area shape="rect" id="Node000002" href="$_lcd_controller_8cpp.html" title="Implementation of LCD display controller for garage control system." alt="" coords="5,80,129,107"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="161,40,90,82,88,77,156,40"/>
-<area shape="rect" id="Node000003" href="$_m_q_t_t_8cpp.html" title="MQTTManager implementation &#45; compiled only when ENABLE_WIFI is 1." alt="" coords="152,80,235,107"/>
+<area shape="rect" id="Node000003" href="$_m_q_t_t_8cpp.html" title="MQTTManager implementation – compiled only when ENABLE_WIFI is 1." alt="" coords="152,80,235,107"/>
 <area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="196,46,196,81,191,78,192,50"/>
 <area shape="rect" id="Node000004" href="$_menu_controller_8cpp.html" title="Button debounce approach ──────────────────────── Each button has its own lastPressTime and lastPinSt..." alt="" coords="258,80,393,107"/>
 <area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="230,37,305,79,300,80,229,42"/>

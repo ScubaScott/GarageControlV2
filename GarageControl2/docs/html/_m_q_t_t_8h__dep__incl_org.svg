@@ -38,7 +38,7 @@
 <!-- Node3 -->
 <g id="Node000003" class="node">
 <title>Node3</title>
-<g id="a_Node000003"><a xlink:href="_m_q_t_t_8cpp.html" target="_top" xlink:title="MQTTManager implementation &#45; compiled only when ENABLE_WIFI is 1.">
+<g id="a_Node000003"><a xlink:href="_m_q_t_t_8cpp.html" target="_top" xlink:title="MQTTManager implementation – compiled only when ENABLE_WIFI is 1.">
 <polygon fill="white" stroke="#666666" points="172.12,-20 110.38,-20 110.38,0 172.12,0 172.12,-20"/>
 <text xml:space="preserve" text-anchor="middle" x="141.25" y="-6.5" font-family="Helvetica,sans-Serif" font-size="10.00">MQTT.cpp</text>
 </a>

@@ -2,6 +2,6 @@
 <area shape="rect" id="Node000001" title="Gets the current light on/off state." alt="" coords="239,31,365,57"/>
 <area shape="rect" id="Node000002" href="$class_garage_light.html#a9666ccbc01cca5c04758d78a8fedca70" title="Gets time remaining before auto&#45;off timeout expires." alt="" coords="5,5,191,32"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="221,35,191,33,191,28,226,34"/>
-<area shape="rect" id="Node000003" href="$class_menu_controller.html#a1573df6b0eaf60590b8efa1bb76584dc" title="Polls button inputs and updates menu state." alt="" coords="29,56,167,83"/>
+<area shape="rect" id="Node000003" href="$class_menu_controller.html#a8c93f46cbd85fde1905cc3acea074722" title="Polls button inputs and updates menu state." alt="" coords="29,56,167,83"/>
 <area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="221,54,167,63,167,58,226,53"/>
 </map>

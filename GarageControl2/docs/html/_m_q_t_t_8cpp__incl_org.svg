@@ -11,7 +11,7 @@
 <!-- Node1 -->
 <g id="Node000001" class="node">
 <title>Node1</title>
-<g id="a_Node000001"><a xlink:title="MQTTManager implementation &#45; compiled only when ENABLE_WIFI is 1.">
+<g id="a_Node000001"><a xlink:title="MQTTManager implementation – compiled only when ENABLE_WIFI is 1.">
 <polygon fill="#999999" stroke="#666666" points="234,-188 172.25,-188 172.25,-168 234,-168 234,-188"/>
 <text xml:space="preserve" text-anchor="middle" x="203.12" y="-174.5" font-family="Helvetica,sans-Serif" font-size="10.00">MQTT.cpp</text>
 </a>

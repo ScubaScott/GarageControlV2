@@ -51,7 +51,7 @@ var NAVTREE =
 
 var NAVTREEINDEX =
 [
-"_c_1_2_users_2scott_2_one_drive_2_documents_2_arduino_2_garage_control2_2_garage_control_v2_2_ga75739980faeffd840532f1c3761574b9.html"
+"_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

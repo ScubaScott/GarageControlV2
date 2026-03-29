@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['diagram_0',['Diagram',['../class_garage_door.html#State',1,'']]]
+  ['current_20value_20separation_0',['NV vs current value separation',['../_m_q_t_t_8cpp.html#NVSeparation',1,'']]]
 ];
