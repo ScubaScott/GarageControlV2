@@ -53,7 +53,7 @@ public:
     // Configuration variables (settable via menu)
     float heatSet = 65;     /**< Temperature setpoint for heating activation (°F) */
     float coolSet = 85;     /**< Temperature setpoint for cooling activation (°F) */
-    int HVACSwing = 2;      /**< Hysteresis range around setpoints to prevent relay chatter (°F) */
+    int HVACSwing = 1;      /**< Hysteresis range around setpoints to prevent relay chatter (°F) */
     bool lockout = false;   /**< Set to true when door is open to prevent conditioning */
 
     /**

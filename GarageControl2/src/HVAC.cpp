@@ -73,7 +73,7 @@ GarageHVAC::State GarageHVAC::poll(float tempF)
   }
 
   // ── Heating logic ─────────────────────────────────────────────────────
-  if (canHeat && tempF < heatSet)
+  if (canHeat && tempF < heatSet - HVACSwing)
   {
     if (!useLockout || !lockout)
     {
@@ -103,7 +103,7 @@ GarageHVAC::State GarageHVAC::poll(float tempF)
   }
 
   // ── Cooling logic ─────────────────────────────────────────────────────
-  if (canCool && tempF > coolSet)
+  if (canCool && tempF > coolSet + HVACSwing)
   {
     if (!useLockout || !lockout)
     {
