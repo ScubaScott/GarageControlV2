@@ -84,6 +84,8 @@ public:
     SetHeat,            ///< Edit heat setpoint temperature (°F)
     SetCool,            ///< Edit cool setpoint temperature (°F)
     SetSwing,           ///< Edit temperature hysteresis/swing (°F)
+    SetMinRunTime,      ///< Edit HVAC minimum runtime (minutes)
+    SetMinRestTime,     ///< Edit HVAC minimum rest time (minutes)
     SetMode,            ///< Select HVAC mode (Off/Heat/Heat_Cool/Cool)
     ReloadNV,           ///< Reload settings from NV storage
     HVACBack,           ///< Return from HVAC menu to Main

@@ -16,11 +16,14 @@
  * - Garage light relay:      digital pin 13 (active HIGH)
  *
  * @section NV (Non-Volatile) Settings Design
- * Four values are persisted in EEPROM as "NV" (non-volatile) settings:
- *   - nvHeatSet       : HVAC heat setpoint
- *   - nvCoolSet       : HVAC cool setpoint
- *   - nvDoorTimeout   : Door auto-close duration (ms)
- *   - nvLightTimeout  : Light auto-off duration (ms)
+ * Seven values are persisted in EEPROM as "NV" (non-volatile) settings:
+ *   - nvHeatSet         : HVAC heat setpoint
+ *   - nvCoolSet         : HVAC cool setpoint
+ *   - nvHVACSwing       : HVAC hysteresis swing
+ *   - nvHVACMinRunTime  : HVAC minimum runtime (minutes)
+ *   - nvHVACMinRestTime : HVAC minimum rest time (minutes)
+ *   - nvDoorTimeout     : Door auto-close duration (ms)
+ *   - nvLightTimeout    : Light auto-off duration (ms)
  *
  * Rules governing NV vs current settings:
  *  1. On boot, loadNV() reads EEPROM and sets BOTH the NV members AND the
@@ -54,7 +57,7 @@
 
 #include "src/Utility.h"
 #include <EEPROM.h>
-const char *GC_VERSION = "2.13.1";
+const char *GC_VERSION = "2.14";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -174,6 +177,9 @@ GarageController *g_controller = nullptr;
  *   [8..11] nvCoolSet         – float, cool setpoint (°F)
  *   [12..13] nvDoorTimeout    – uint16_t, door auto-close (minutes)
  *   [14..15] nvLightTimeout   – uint16_t, light auto-off  (minutes)
+ *   [16..17] nvHVACSwing      – uint16_t, HVAC hysteresis swing (°F)
+ *   [18..19] nvHVACMinRunTime – uint16_t, HVAC minimum run time (minutes)
+ *   [20..21] nvHVACMinRestTime– uint16_t, HVAC minimum rest time (minutes)
  *
  * @note All NV EEPROM reads/writes go through loadNV() / saveNV() only.
  *       No subsystem accesses EEPROM directly.
@@ -201,10 +207,13 @@ public:
    * and vice versa, except when reloadNV() is explicitly invoked.
    * @{
    */
-  float         nvHeatSet     = 65.0f;          ///< NV HVAC heat setpoint (°F)
-  float         nvCoolSet     = 85.0f;          ///< NV HVAC cool setpoint (°F)
-  unsigned long nvDoorTimeout = 30UL * 60000UL; ///< NV door auto-close duration (ms)
-  unsigned long nvLightTimeout= 20UL * 60000UL; ///< NV light auto-off duration (ms)
+  float         nvHeatSet         = 65.0f;          ///< NV HVAC heat setpoint (°F)
+  float         nvCoolSet         = 85.0f;          ///< NV HVAC cool setpoint (°F)
+  uint16_t      nvHVACSwing       = 1;               ///< NV HVAC hysteresis swing (°F)
+  uint16_t      nvHVACMinRunTime  = 2;               ///< NV HVAC minimum runtime (minutes)
+  uint16_t      nvHVACMinRestTime = 5;               ///< NV HVAC minimum rest time (minutes)
+  unsigned long nvDoorTimeout     = 30UL * 60000UL; ///< NV door auto-close duration (ms)
+  unsigned long nvLightTimeout    = 20UL * 60000UL; ///< NV light auto-off duration (ms)
   /** @} */
 
   // ── Temperature state ─────────────────────────────────────────────────────
@@ -218,8 +227,11 @@ public:
   static constexpr int      NV_ADDR_MAGIC     = 0;
   static constexpr int      NV_ADDR_HEAT_SET  = NV_ADDR_MAGIC    + sizeof(NV_MAGIC);
   static constexpr int      NV_ADDR_COOL_SET  = NV_ADDR_HEAT_SET + sizeof(float);
-  static constexpr int      NV_ADDR_DOOR_TIMEOUT  = NV_ADDR_COOL_SET    + sizeof(float);
-  static constexpr int      NV_ADDR_LIGHT_TIMEOUT = NV_ADDR_DOOR_TIMEOUT + sizeof(uint16_t);
+  static constexpr int      NV_ADDR_DOOR_TIMEOUT    = NV_ADDR_COOL_SET    + sizeof(float);
+  static constexpr int      NV_ADDR_LIGHT_TIMEOUT   = NV_ADDR_DOOR_TIMEOUT + sizeof(uint16_t);
+  static constexpr int      NV_ADDR_HVAC_SWING      = NV_ADDR_LIGHT_TIMEOUT + sizeof(uint16_t);
+  static constexpr int      NV_ADDR_HVAC_MIN_RUN    = NV_ADDR_HVAC_SWING  + sizeof(uint16_t);
+  static constexpr int      NV_ADDR_HVAC_MIN_REST   = NV_ADDR_HVAC_MIN_RUN + sizeof(uint16_t);
 
   // ── MQTT command debounce timestamps (ENABLE_WIFI only) ──────────────────
 #if ENABLE_WIFI
@@ -310,8 +322,9 @@ public:
   /**
    * @brief Reads NV settings from EEPROM and applies them to all subsystems.
    *
-   * Sets BOTH the four NV member variables AND the live subsystem values
-   * (hvac.heatSet, hvac.coolSet, door.autoCloseDuration, lights.duration).
+   * Sets BOTH the NV member variables AND the live subsystem values
+   * (hvac.heatSet, hvac.coolSet, hvac.HVACSwing, hvac.minRunTimeMins,
+   *  hvac.minRestTimeMins, door.autoCloseDuration, lights.duration).
    * Called once on boot; also called by reloadNV().
    *
    * @return true  if EEPROM contained a valid NV block,
@@ -326,6 +339,9 @@ public:
 
     float    heatSetNV       = 0.0f;
     float    coolSetNV       = 0.0f;
+    uint16_t hvacSwingNV     = 0;
+    uint16_t minRunNV       = 0;
+    uint16_t minRestNV      = 0;
     uint16_t doorTimeoutMins = 0;
     uint16_t lightTimeoutMins= 0;
 
@@ -333,25 +349,37 @@ public:
     EEPROM.get(NV_ADDR_COOL_SET,      coolSetNV);
     EEPROM.get(NV_ADDR_DOOR_TIMEOUT,  doorTimeoutMins);
     EEPROM.get(NV_ADDR_LIGHT_TIMEOUT, lightTimeoutMins);
+    EEPROM.get(NV_ADDR_HVAC_SWING,    hvacSwingNV);
+    EEPROM.get(NV_ADDR_HVAC_MIN_RUN,  minRunNV);
+    EEPROM.get(NV_ADDR_HVAC_MIN_REST, minRestNV);
 
-    // Sanity-check all four values before accepting the NV block.
-    if (heatSetNV      < 30.0f || heatSetNV      > 100.0f ||
-        coolSetNV      < 30.0f || coolSetNV       > 100.0f ||
-        doorTimeoutMins  < 1   || doorTimeoutMins  > 120   ||
-        lightTimeoutMins < 1   || lightTimeoutMins > 120)
+    // Sanity-check all NV values before accepting the NV block.
+    if (heatSetNV       < 30.0f || heatSetNV       > 100.0f ||
+        coolSetNV       < 30.0f || coolSetNV       > 100.0f ||
+        doorTimeoutMins  < 1    || doorTimeoutMins  > 120   ||
+        lightTimeoutMins < 1    || lightTimeoutMins > 120   ||
+        hvacSwingNV      > 20   ||
+        minRunNV         < 1    || minRunNV         > 120   ||
+        minRestNV        > 120)
     {
       return false;
     }
 
-    // ── Store the four NV members ─────────────────────────────────────────
-    nvHeatSet      = heatSetNV;
-    nvCoolSet      = coolSetNV;
-    nvDoorTimeout  = (unsigned long)doorTimeoutMins  * 60000UL;
-    nvLightTimeout = (unsigned long)lightTimeoutMins * 60000UL;
+    // ── Store the NV members ─────────────────────────────────────────────
+    nvHeatSet         = heatSetNV;
+    nvCoolSet         = coolSetNV;
+    nvHVACSwing       = hvacSwingNV;
+    nvHVACMinRunTime  = minRunNV;
+    nvHVACMinRestTime = minRestNV;
+    nvDoorTimeout     = (unsigned long)doorTimeoutMins  * 60000UL;
+    nvLightTimeout    = (unsigned long)lightTimeoutMins * 60000UL;
 
     // ── Apply NV values to live subsystems (Rule 1) ───────────────────────
-    hvac.heatSet          = nvHeatSet;
-    hvac.coolSet          = nvCoolSet;
+    hvac.heatSet           = nvHeatSet;
+    hvac.coolSet           = nvCoolSet;
+    hvac.HVACSwing         = nvHVACSwing;
+    hvac.minRunTimeMins    = nvHVACMinRunTime;
+    hvac.minRestTimeMins   = nvHVACMinRestTime;
     door.autoCloseDuration = nvDoorTimeout;
     lights.duration        = nvLightTimeout;
 
@@ -359,9 +387,10 @@ public:
   }
 
   /**
-   * @brief Writes the four NV member variables to EEPROM.
+   * @brief Writes the NV member variables to EEPROM.
    *
-   * Saves nvHeatSet, nvCoolSet, nvDoorTimeout, and nvLightTimeout.
+   * Saves nvHeatSet, nvCoolSet, nvHVACSwing, nvHVACMinRunTime,
+   * nvHVACMinRestTime, nvDoorTimeout, and nvLightTimeout.
    * This function deliberately does NOT read live subsystem values
    * (hvac.heatSet, door.autoCloseDuration, etc.) – only the NV members
    * are persisted (Rule 2 / Rule 3).
@@ -371,8 +400,11 @@ public:
   bool saveNV()
   {
     // Convert milliseconds to minutes for compact EEPROM storage.
-    uint16_t doorMins  = (uint16_t)(nvDoorTimeout  / 60000UL);
-    uint16_t lightMins = (uint16_t)(nvLightTimeout / 60000UL);
+    uint16_t doorMins      = (uint16_t)(nvDoorTimeout  / 60000UL);
+    uint16_t lightMins     = (uint16_t)(nvLightTimeout / 60000UL);
+    uint16_t hvacSwing     = (uint16_t)constrain((int)nvHVACSwing, 0, 20);
+    uint16_t minRunMins    = (uint16_t)constrain((int)nvHVACMinRunTime, 1, 120);
+    uint16_t minRestMins   = (uint16_t)constrain((int)nvHVACMinRestTime, 0, 120);
 
     // Clamp to valid range before writing.
     doorMins  = constrain(doorMins,  1, 120);
@@ -383,6 +415,9 @@ public:
     EEPROM.put(NV_ADDR_COOL_SET,      nvCoolSet);
     EEPROM.put(NV_ADDR_DOOR_TIMEOUT,  doorMins);
     EEPROM.put(NV_ADDR_LIGHT_TIMEOUT, lightMins);
+    EEPROM.put(NV_ADDR_HVAC_SWING,    hvacSwing);
+    EEPROM.put(NV_ADDR_HVAC_MIN_RUN,  minRunMins);
+    EEPROM.put(NV_ADDR_HVAC_MIN_REST, minRestMins);
 
 #if defined(ESP8266) || defined(ESP32)
     EEPROM.commit();
@@ -405,6 +440,9 @@ public:
   {
     hvac.heatSet           = nvHeatSet;
     hvac.coolSet           = nvCoolSet;
+    hvac.HVACSwing         = nvHVACSwing;
+    hvac.minRunTimeMins    = nvHVACMinRunTime;
+    hvac.minRestTimeMins   = nvHVACMinRestTime;
     door.autoCloseDuration = nvDoorTimeout;
     lights.duration        = nvLightTimeout;
     Serial.println(F("Controller:NV reloaded to live subsystems"));

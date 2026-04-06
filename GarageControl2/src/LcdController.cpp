@@ -228,7 +228,7 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
   }
   case MenuController::Screen::HVACMenu:
     printLCDText(1, true, "HVAC Settings");
-    printLCDText(3, true, "Heat/Cool/Swing/etc");
+    printLCDText(3, true, "Heat/Cool/Swing/Timers");
     printLCDText(4, false, "\x00");
     break;
 
@@ -253,6 +253,22 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     printLCDText(4, false, "\x02");
     EditMode ? lcd.blink_on() : lcd.blink_off();
     snprintf(buf, sizeof(buf), "%d\x03", hvac.HVACSwing);
+    printLCDText(3, true, buf);
+    break;
+
+  case MenuController::Screen::SetMinRunTime:
+    printLCDText(1, true, "HVAC Min Run");
+    printLCDText(4, false, "\x01");
+    EditMode ? lcd.blink_on() : lcd.blink_off();
+    snprintf(buf, sizeof(buf), "%u minutes", hvac.minRunTimeMins);
+    printLCDText(3, true, buf);
+    break;
+
+  case MenuController::Screen::SetMinRestTime:
+    printLCDText(1, true, "HVAC Min Rest");
+    printLCDText(4, false, "\x01");
+    EditMode ? lcd.blink_on() : lcd.blink_off();
+    snprintf(buf, sizeof(buf), "%u minutes", hvac.minRestTimeMins);
     printLCDText(3, true, buf);
     break;
 

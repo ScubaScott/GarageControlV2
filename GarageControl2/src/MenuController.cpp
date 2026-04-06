@@ -190,6 +190,12 @@ void MenuController::handleSet(IMenuHost &controller)
   case Screen::SetSwing:
     EditMode = !EditMode;
     break;
+  case Screen::SetMinRunTime:
+    EditMode = !EditMode;
+    break;
+  case Screen::SetMinRestTime:
+    EditMode = !EditMode;
+    break;
   case Screen::SetMode:
     EditMode = !EditMode;
     break;
@@ -281,6 +287,24 @@ void MenuController::handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor 
     if (EditMode)
       hvac.HVACSwing++;
     else
+      current = Screen::SetMinRunTime;
+    break;
+  case Screen::SetMinRunTime:
+    if (EditMode)
+    {
+      if (hvac.minRunTimeMins < 120)
+        hvac.minRunTimeMins++;
+    }
+    else
+      current = Screen::SetSwing;
+    break;
+  case Screen::SetMinRestTime:
+    if (EditMode)
+    {
+      if (hvac.minRestTimeMins < 120)
+        hvac.minRestTimeMins++;
+    }
+    else
       current = Screen::SetMode;
     break;
   case Screen::SetMode:
@@ -357,13 +381,31 @@ void MenuController::handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoo
     if (EditMode)
       hvac.HVACSwing--;
     else
-      current = Screen::SetMode;
+      current = Screen::SetMinRunTime;
+    break;
+  case Screen::SetMinRunTime:
+    if (EditMode)
+    {
+      if (hvac.minRunTimeMins > 1)
+        hvac.minRunTimeMins--;
+    }
+    else
+      current = Screen::SetSwing;
+    break;
+  case Screen::SetMinRestTime:
+    if (EditMode)
+    {
+      if (hvac.minRestTimeMins > 0)
+        hvac.minRestTimeMins--;
+    }
+    else
+      current = Screen::SetMinRunTime;
     break;
   case Screen::SetMode:
     if (EditMode)
       hvac.mode = (GarageHVAC::Mode)((hvac.mode + 3) % 4);
     else
-      current = Screen::ReloadNV;
+      current = Screen::SetMinRestTime;
     break;
   case Screen::ReloadNV:
     current = Screen::HVACBack;

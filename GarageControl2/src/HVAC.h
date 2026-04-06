@@ -54,6 +54,10 @@ public:
     float heatSet = 65;     /**< Temperature setpoint for heating activation (°F) */
     float coolSet = 85;     /**< Temperature setpoint for cooling activation (°F) */
     int HVACSwing = 1;      /**< Hysteresis range around setpoints to prevent relay chatter (°F) */
+    uint16_t minRunTimeMins = 2;  /**< Minimum time the system must run once started (minutes) */
+    uint16_t minRestTimeMins = 5; /**< Minimum rest duration between cycles (minutes) */
+    unsigned long lastRunStartTime = 0; /**< Timestamp when current HVAC cycle began */
+    unsigned long lastRunEndTime = 0;   /**< Timestamp when the last HVAC cycle ended */
     bool lockout = false;   /**< Set to true when door is open to prevent conditioning */
 
     /**
