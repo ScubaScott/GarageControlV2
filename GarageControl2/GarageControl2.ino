@@ -25,16 +25,31 @@
  *   - nvDoorTimeout     : Door auto-close duration (ms)
  *   - nvLightTimeout    : Light auto-off duration (ms)
  *
- * Rules governing NV vs current settings:
- *  1. On boot, loadNV() reads EEPROM and sets BOTH the NV members AND the
- *     live subsystem values (hvac.heatSet, door.autoCloseDuration, etc.).
- *  2. Changes to the CURRENT settings (menu or /cmd MQTT topics) do NOT
- *     write to EEPROM and do NOT touch the NV member variables.
- *  3. Changes to the NV settings (/nv/…/cmd MQTT topics) update ONLY the
- *     NV member variables and save to EEPROM; they do NOT touch the live
- *     subsystem values.
- *  4. LoadNV() (menu or /nv/reload/cmd) copies all four NV members back
- *     into the live subsystems, exactly as loadNV() does on boot.
+ * @section NVModel NV vs Live settings — the four rules
+ *
+ *  Rule 1 – Boot:
+ *    loadNV() reads EEPROM → writes NV member variables → writes live subsystem
+ *    values.  All three layers are in sync immediately after boot.
+ *
+ *  Rule 2 – Live changes:
+ *    Any update to a live subsystem value (via menu edit or MQTT /cmd topics)
+ *    touches ONLY that subsystem.  NV members and EEPROM are NOT affected.
+ *
+ *  Rule 3 – NV changes:
+ *    MQTT /nv/ topics update ONLY the NV member variables (in RAM).
+ *    Live subsystem values and EEPROM are NOT affected.  Changes accumulate
+ *    in RAM until an explicit Save is issued.
+ *
+ *  Rule 4 – Saving NV:
+ *    SaveNV() (menu) copies the current LIVE values → NV members → EEPROM.
+ *    This is the natural "commit what I just configured" action from the menu.
+ *    saveNV() (MQTT /nv/save/cmd or boot default) writes the current NV
+ *    member variables to EEPROM without touching live values.
+ *    Either path does NOT alter live subsystem values.
+ *
+ *  Rule 5 – Reload NV:
+ *    LoadNV() copies NV members → live subsystem values only; EEPROM is not
+ *    re-read and NV members are not modified.
  *
  * @section TemperatureSampling
  * The DS18B20 is read asynchronously to keep the main loop non-blocking:
@@ -57,7 +72,7 @@
 
 #include "src/Utility.h"
 #include <EEPROM.h>
-const char *GC_VERSION = "2.14.3";
+const char *GC_VERSION = "2.15.0";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -172,7 +187,7 @@ GarageController *g_controller = nullptr;
  *
  * @section NV Storage Layout
  * EEPROM layout (byte offsets):
- *   [0..3]  NV_MAGIC          – validity sentinel (0x47434E56)
+ *   [0..3]  NV_MAGIC          – validity sentinel (0x47434E56 = 'GCNV')
  *   [4..7]  nvHeatSet         – float, heat setpoint (°F)
  *   [8..11] nvCoolSet         – float, cool setpoint (°F)
  *   [12..13] nvDoorTimeout    – uint16_t, door auto-close (minutes)
@@ -200,11 +215,16 @@ public:
 
   // ── NV (EEPROM) settings ─────────────────────────────────────────────────
   /**
-   * @defgroup NVSettings Non-volatile settings
-   * These four members are the authoritative NV copies.  They are only
-   * modified by saveNV() (write) and loadNV() (read).  Changing a live
-   * subsystem value (e.g. hvac.heatSet) has NO effect on these members
-   * and vice versa, except when LoadNV() is explicitly invoked.
+   * @defgroup NVSettings Non-volatile settings (RAM mirrors of EEPROM)
+   *
+   * These members hold the "pending NV" values.  They are written by:
+   *   - loadNV()  on boot (reads from EEPROM)
+   *   - MQTT /nv/ command topics (update RAM only, no auto-save)
+   *   - SaveNV()  from the menu (copies from live subsystem values first)
+   *
+   * They are NOT updated by live subsystem changes (Rule 2).
+   * They are NOT auto-saved to EEPROM on every change (Rule 3).
+   * EEPROM is only written by saveNV() (Rule 4).
    * @{
    */
   float         nvHeatSet         = 65.0f;          ///< NV HVAC heat setpoint (°F)
@@ -301,14 +321,17 @@ public:
     Serial.println(F("Controller:LCD ready"));
 
     // ── NV settings ──────────────────────────────────────────────────────────
+    // On a valid NV block: EEPROM → NV members → live subsystems (all in sync).
+    // On a missing/invalid block: use compiled defaults, then persist them so
+    // the next boot has a valid NV block to read.
     if (loadNV())
     {
       Serial.println(F("Controller:Loaded NV settings"));
     }
     else
     {
-      Serial.println(F("Controller:NV missing/invalid – using defaults"));
-      saveNV();
+      Serial.println(F("Controller:NV missing/invalid - using defaults"));
+      saveNV(); // write defaults to EEPROM
     }
 
     // ── Network (production builds only) ─────────────────────────────────────
@@ -322,13 +345,15 @@ public:
   /**
    * @brief Reads NV settings from EEPROM and applies them to all subsystems.
    *
-   * Sets BOTH the NV member variables AND the live subsystem values
-   * (hvac.heatSet, hvac.coolSet, hvac.HVACSwing, hvac.minRunTimeMins,
-   *  hvac.minRestTimeMins, door.autoCloseDuration, lights.duration).
-   * Called once on boot; also called by LoadNV().
+   * Implements Rule 1 (boot sync): EEPROM → NV members → live subsystem values.
+   * Sets BOTH the NV member variables AND the live subsystem values so that
+   * all three layers are in agreement immediately after this call.
    *
-   * @return true  if EEPROM contained a valid NV block,
-   *         false if magic was absent or values were out of range.
+   * Called once on boot.  Also available via LoadNV() if the caller explicitly
+   * wants to re-read EEPROM (rare; normally LoadNV() just replays NV members).
+   *
+   * @return true  if EEPROM contained a valid NV block with in-range values.
+   * @return false if magic was absent or any value failed the sanity check.
    */
   bool loadNV()
   {
@@ -337,13 +362,13 @@ public:
     if (magic != NV_MAGIC)
       return false;
 
-    float    heatSetNV       = 0.0f;
-    float    coolSetNV       = 0.0f;
-    uint16_t hvacSwingNV     = 0;
-    uint16_t minRunNV       = 0;
-    uint16_t minRestNV      = 0;
-    uint16_t doorTimeoutMins = 0;
-    uint16_t lightTimeoutMins= 0;
+    float    heatSetNV        = 0.0f;
+    float    coolSetNV        = 0.0f;
+    uint16_t hvacSwingNV      = 0;
+    uint16_t minRunNV         = 0;
+    uint16_t minRestNV        = 0;
+    uint16_t doorTimeoutMins  = 0;
+    uint16_t lightTimeoutMins = 0;
 
     EEPROM.get(NV_ADDR_HEAT_SET,      heatSetNV);
     EEPROM.get(NV_ADDR_COOL_SET,      coolSetNV);
@@ -353,19 +378,19 @@ public:
     EEPROM.get(NV_ADDR_HVAC_MIN_RUN,  minRunNV);
     EEPROM.get(NV_ADDR_HVAC_MIN_REST, minRestNV);
 
-    // Sanity-check all NV values before accepting the NV block.
-    if (heatSetNV       < 30.0f || heatSetNV       > 100.0f ||
-        coolSetNV       < 30.0f || coolSetNV       > 100.0f ||
-        doorTimeoutMins  < 1    || doorTimeoutMins  > 120   ||
-        lightTimeoutMins < 1    || lightTimeoutMins > 120   ||
-        hvacSwingNV      > 20   ||
-        minRunNV         < 1    || minRunNV         > 120   ||
+    // Sanity-check all values before accepting the NV block.
+    if (heatSetNV        < 30.0f || heatSetNV        > 100.0f ||
+        coolSetNV        < 30.0f || coolSetNV        > 100.0f ||
+        doorTimeoutMins  < 1     || doorTimeoutMins  > 120    ||
+        lightTimeoutMins < 1     || lightTimeoutMins > 120    ||
+        hvacSwingNV      > 20    ||
+        minRunNV         < 1     || minRunNV         > 120    ||
         minRestNV        > 120)
     {
       return false;
     }
 
-    // ── Store the NV members ─────────────────────────────────────────────
+    // ── Write NV member variables (Rule 1 – NV layer) ────────────────────
     nvHeatSet         = heatSetNV;
     nvCoolSet         = coolSetNV;
     nvHVACSwing       = hvacSwingNV;
@@ -374,7 +399,7 @@ public:
     nvDoorTimeout     = (unsigned long)doorTimeoutMins  * 60000UL;
     nvLightTimeout    = (unsigned long)lightTimeoutMins * 60000UL;
 
-    // ── Apply NV values to live subsystems (Rule 1) ───────────────────────
+    // ── Apply NV values to live subsystems (Rule 1 – live layer) ─────────
     hvac.heatSet           = nvHeatSet;
     hvac.coolSet           = nvCoolSet;
     hvac.HVACSwing         = nvHVACSwing;
@@ -385,33 +410,27 @@ public:
 
     return true;
   }
-  void SaveNV()
-  {
-    saveNV();
-  }
+
   /**
-   * @brief Writes the NV member variables to EEPROM.
+   * @brief Writes the current NV member variables to EEPROM.
    *
-   * Saves nvHeatSet, nvCoolSet, nvHVACSwing, nvHVACMinRunTime,
-   * nvHVACMinRestTime, nvDoorTimeout, and nvLightTimeout.
-   * This function deliberately does NOT read live subsystem values
-   * (hvac.heatSet, door.autoCloseDuration, etc.) – only the NV members
-   * are persisted (Rule 2 / Rule 3).
+   * Implements Rule 4 (NV→EEPROM path for MQTT /nv/save/cmd and boot defaults).
+   * Persists exactly what is in the NV member variables at the time of the call.
+   * Live subsystem values are deliberately NOT read here; only NV members are written.
    *
-   * @return true always (future-proofed for write-error detection).
+   * EEPROM.put() uses a read-modify-write internally so cells are only physically
+   * written if the value has changed, preserving EEPROM write-cycle lifetime.
+   *
+   * @return true always (reserved for future write-error detection).
    */
   bool saveNV()
   {
     // Convert milliseconds to minutes for compact EEPROM storage.
-    uint16_t doorMins      = (uint16_t)(nvDoorTimeout  / 60000UL);
-    uint16_t lightMins     = (uint16_t)(nvLightTimeout / 60000UL);
-    uint16_t hvacSwing     = (uint16_t)constrain((int)nvHVACSwing, 0, 20);
-    uint16_t minRunMins    = (uint16_t)constrain((int)nvHVACMinRunTime, 1, 120);
-    uint16_t minRestMins   = (uint16_t)constrain((int)nvHVACMinRestTime, 0, 120);
-
-    // Clamp to valid range before writing.
-    doorMins  = constrain(doorMins,  1, 120);
-    lightMins = constrain(lightMins, 1, 120);
+    uint16_t doorMins    = (uint16_t)constrain((long)(nvDoorTimeout  / 60000UL), 1L, 120L);
+    uint16_t lightMins   = (uint16_t)constrain((long)(nvLightTimeout / 60000UL), 1L, 120L);
+    uint16_t hvacSwing   = (uint16_t)constrain((int)nvHVACSwing,       0,  20);
+    uint16_t minRunMins  = (uint16_t)constrain((int)nvHVACMinRunTime,  1, 120);
+    uint16_t minRestMins = (uint16_t)constrain((int)nvHVACMinRestTime, 0, 120);
 
     EEPROM.put(NV_ADDR_MAGIC,         NV_MAGIC);
     EEPROM.put(NV_ADDR_HEAT_SET,      nvHeatSet);
@@ -426,20 +445,48 @@ public:
     EEPROM.commit();
 #endif
 
+    Serial.println(F("Controller:NV saved to EEPROM"));
     return true;
+  }
+
+  /**
+   * @brief Copies current live subsystem values → NV members → EEPROM.
+   *
+   * This is the IMenuHost::SaveNV() implementation called by the SaveNV menu
+   * screen.  It is the natural "commit what I just configured" action:
+   *   - The user edits live values via the menu (heat setpoint, timeouts, etc.)
+   *   - Pressing SaveNV snapshots those live values into the NV members, then
+   *     persists them to EEPROM via saveNV().
+   *
+   * This is distinct from saveNV() (which saves NV members as-is, without
+   * reading live values) and is the ONLY place where live values are copied
+   * into the NV layer.  Rule 4 is satisfied: live subsystem values are not
+   * modified by this call.
+   */
+  void SaveNV() override
+  {
+    // Snapshot every live subsystem value into the corresponding NV member.
+    nvHeatSet         = hvac.heatSet;
+    nvCoolSet         = hvac.coolSet;
+    nvHVACSwing       = (uint16_t)constrain(hvac.HVACSwing,           0,  20);
+    nvHVACMinRunTime  = (uint16_t)constrain((int)hvac.minRunTimeMins,  1, 120);
+    nvHVACMinRestTime = (uint16_t)constrain((int)hvac.minRestTimeMins, 0, 120);
+    nvDoorTimeout     = door.autoCloseDuration;
+    nvLightTimeout    = lights.duration;
+
+    // Persist the freshly-updated NV members to EEPROM.
+    saveNV();
+    Serial.println(F("Controller:Live->NV->EEPROM (menu Save)"));
   }
 
   /**
    * @brief Restores all live subsystem values from the NV member variables.
    *
-   * Implements Rule 4: behaves identically to the "apply" step inside
-   * loadNV(), copying nvHeatSet, nvCoolSet, nvDoorTimeout, and
-   * nvLightTimeout into the live subsystems.  Does NOT re-read EEPROM.
-   *
-   * Called by the LoadNV menu screen (SET button) and the
-   * /nv/reload/cmd MQTT topic.
+   * Implements Rule 5 (LoadNV): copies NV members → live subsystems.
+   * Does NOT re-read EEPROM and does NOT modify NV members.
+   * Called by the LoadNV menu screen and the /nv/reload/cmd MQTT topic.
    */
-  void LoadNV()
+  void LoadNV() override
   {
     hvac.heatSet           = nvHeatSet;
     hvac.coolSet           = nvCoolSet;
@@ -448,7 +495,7 @@ public:
     hvac.minRestTimeMins   = nvHVACMinRestTime;
     door.autoCloseDuration = nvDoorTimeout;
     lights.duration        = nvLightTimeout;
-    Serial.println(F("Controller:NV reloaded to live subsystems"));
+    Serial.println(F("Controller:NV->live (reload)"));
   }
 
 
@@ -459,13 +506,16 @@ public:
   /**
    * @brief Dispatches an inbound MQTT command to the appropriate subsystem.
    *
-   * This function is called from the static mqttCallback() after building a
-   * String from the raw byte payload.  It uses strcmp() against pre-built
-   * topic strings so no heap allocations occur here.
+   * Topic routing follows the NV model strictly:
    *
-   * NV-vs-current topic separation:
-   *   /cmd    topics  → modify LIVE subsystem values only (no saveNV).
-   *   /nv/…/cmd topics → modify NV member variables + saveNV (no live change).
+   *   /cmd    topics  → modify LIVE subsystem values only; NV and EEPROM untouched.
+   *
+   *   /nv/…/cmd topics → modify NV member variables in RAM only; live subsystems
+   *                       and EEPROM are NOT touched.  Changes accumulate until
+   *                       a /nv/save/cmd is received (Rule 3).
+   *
+   *   /nv/save/cmd     → persist current NV members to EEPROM (Rule 4 MQTT path).
+   *   /nv/reload/cmd   → copy NV members → live subsystems (Rule 5).
    *
    * @param topic    Null-terminated MQTT topic string.
    * @param payload  Command payload as an Arduino String.
@@ -476,6 +526,11 @@ public:
     Serial.print(topic);
     Serial.print(F("] "));
     Serial.println(payload);
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  LIVE topics – update live subsystem values ONLY (Rule 2).
+    //  NV members and EEPROM are intentionally not touched here.
+    // ════════════════════════════════════════════════════════════════════════
 
     // ── Door command (LIVE only) ──────────────────────────────────────────
     if (strcmp(topic, mqttManager.getTopic(F("/door/cmd"))) == 0)
@@ -494,7 +549,7 @@ public:
       int mins = payload.toInt();
       if (mins > 0 && mins <= 120)
       {
-        // Update the live auto-close duration; NV is NOT changed.
+        // Update live auto-close duration; NV member nvDoorTimeout unchanged.
         door.autoCloseDuration = (unsigned long)mins * 60000UL;
         lcdDisplay.SetDirty(false);
       }
@@ -524,7 +579,7 @@ public:
       int mins = payload.toInt();
       if (mins > 0 && mins <= 120)
       {
-        // Update the live light-off duration; NV is NOT changed.
+        // Update live light-off duration; NV member nvLightTimeout unchanged.
         lights.duration = (unsigned long)mins * 60000UL;
         lcdDisplay.SetDirty(false);
       }
@@ -574,58 +629,71 @@ public:
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    //  NV topics – update NV members + EEPROM ONLY (Rule 3).
-    //  Live subsystem values are intentionally NOT touched here.
-    //  Use /nv/reload/cmd (or the LoadNV menu) to propagate to live values.
+    //  NV topics – update NV member variables in RAM ONLY (Rule 3).
+    //  Live subsystem values and EEPROM are NOT touched here.
+    //  Changes accumulate in RAM until /nv/save/cmd is received.
     // ════════════════════════════════════════════════════════════════════════
 
-    // ── NV heat setpoint (NV only – Rule 3) ──────────────────────────────
+    // ── NV heat setpoint (NV RAM only – Rule 3) ───────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/nv/hvac/heat_set/cmd"))) == 0)
     {
       float val = payload.toFloat();
       if (val > 30 && val < 100)
       {
-        nvHeatSet = val;  // NV member updated; hvac.heatSet is NOT changed.
-        saveNV();
+        nvHeatSet = val; // NV member updated in RAM; hvac.heatSet unchanged; no EEPROM write.
+        Serial.println(F("NV:heat_set updated (unsaved)"));
         lcdDisplay.SetDirty(false);
       }
     }
-    // ── NV cool setpoint (NV only – Rule 3) ──────────────────────────────
+    // ── NV cool setpoint (NV RAM only – Rule 3) ───────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/nv/hvac/cool_set/cmd"))) == 0)
     {
       float val = payload.toFloat();
       if (val > 30 && val < 100)
       {
-        nvCoolSet = val;  // NV member updated; hvac.coolSet is NOT changed.
-        saveNV();
+        nvCoolSet = val; // NV member updated in RAM; hvac.coolSet unchanged; no EEPROM write.
+        Serial.println(F("NV:cool_set updated (unsaved)"));
         lcdDisplay.SetDirty(false);
       }
     }
-    // ── NV door timeout (NV only – Rule 3) ───────────────────────────────
+    // ── NV door timeout (NV RAM only – Rule 3) ────────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/nv/door_timeout/cmd"))) == 0)
     {
       int mins = payload.toInt();
       if (mins > 0 && mins <= 120)
       {
-        // Update NV member and persist; door.autoCloseDuration is NOT touched.
-        nvDoorTimeout = (unsigned long)mins * 60000UL;
-        saveNV();
+        nvDoorTimeout = (unsigned long)mins * 60000UL; // door.autoCloseDuration unchanged; no EEPROM write.
+        Serial.println(F("NV:door_timeout updated (unsaved)"));
         lcdDisplay.SetDirty(false);
       }
     }
-    // ── NV light timeout (NV only – Rule 3) ──────────────────────────────
+    // ── NV light timeout (NV RAM only – Rule 3) ───────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/nv/light_timeout/cmd"))) == 0)
     {
       int mins = payload.toInt();
       if (mins > 0 && mins <= 120)
       {
-        // Update NV member and persist; lights.duration is NOT touched.
-        nvLightTimeout = (unsigned long)mins * 60000UL;
-        saveNV();
+        nvLightTimeout = (unsigned long)mins * 60000UL; // lights.duration unchanged; no EEPROM write.
+        Serial.println(F("NV:light_timeout updated (unsaved)"));
         lcdDisplay.SetDirty(false);
       }
     }
-    // ── Reload NV → live subsystems (Rule 4) ─────────────────────────────
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  NV control topics
+    // ════════════════════════════════════════════════════════════════════════
+
+    // ── Save NV to EEPROM (Rule 4 – MQTT path) ────────────────────────────
+    // Writes current NV member variables to EEPROM without touching live values.
+    // Use after sending /nv/ updates to commit them permanently.
+    else if (strcmp(topic, mqttManager.getTopic(F("/nv/save/cmd"))) == 0)
+    {
+      saveNV();
+      Serial.println(F("Controller:NV saved via MQTT"));
+      lcdDisplay.SetDirty(false);
+    }
+    // ── Reload NV → live subsystems (Rule 5) ─────────────────────────────
+    // Copies NV members → live subsystems without re-reading EEPROM.
     else if (strcmp(topic, mqttManager.getTopic(F("/nv/reload/cmd"))) == 0)
     {
       LoadNV();
@@ -762,7 +830,7 @@ public:
     // ── 9. MQTT state publish ─────────────────────────────────────────────
     // Pass NV timeouts separately so HA sees independent current vs NV
     // sensor entities and they can diverge when the user changes one without
-    // immediately reloading.
+    // immediately saving.
 #if ENABLE_WIFI
     mqttManager.publishStateChanges(
         lights.isOn(),

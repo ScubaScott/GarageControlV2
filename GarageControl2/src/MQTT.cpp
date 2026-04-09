@@ -19,7 +19,15 @@
  * against separate prev-state members (prevDoorDuration vs prevNvDoorTimeout,
  * prevLightDuration vs prevNvLightTimeout) and published to separate MQTT
  * topics.  This means Home Assistant will reflect the correct NV value even
- * when the user has temporarily changed the current setting without reloading.
+ * when the user has temporarily changed the current setting without saving.
+ *
+ * @section NVSaveModel NV save model
+ * /nv/ command topics update the NV member variables in RAM only (no auto-save).
+ * Changes accumulate in RAM until the client sends /nv/save/cmd, which triggers
+ * saveNV() to persist all NV members to EEPROM in a single write pass.
+ * This eliminates per-step EEPROM writes when adjusting values incrementally
+ * (e.g., stepping a setpoint from 65→75 via HA) and greatly reduces write-cycle
+ * wear on the EEPROM cells.
  */
 
 #include <ArduinoJson.h>
@@ -282,8 +290,8 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevCoolSet        = coolSet    + 10.0f;
     prevNvHeatSet      = nvHeatSet  + 10.0f;
     prevNvCoolSet      = nvCoolSet  + 10.0f;
-    prevNvDoorTimeout  = nvDoorTimeoutMins  + 1;  // NV door timeout sentinel
-    prevNvLightTimeout = nvLightTimeoutMins + 1;  // NV light timeout sentinel
+    prevNvDoorTimeout  = nvDoorTimeoutMins  + 1;
+    prevNvLightTimeout = nvLightTimeoutMins + 1;
     prevMode           = 0xFF;
     prevHvacState      = 0xFF;
     prevMotion         = !motionActive;
@@ -396,8 +404,6 @@ void MQTTManager::publishStateChanges(bool          lightOn,
 
   // ── NV door timeout ───────────────────────────────────────────────────────
   // Tracked against prevNvDoorTimeout, which is INDEPENDENT of prevDoorDuration.
-  // This allows the current and NV door timeout entities in HA to show different
-  // values when the user changes one without reloading the other.
   if (nvDoorTimeoutMins != prevNvDoorTimeout)
   {
     snprintf(val, sizeof(val), "%lu", nvDoorTimeoutMins);
@@ -514,6 +520,11 @@ void MQTTManager::connectWiFi()
  * @brief Connects to the MQTT broker, subscribes to command topics,
  *        and schedules a full state re-publish.
  *
+ * Subscribes to all live /cmd topics and NV /nv/ topics.
+ * The /nv/save/cmd topic is subscribed here; its handler in
+ * GarageController::handleMQTT() persists current NV members to EEPROM
+ * without touching live subsystem values (Rule 4 MQTT path).
+ *
  * Uses a stack-allocated clientId (no heap String).  The availability
  * topic is copied into a local buffer before the connect() call because
  * buildTopic() reuses _topicBuf.
@@ -545,7 +556,7 @@ void MQTTManager::connectMQTT()
     Serial.println(F("connected"));
     mqtt.publish(avail, "online", true);
 
-    // Subscribe to all inbound command topics.
+    // ── Subscribe to live /cmd topics ─────────────────────────────────────
     mqtt.subscribe(buildTopic(F("/door/cmd")));
     mqtt.subscribe(buildTopic(F("/door/duration/cmd")));
     mqtt.subscribe(buildTopic(F("/light/cmd")));
@@ -553,11 +564,17 @@ void MQTTManager::connectMQTT()
     mqtt.subscribe(buildTopic(F("/hvac/heat_set/cmd")));
     mqtt.subscribe(buildTopic(F("/hvac/cool_set/cmd")));
     mqtt.subscribe(buildTopic(F("/hvac/mode/cmd")));
+
+    // ── Subscribe to NV /nv/ topics ───────────────────────────────────────
+    // These update NV members in RAM only; no auto-save occurs.
     mqtt.subscribe(buildTopic(F("/nv/hvac/heat_set/cmd")));
     mqtt.subscribe(buildTopic(F("/nv/hvac/cool_set/cmd")));
     mqtt.subscribe(buildTopic(F("/nv/door_timeout/cmd")));
     mqtt.subscribe(buildTopic(F("/nv/light_timeout/cmd")));
-    mqtt.subscribe(buildTopic(F("/nv/reload/cmd")));
+
+    // ── Subscribe to NV control topics ────────────────────────────────────
+    mqtt.subscribe(buildTopic(F("/nv/save/cmd")));    // persist NV members → EEPROM
+    mqtt.subscribe(buildTopic(F("/nv/reload/cmd")));  // copy NV members → live subsystems
 
     publishDiscovery();
 
@@ -591,6 +608,10 @@ void MQTTManager::connectMQTT()
  * A single 1024-byte stack buffer is reused for every entity payload,
  * replacing the heap-concatenated String approach that caused repeated
  * ~400-byte heap allocations and fragmentation at startup and on reconnect.
+ *
+ * Includes a "Save NV Settings" button entity that triggers /nv/save/cmd,
+ * allowing HA users to explicitly commit pending NV RAM changes to EEPROM
+ * after making NV adjustments.
  *
  * Also removes stale 'number' discovery entries for read-only 'remaining'
  * sensors that were previously published with a command_topic, which caused
@@ -773,6 +794,24 @@ void MQTTManager::publishDiscovery()
     serializeJson(doc, buf, sizeof(buf));
     mqtt.publish(buildDiscoveryTopic(F("number"), F("_nv_light_timeout")), buf, true);
     Serial.println(F("Discovery: nv light timeout published"));
+  }
+
+  // ── NV Save button ────────────────────────────────────────────────────────
+  // A momentary button in HA that publishes to /nv/save/cmd, triggering the
+  // controller to write current NV member variables to EEPROM.
+  // Use this after adjusting any /nv/ number entity to make the changes permanent.
+  {
+    StaticJsonDocument<256> doc;
+    char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_nv_save", DEVICE_ID);
+    char topic[64]; makeTopic(topic, sizeof(topic), base, "nv/save/cmd");
+    doc["name"]          = "Save NV Settings";
+    doc["uniq_id"]       = uniq;
+    doc["command_topic"] = topic;
+    doc["avty_t"]        = avail;
+    addDevice(doc.createNestedObject("dev"));
+    serializeJson(doc, buf, sizeof(buf));
+    mqtt.publish(buildDiscoveryTopic(F("button"), F("_nv_save")), buf, true);
+    Serial.println(F("Discovery: nv save button published"));
   }
 
   // ── Garage light switch ───────────────────────────────────────────────────
