@@ -199,12 +199,23 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     printLCDText(2, true, buf);
 
     const char *modeStr;
-    switch (hvac.mode) {
-      case GarageHVAC::Off:      modeStr = "Off";  break;
-      case GarageHVAC::Heat:     modeStr = "Heat"; break;
-      case GarageHVAC::Heat_Cool: modeStr = "H+C"; break;
-      case GarageHVAC::Cool:     modeStr = "Cool"; break;
-      default:                   modeStr = "???";  break;
+    switch (hvac.mode)
+    {
+    case GarageHVAC::Off:
+      modeStr = "Off";
+      break;
+    case GarageHVAC::Heat:
+      modeStr = "Heat";
+      break;
+    case GarageHVAC::Heat_Cool:
+      modeStr = "H+C";
+      break;
+    case GarageHVAC::Cool:
+      modeStr = "Cool";
+      break;
+    default:
+      modeStr = "???";
+      break;
     }
     snprintf(buf, sizeof(buf), "HVAC:%s",
              modeStr);
@@ -228,8 +239,8 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
   }
   case MenuController::Screen::HVACMenu:
     printLCDText(1, true, "HVAC Settings");
-    printLCDText(3, true, "Heat/Cool/Swing/Timers");
-    printLCDText(4, false, "\x00");
+    printLCDText(3, true, "Ht/Cl/Swing/Time");
+    printLCDText(4, false, "\x01");
     break;
 
   case MenuController::Screen::SetHeat:
@@ -258,7 +269,7 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
 
   case MenuController::Screen::SetMinRunTime:
     printLCDText(1, true, "HVAC Min Run");
-    printLCDText(4, false, "\x01");
+    printLCDText(4, false, "\x02");
     EditMode ? lcd.blink_on() : lcd.blink_off();
     snprintf(buf, sizeof(buf), "%u minutes", hvac.minRunTimeMins);
     printLCDText(3, true, buf);
@@ -266,7 +277,7 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
 
   case MenuController::Screen::SetMinRestTime:
     printLCDText(1, true, "HVAC Min Rest");
-    printLCDText(4, false, "\x01");
+    printLCDText(4, false, "\x02");
     EditMode ? lcd.blink_on() : lcd.blink_off();
     snprintf(buf, sizeof(buf), "%u minutes", hvac.minRestTimeMins);
     printLCDText(3, true, buf);
@@ -274,23 +285,40 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
 
   case MenuController::Screen::SetMode:
     printLCDText(1, true, "HVAC Mode");
-    printLCDText(4, false, "\x01");
     EditMode ? lcd.blink_on() : lcd.blink_off();
     const char *modeStr;
-    switch (hvac.mode) {
-      case GarageHVAC::Off:      modeStr = "Off";  break;
-      case GarageHVAC::Heat:     modeStr = "Heat"; break;
-      case GarageHVAC::Heat_Cool: modeStr = "H+C"; break;
-      case GarageHVAC::Cool:     modeStr = "Cool"; break;
-      default:                   modeStr = "???";  break;
+    switch (hvac.mode)
+    {
+    case GarageHVAC::Off:
+      modeStr = "Off";
+      break;
+    case GarageHVAC::Heat:
+      modeStr = "Heat";
+      break;
+    case GarageHVAC::Heat_Cool:
+      modeStr = "H+C";
+      break;
+    case GarageHVAC::Cool:
+      modeStr = "Cool";
+      break;
+    default:
+      modeStr = "???";
+      break;
     }
     printLCDText(3, true, modeStr);
+    printLCDText(4, false, "\x02");
     break;
 
-  case MenuController::Screen::ReloadNV:
-    printLCDText(1, true, "Reload from NV");
-    printLCDText(3, true, "Press SET to reload");
-    printLCDText(4, false, "\x00");
+  case MenuController::Screen::LoadNV:
+    printLCDText(1, true, "Load from NV");
+    printLCDText(3, true, "Press SET to Load");
+    printLCDText(4, false, "\x02");
+    break;
+
+  case MenuController::Screen::SaveNV:
+    printLCDText(1, true, "Save to NV");
+    printLCDText(3, true, "Press SET to Save");
+    printLCDText(4, false, "\x02");
     break;
 
   case MenuController::Screen::LightMenu:
@@ -331,9 +359,8 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
 
   case MenuController::Screen::ConfigMenu:
     printLCDText(1, true, "Config Settings");
-    printLCDText(2, true, "General Settings");
     snprintf(buf, sizeof(buf), "Version: %s", GC_VERSION);
-    printLCDText(3, true, buf); 
+    printLCDText(2, true, buf);
     printLCDText(4, false, "\x02");
     break;
 
@@ -371,7 +398,7 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     snprintf(buf, sizeof(buf), "MQTT: %s", mqttStr);
     printLCDText(3, true, buf);
     EditMode ? lcd.blink_on() : lcd.blink_off();
-    snprintf(buf, sizeof(buf), "\x02 Status: %s", statusStr);
+    snprintf(buf, sizeof(buf), "\x01 Status: %s", statusStr);
     printLCDText(4, false, buf);
   }
   break;

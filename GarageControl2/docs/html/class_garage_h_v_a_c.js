@@ -17,7 +17,11 @@ var class_garage_h_v_a_c =
     [ "coolSet", "class_garage_h_v_a_c.html#a3cd28f25be231c1637678c1f19667528", null ],
     [ "heatSet", "class_garage_h_v_a_c.html#a3c76113f94034f50001247edd127aeb0", null ],
     [ "HVACSwing", "class_garage_h_v_a_c.html#a6e2f7814032cdbc39db7a5bd67fd688e", null ],
+    [ "lastRunEndTime", "class_garage_h_v_a_c.html#af083c1863da238f13fdcd7070a981573", null ],
+    [ "lastRunStartTime", "class_garage_h_v_a_c.html#a4f99548f6abff9c1b37cf6206fd95176", null ],
     [ "lockout", "class_garage_h_v_a_c.html#a6ceefcbc7ca5f3ce98fa9df42a1341db", null ],
+    [ "minRestTimeMins", "class_garage_h_v_a_c.html#afd9fcd96b0de0970d1e326188398efd7", null ],
+    [ "minRunTimeMins", "class_garage_h_v_a_c.html#a04e17f97aeae107db5bab31cec433e50", null ],
     [ "mode", "class_garage_h_v_a_c.html#a7e6765e087e124111191190bd89db7c5", null ],
     [ "state", "class_garage_h_v_a_c.html#afaa8a96be2e81d7cb0df87de61a19300", null ]
 ];

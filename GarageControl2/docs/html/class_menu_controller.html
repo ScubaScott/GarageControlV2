@@ -107,26 +107,29 @@ Public Types</h2></td></tr>
 , <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a365a34a1a8cdda07b5268a58bc859b6f">SetCool</a>
 , <br />
 &#160;&#160;<a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a485646c5eeb643f9507cc003d6c5193d">SetSwing</a>
+, <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a576beab75b5b94e28870c6b15a203e59">SetMinRunTime</a>
+, <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a7efd7d7d5a1efc74abbf62ca6e6bc0b3">SetMinRestTime</a>
 , <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40ad6726dd19bebc50d7293e04a0c949677">SetMode</a>
-, <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a975edf87794b2353ee341cc8969dd676">ReloadNV</a>
-, <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40af022f4b3211de36dab0296a50f8d381c">HVACBack</a>
 , <br />
-&#160;&#160;<a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a653aaa989f0cda1da0866ca8b5ce75d9">LightMenu</a>
-, <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a7c0c93d7c682d7e34d6f71887d567208">SetLightTimeout</a>
+&#160;&#160;<a class="el" href="#ab21a51647c0c372fad4282810e6a2f40afad010306472840262c1e15ae6bee46c">LoadNV</a>
+, <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40afa2545fb343c9d2b33f1b802bdf83b3a">SaveNV</a>
+, <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40af022f4b3211de36dab0296a50f8d381c">HVACBack</a>
+, <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a653aaa989f0cda1da0866ca8b5ce75d9">LightMenu</a>
+, <br />
+&#160;&#160;<a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a7c0c93d7c682d7e34d6f71887d567208">SetLightTimeout</a>
 , <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a78416dec881fb832e25ed4bc24a963ca">LightBack</a>
 , <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40aa5e13bd78827fd24e541bc1ab3421460">DoorMenu</a>
+, <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a6b1a31996af4eb0c1122c571591cf049">SetDoorTimeout</a>
 , <br />
-&#160;&#160;<a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a6b1a31996af4eb0c1122c571591cf049">SetDoorTimeout</a>
-, <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40aa315e6ff68a95619c75c12a3845caddd">SetDoorAttempts</a>
+&#160;&#160;<a class="el" href="#ab21a51647c0c372fad4282810e6a2f40aa315e6ff68a95619c75c12a3845caddd">SetDoorAttempts</a>
 , <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a8f6b561a873c37aa71d9aca980852abb">DoorBack</a>
 , <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40af66739494b021187313ef9527dc2c214">ConfigMenu</a>
+, <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a0b4ba01efcb15b2ff201068d04643fd5">NetworkInfo</a>
 , <br />
-&#160;&#160;<a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a0b4ba01efcb15b2ff201068d04643fd5">NetworkInfo</a>
-, <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40aa1a76d845aeb8091d67f5550ce58afa3">NetworkReset</a>
+&#160;&#160;<a class="el" href="#ab21a51647c0c372fad4282810e6a2f40aa1a76d845aeb8091d67f5550ce58afa3">NetworkReset</a>
 , <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40acd0d02f600f9febe0564d6b9508f64b9">ConfigBack</a>
 , <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40a0cc62470eca07966eee51b9df1fa3034">MenuExit</a>
-, <br />
-&#160;&#160;<a class="el" href="#ab21a51647c0c372fad4282810e6a2f40ae93f994f01c537c4e2f7d8528c3eb5e9">Count</a>
+, <a class="el" href="#ab21a51647c0c372fad4282810e6a2f40ae93f994f01c537c4e2f7d8528c3eb5e9">Count</a>
 <br />
  }</td></tr>
 <tr class="memdesc:ab21a51647c0c372fad4282810e6a2f40"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enumeration of all available menu screens in the hierarchy.  <a href="#ab21a51647c0c372fad4282810e6a2f40">More...</a><br /></td></tr>
@@ -220,9 +223,15 @@ Data Fields</h2></td></tr>
 </td></tr>
 <tr><td class="fieldname"><a id="ab21a51647c0c372fad4282810e6a2f40a485646c5eeb643f9507cc003d6c5193d" name="ab21a51647c0c372fad4282810e6a2f40a485646c5eeb643f9507cc003d6c5193d"></a>SetSwing&#160;</td><td class="fielddoc"><p>Edit temperature hysteresis/swing (°F). </p>
 </td></tr>
+<tr><td class="fieldname"><a id="ab21a51647c0c372fad4282810e6a2f40a576beab75b5b94e28870c6b15a203e59" name="ab21a51647c0c372fad4282810e6a2f40a576beab75b5b94e28870c6b15a203e59"></a>SetMinRunTime&#160;</td><td class="fielddoc"><p>Edit HVAC minimum runtime (minutes). </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ab21a51647c0c372fad4282810e6a2f40a7efd7d7d5a1efc74abbf62ca6e6bc0b3" name="ab21a51647c0c372fad4282810e6a2f40a7efd7d7d5a1efc74abbf62ca6e6bc0b3"></a>SetMinRestTime&#160;</td><td class="fielddoc"><p>Edit HVAC minimum rest time (minutes). </p>
+</td></tr>
 <tr><td class="fieldname"><a id="ab21a51647c0c372fad4282810e6a2f40ad6726dd19bebc50d7293e04a0c949677" name="ab21a51647c0c372fad4282810e6a2f40ad6726dd19bebc50d7293e04a0c949677"></a>SetMode&#160;</td><td class="fielddoc"><p>Select HVAC mode (Off/Heat/Heat_Cool/Cool). </p>
 </td></tr>
-<tr><td class="fieldname"><a id="ab21a51647c0c372fad4282810e6a2f40a975edf87794b2353ee341cc8969dd676" name="ab21a51647c0c372fad4282810e6a2f40a975edf87794b2353ee341cc8969dd676"></a>ReloadNV&#160;</td><td class="fielddoc"><p>Reload settings from NV storage. </p>
+<tr><td class="fieldname"><a id="ab21a51647c0c372fad4282810e6a2f40afad010306472840262c1e15ae6bee46c" name="ab21a51647c0c372fad4282810e6a2f40afad010306472840262c1e15ae6bee46c"></a>LoadNV&#160;</td><td class="fielddoc"><p>Load settings from NV storage. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ab21a51647c0c372fad4282810e6a2f40afa2545fb343c9d2b33f1b802bdf83b3a" name="ab21a51647c0c372fad4282810e6a2f40afa2545fb343c9d2b33f1b802bdf83b3a"></a>SaveNV&#160;</td><td class="fielddoc"><p>Save settings to NV storage. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="ab21a51647c0c372fad4282810e6a2f40af022f4b3211de36dab0296a50f8d381c" name="ab21a51647c0c372fad4282810e6a2f40af022f4b3211de36dab0296a50f8d381c"></a>HVACBack&#160;</td><td class="fielddoc"><p>Return from HVAC menu to Main. </p>
 </td></tr>
@@ -406,7 +415,7 @@ Here is the caller graph for this function:</div>
 <p>Should be called once per main loop iteration (typically 100-200ms). Debounces button presses, detects transitions, calls appropriate handlers, manages menu screen navigation, and auto-timeout to Main screen.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">controller</td><td>Reference to GarageController for reloadNV functionality </td></tr>
+    <tr><td class="paramname">controller</td><td>Reference to GarageController for LoadNV functionality </td></tr>
     <tr><td class="paramname">hvac</td><td>Reference to <a class="el" href="class_garage_h_v_a_c.html" title="Controls heating and cooling relays based on temperature setpoints.">GarageHVAC</a> instance for reading/updating HVAC settings </td></tr>
     <tr><td class="paramname">lights</td><td>Reference to <a class="el" href="class_garage_light.html" title="Controls garage light relay with configurable auto-off timeout.">GarageLight</a> instance for reading/updating light timeout </td></tr>
     <tr><td class="paramname">door</td><td>Reference to <a class="el" href="class_garage_door.html" title="Manages garage door operation, state tracking, and automatic closing.">GarageDoor</a> instance for reading/updating door settings </td></tr>

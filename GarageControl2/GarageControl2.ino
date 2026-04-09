@@ -33,7 +33,7 @@
  *  3. Changes to the NV settings (/nv/…/cmd MQTT topics) update ONLY the
  *     NV member variables and save to EEPROM; they do NOT touch the live
  *     subsystem values.
- *  4. reloadNV() (menu or /nv/reload/cmd) copies all four NV members back
+ *  4. LoadNV() (menu or /nv/reload/cmd) copies all four NV members back
  *     into the live subsystems, exactly as loadNV() does on boot.
  *
  * @section TemperatureSampling
@@ -57,7 +57,7 @@
 
 #include "src/Utility.h"
 #include <EEPROM.h>
-const char *GC_VERSION = "2.14";
+const char *GC_VERSION = "2.14.3";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -204,7 +204,7 @@ public:
    * These four members are the authoritative NV copies.  They are only
    * modified by saveNV() (write) and loadNV() (read).  Changing a live
    * subsystem value (e.g. hvac.heatSet) has NO effect on these members
-   * and vice versa, except when reloadNV() is explicitly invoked.
+   * and vice versa, except when LoadNV() is explicitly invoked.
    * @{
    */
   float         nvHeatSet         = 65.0f;          ///< NV HVAC heat setpoint (°F)
@@ -325,7 +325,7 @@ public:
    * Sets BOTH the NV member variables AND the live subsystem values
    * (hvac.heatSet, hvac.coolSet, hvac.HVACSwing, hvac.minRunTimeMins,
    *  hvac.minRestTimeMins, door.autoCloseDuration, lights.duration).
-   * Called once on boot; also called by reloadNV().
+   * Called once on boot; also called by LoadNV().
    *
    * @return true  if EEPROM contained a valid NV block,
    *         false if magic was absent or values were out of range.
@@ -385,7 +385,10 @@ public:
 
     return true;
   }
-
+  void SaveNV()
+  {
+    saveNV();
+  }
   /**
    * @brief Writes the NV member variables to EEPROM.
    *
@@ -433,10 +436,10 @@ public:
    * loadNV(), copying nvHeatSet, nvCoolSet, nvDoorTimeout, and
    * nvLightTimeout into the live subsystems.  Does NOT re-read EEPROM.
    *
-   * Called by the ReloadNV menu screen (SET button) and the
+   * Called by the LoadNV menu screen (SET button) and the
    * /nv/reload/cmd MQTT topic.
    */
-  void reloadNV()
+  void LoadNV()
   {
     hvac.heatSet           = nvHeatSet;
     hvac.coolSet           = nvCoolSet;
@@ -447,6 +450,8 @@ public:
     lights.duration        = nvLightTimeout;
     Serial.println(F("Controller:NV reloaded to live subsystems"));
   }
+
+
 
   // ── MQTT command handler (ENABLE_WIFI only) ───────────────────────────────
 #if ENABLE_WIFI
@@ -571,7 +576,7 @@ public:
     // ════════════════════════════════════════════════════════════════════════
     //  NV topics – update NV members + EEPROM ONLY (Rule 3).
     //  Live subsystem values are intentionally NOT touched here.
-    //  Use /nv/reload/cmd (or the ReloadNV menu) to propagate to live values.
+    //  Use /nv/reload/cmd (or the LoadNV menu) to propagate to live values.
     // ════════════════════════════════════════════════════════════════════════
 
     // ── NV heat setpoint (NV only – Rule 3) ──────────────────────────────
@@ -623,7 +628,7 @@ public:
     // ── Reload NV → live subsystems (Rule 4) ─────────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/nv/reload/cmd"))) == 0)
     {
-      reloadNV();
+      LoadNV();
       lcdDisplay.SetDirty(false);
     }
   }
