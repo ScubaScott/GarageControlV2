@@ -94,6 +94,7 @@ private:
   float         prevCoolSet         = -999.0f;
   float         prevNvHeatSet       = -999.0f;
   float         prevNvCoolSet       = -999.0f;
+  unsigned long prevHvacSwing       = 0;
   unsigned long prevNvDoorTimeout   = 0; ///< Tracks last-published NV door timeout
   unsigned long prevNvLightTimeout  = 0; ///< Tracks last-published NV light timeout
   bool          prevMotion          = false;
@@ -246,6 +247,7 @@ public:
                            float         coolSet,
                            float         nvHeatSet,
                            float         nvCoolSet,
+                           unsigned long hvacSwing,
                            unsigned long nvDoorTimeoutMins,
                            unsigned long nvLightTimeoutMins,
                            uint8_t       mode,

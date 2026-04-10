@@ -246,6 +246,7 @@ void MQTTManager::loop()
  * @param coolSet             Current live HVAC cool setpoint (°F).
  * @param nvHeatSet           NV HVAC heat setpoint (°F).
  * @param nvCoolSet           NV HVAC cool setpoint (°F).
+ * @param hvacSwing           Current live HVAC swing (°F).
  * @param nvDoorTimeoutMins   NV door auto-close timeout (min) – independent of doorDurationMins.
  * @param nvLightTimeoutMins  NV light auto-off timeout (min) – independent of lightDurationMins.
  * @param mode                HVAC mode code (0–3).
@@ -264,6 +265,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
                                       float         coolSet,
                                       float         nvHeatSet,
                                       float         nvCoolSet,
+                                      unsigned long hvacSwing,
                                       unsigned long nvDoorTimeoutMins,
                                       unsigned long nvLightTimeoutMins,
                                       uint8_t       mode,
@@ -290,6 +292,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevCoolSet        = coolSet    + 10.0f;
     prevNvHeatSet      = nvHeatSet  + 10.0f;
     prevNvCoolSet      = nvCoolSet  + 10.0f;
+    prevHvacSwing      = hvacSwing + 1;
     prevNvDoorTimeout  = nvDoorTimeoutMins  + 1;
     prevNvLightTimeout = nvLightTimeoutMins + 1;
     prevMode           = 0xFF;
@@ -385,6 +388,13 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     dtostrf(coolSet, 4, 1, val);
     mqtt.publish(buildTopic(F("/hvac/cool_set/state")), val, true);
     prevCoolSet = coolSet;
+  }
+
+  if (abs(hvacSwing - prevHvacSwing) >= 0.5f)
+  {
+    dtostrf(hvacSwing, 4, 1, val);
+    mqtt.publish(buildTopic(F("/hvac/swing/state")), val, true);
+    prevHvacSwing = hvacSwing;
   }
 
   // ── NV HVAC setpoints ─────────────────────────────────────────────────────
@@ -564,6 +574,7 @@ void MQTTManager::connectMQTT()
     mqtt.subscribe(buildTopic(F("/hvac/heat_set/cmd")));
     mqtt.subscribe(buildTopic(F("/hvac/cool_set/cmd")));
     mqtt.subscribe(buildTopic(F("/hvac/mode/cmd")));
+    mqtt.subscribe(buildTopic(F("/hvac/swing/cmd")));
 
     // ── Subscribe to NV /nv/ topics ───────────────────────────────────────
     // These update NV members in RAM only; no auto-save occurs.
@@ -753,7 +764,26 @@ void MQTTManager::publishDiscovery()
     mqtt.publish(buildDiscoveryTopic(F("number"), F("_nv_cool_set")), buf, true);
     Serial.println(F("Discovery: nv cool setpoint published"));
   }
-
+  // ── HVAC swing ──────────────────────────────────────────────────────
+  {
+    StaticJsonDocument<256> doc;
+    char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_hvac_swing", DEVICE_ID);
+    char stopic[64]; makeTopic(stopic, sizeof(stopic), base, "hvac/swing/state");
+    char ctopic[64]; makeTopic(ctopic, sizeof(ctopic), base, "hvac/swing/cmd");
+    doc["name"]              = "HVAC Swing";
+    doc["uniq_id"]           = uniq;
+    doc["state_topic"]       = stopic;
+    doc["command_topic"]     = ctopic;
+    doc["min"]               = 0;
+    doc["max"]               = 5;
+    doc["step"]              = 0.5;
+    doc["unit_of_measurement"] = "°F";
+    doc["avty_t"]            = avail;
+    addDevice(doc.createNestedObject("dev"));
+    serializeJson(doc, buf, sizeof(buf));
+    mqtt.publish(buildDiscoveryTopic(F("number"), F("_hvac_swing_set")), buf, true);
+    Serial.println(F("Discovery: HVAC Swing published"));
+  }
   // ── NV door timeout ───────────────────────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
@@ -892,6 +922,7 @@ void MQTTManager::publishDiscovery()
     makeTopic(topic, sizeof(topic), hvacBase, "action/state");      doc["action_topic"]               = topic;
     makeTopic(topic, sizeof(topic), hvacBase, "temp/state");        doc["current_temperature_topic"]  = topic;
     makeTopic(topic, sizeof(topic), hvacBase, "heat_set/state");    doc["temperature_state_topic"]    = topic;
+    makeTopic(topic, sizeof(topic), hvacBase, "hvac_swing/state");  doc["hvac_swing_topic"]           = topic;
     makeTopic(topic, sizeof(topic), hvacBase, "heat_set/cmd");      doc["temperature_command_topic"]  = topic;
     makeTopic(topic, sizeof(topic), hvacBase, "heat_set/state");    doc["temp_low_state_topic"]       = topic;
     makeTopic(topic, sizeof(topic), hvacBase, "heat_set/cmd");      doc["temp_low_command_topic"]     = topic;

@@ -72,7 +72,7 @@
 
 #include "src/Utility.h"
 #include <EEPROM.h>
-const char *GC_VERSION = "2.15.0";
+const char *GC_VERSION = "2.16.0";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -844,6 +844,7 @@ public:
         hvac.coolSet,
         nvHeatSet,
         nvCoolSet,
+        hvac.HVACSwing,
         nvDoorTimeout  / 60000UL,          // NV door timeout (min)
         nvLightTimeout / 60000UL,          // NV light timeout (min)
         (uint8_t)hvac.mode,
