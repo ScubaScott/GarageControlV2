@@ -351,7 +351,7 @@ void MenuController::handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor 
     current = Screen::LoadNV;
     break;
   case Screen::ConfigBack:
-    current = Screen::LoadNV;
+    current = Screen::SaveNV;
     break;
     // fail safe
   default:

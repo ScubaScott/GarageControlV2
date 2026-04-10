@@ -190,11 +190,11 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
   case MenuController::Screen::Main:
   {
 
-    snprintf(buf, sizeof(buf), "F:%.1f\x03  H:%d/C:%d",
+    snprintf(buf, sizeof(buf), "%.1f\x03  H:%d/C:%d",
              tempF, (int)hvac.heatSet, (int)hvac.coolSet);
     printLCDText(1, true, buf);
 
-    snprintf(buf, sizeof(buf), "Ht:%s / Dr:%s",
+    snprintf(buf, sizeof(buf), "HV:%s / Dr:%s",
              getHvacStateString(hvac), getDoorStateString(door));
     printLCDText(2, true, buf);
 
@@ -217,7 +217,7 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
       modeStr = "???";
       break;
     }
-    snprintf(buf, sizeof(buf), "HVAC:%s",
+    snprintf(buf, sizeof(buf), "Mode:%s",
              modeStr);
     printLCDText(3, true, buf);
 
