@@ -3,7 +3,7 @@
  * @brief Implementation of garage light controller.
  *
  * This file implements the GarageLight class methods for light control,
- * automatic timeout, and motion sensor integration.
+ * automatic timeout, and motion sensor integration with cooldown periods.
  */
 
 #include <Arduino.h>
@@ -14,6 +14,9 @@
 // ============================================================
 //  Garage Lights
 // ============================================================
+
+/** @brief 15-second cooldown period to suppress motion after manual turn-off (ms). */
+static constexpr unsigned long LIGHT_COOLDOWN_MS = 15000UL;
 
 /**
  * @brief Constructor for GarageLight.
@@ -38,24 +41,42 @@ void GarageLight::turnOn()
 
 /**
  * @brief Turns off the garage light and forces an acknowledgment to suppress false triggers.
+ *
+ * For manual turn-offs (button, MQTT), starts a 15-second cooldown period to prevent
+ * motion from re-triggering the lights, allowing occupants to exit without reactivation.
+ * For timeout-based turn-offs, no cooldown is applied, allowing motion to immediately
+ * re-trigger if the occupant is still present and moves.
+ *
+ * @param isManual If true (default), applies cooldown. If false, no cooldown (timeout).
  */
-void GarageLight::turnOff()
+void GarageLight::turnOff(bool isManual)
 {
   motion.forceAck();
   digitalWrite(pin, !onState);
-  Serial.println(F("Lights:Off(cmd)"));
+  
+  if (isManual)
+  {
+    cooldownUntil = now() + LIGHT_COOLDOWN_MS;  // Start 15-second cooldown for manual turn-off
+    Serial.println(F("Lights:Off(cmd)+cooldown"));
+  }
+  else
+  {
+    cooldownUntil = 0;  // No cooldown for timeout turn-off
+    Serial.println(F("Lights:Off(timeout)"));
+  }
 }
 
 /**
  * @brief Checks if the light has been on longer than the set duration, and if so, turns it off.
+ *
+ * When timeout expires, turnOff(false) is called to disable cooldown blocking,
+ * allowing motion to immediately re-trigger lights if occupant is still present.
  */
 void GarageLight::poll()
 {
   if (digitalRead(pin) == onState && expired(lastOn, duration))
   {
-    motion.forceAck();
-    digitalWrite(pin, !onState);
-    Serial.println(F("Lights:Off(timeout)"));
+    turnOff(false);  // Timeout turn-off: no cooldown, motion can re-trigger immediately
   }
 }
 
@@ -81,4 +102,13 @@ unsigned long GarageLight::lightRemaining()
     }
   }
   return 0;
+}
+
+/**
+ * @brief Checks if the light is currently in cooldown period after manual turn-off.
+ * @return True if currently in cooldown period, false otherwise.
+ */
+bool GarageLight::isInCooldown() const
+{
+  return now() < cooldownUntil;
 }

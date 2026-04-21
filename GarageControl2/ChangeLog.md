@@ -1,5 +1,25 @@
 # GarageControl2 – Change Log
 
+## [2.18.0] – 2026-04-20
+
+### Added
+- **PIR Hardware Interrupt (v2.18.0)**: Forces lights on immediately via RISING edge trigger
+  - Lights activate instantly on motion detection, even during MQTT reconnection
+  - Interrupt routing respects 15-second cooldown period to prevent unwanted reactivation
+
+- **Light Cooldown Timer (v2.18.0)**: 15-second motion-blocking period after manual turn-off
+  - Prevents lights from re-triggering when occupants exit the room
+  - Applies to all manual turn-off methods: button press, MQTT command, timeout
+  - Works seamlessly with hardware interrupt handler
+
+### Architecture
+- Hardware interrupt handler (`pirISR()`) attached to PIR pin 4 (RISING edge)
+- Cooldown state tracked in `GarageLight` class with `cooldownUntil` timestamp
+- Main loop respects cooldown: motion-triggered lights blocked during 15-second window
+- Hardware interrupt bypasses main loop delays but respects cooldown safety mechanism
+
+---
+
 ## [2.17.0] – 2026-04-20
 
 ### Added

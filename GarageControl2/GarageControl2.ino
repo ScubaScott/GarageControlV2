@@ -65,12 +65,12 @@
  *   - requestTemperatures() is issued every TEMP_INTERVAL_MS, returning immediately.
  *   - After TEMP_CONVERSION_MS the result is collected with getTempFByIndex().
  *
- * @version 2.17.0
+ * @version 2.18.0
  */
 
 #include "src/Utility.h"
 #include <EEPROM.h>
-const char *GC_VERSION = "2.17.0";
+const char *GC_VERSION = "2.18.0";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -165,6 +165,9 @@ uint8_t doorStateCode(const GarageDoor &door)
 // ============================================================
 class GarageController;
 GarageController *g_controller = nullptr;
+
+// Forward declare pirISR() so it can be used in begin()
+void pirISR();
 
 // ============================================================
 //  MAIN SYSTEM CONTROLLER
@@ -327,6 +330,13 @@ public:
 
     lcdDisplay.SetDirty(true);
     Serial.println(F("Controller:LCD ready"));
+
+    // ── PIR hardware interrupt ──────────────────────────────────────────────
+    // Attach hardware interrupt to force lights on immediately, even during
+    // MQTT reconnection. The 15-second cooldown after manual turn-off blocks
+    // interrupt processing to allow occupants to exit without reactivation.
+    attachInterrupt(digitalPinToInterrupt(PIRPin), pirISR, RISING);
+    Serial.println(F("Controller:PIR interrupt attached"));
 
     // ── NV settings ──────────────────────────────────────────────────────────
     if (loadNV())
@@ -831,12 +841,18 @@ public:
     // ── 1. Motion detection + light activation ────────────────────────────
     bool motionDetected = motion.poll();
 
-    if (motionDetected)
+    // Turn on lights if motion detected, unless we're in the 15-second cooldown
+    // period after manual turn-off (allows occupants to exit without reactivation)
+    if (motionDetected && !lights.isInCooldown())
     {
       lights.turnOn();
-      Serial.println(F("Controller:Motion->light on"));
+      Serial.println(F("Controller:Motion->lights on"));
       if (!lcdDisplay.isBacklightOn())
         lcdDisplay.setBacklight(true);
+    }
+    else if (motionDetected)
+    {
+      Serial.println(F("Controller:Motion detected but blocked by cooldown"));
     }
 
     // ── 2. Light auto-off timeout check ──────────────────────────────────
@@ -920,6 +936,37 @@ public:
     lcdDisplay.updateDisplay(hvac, door, lights, tempF);
   }
 };
+
+// ============================================================
+//  PIR Hardware Interrupt Handler Implementation
+// ============================================================
+
+/**
+ * @brief Hardware interrupt service routine for PIR motion sensor.
+ *
+ * Triggered by RISING signal on PIR pin (hardware interrupt).
+ * Forces lights on immediately, even if MQTT is reconnecting.
+ *
+ * The 15-second cooldown after manual turn-off is respected:
+ * if lights were just manually turned off, the interrupt is blocked
+ * allowing occupants to exit without unwanted reactivation.
+ *
+ * @note This runs at interrupt level with minimal context,
+ *       so we call a simple member function with no parameters.
+ */
+void pirISR()
+{
+  // Check if we have a valid controller and if we're not in cooldown
+  if (g_controller && !g_controller->lights.isInCooldown())
+  {
+    g_controller->lights.turnOn();
+    Serial.println(F("Controller:PIR interrupt->lights on"));
+  }
+  else if (g_controller)
+  {
+    Serial.println(F("Controller:PIR interrupt blocked (cooldown)"));
+  }
+}
 
 // ── Global instance ──────────────────────────────────────────────────────────
 GarageController controller;
