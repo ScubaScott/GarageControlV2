@@ -22,6 +22,7 @@ class MenuController;
 class GarageHVAC;
 class GarageDoor;
 class GarageLight;
+class IMenuHost;
 
 /**
  * @class LcdController
@@ -54,6 +55,7 @@ private:
   // Hardware references
   LiquidCrystal_I2C &lcd;   /**< Reference to initialized LCD controller */
   MenuController    &menu;  /**< Reference to menu navigation state */
+  IMenuHost         *host;  /**< Pointer to IMenuHost for NV value access (set via setHost()) */
 
   // Display update tracking
   bool IsDirty    = false;  /**< Flag to force redraw on next updateDisplay() */
@@ -147,6 +149,22 @@ public:
    * @see setBacklight()
    */
   bool isBacklightOn() const { return backlightOn; }
+
+  /**
+   * @brief Sets the IMenuHost pointer for NV value access.
+   *
+   * Called during setup to wire the LcdController to the IMenuHost implementation
+   * (typically GarageController). Required for SetNV menu screens to display and
+   * edit NV values via the host->getNv*() and host->adjNv*() methods.
+   *
+   * @param hostPtr Pointer to IMenuHost implementation (typically &controller)
+   *
+   * @note Must be called before updateDisplay() is invoked on SetNV screens.
+   *       If host is nullptr when a SetNV screen is displayed, values show "---".
+   *
+   * @see getNvHeatSet(), getNvCoolSet(), etc. for the accessors used
+   */
+  void setHost(IMenuHost *hostPtr) { host = hostPtr; }
 
 private:
   // Internal display rendering methods

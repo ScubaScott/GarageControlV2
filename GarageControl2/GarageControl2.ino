@@ -25,7 +25,7 @@
  *   - nvDoorTimeout     : Door auto-close duration (ms)
  *   - nvLightTimeout    : Light auto-off duration (ms)
  *
- * @section NVModel NV vs Live settings — the four rules
+ * @section NVModel NV vs Live settings — the five rules
  *
  *  Rule 1 – Boot:
  *    loadNV() reads EEPROM → writes NV member variables → writes live subsystem
@@ -36,43 +36,41 @@
  *    touches ONLY that subsystem.  NV members and EEPROM are NOT affected.
  *
  *  Rule 3 – NV changes:
- *    MQTT /nv/ topics update ONLY the NV member variables (in RAM).
- *    Live subsystem values and EEPROM are NOT affected.  Changes accumulate
- *    in RAM until an explicit Save is issued.
+ *    MQTT /nv/ topics and the new SetNV menu screens update ONLY the NV member
+ *    variables (in RAM).  Live subsystem values and EEPROM are NOT affected.
+ *    Changes accumulate in RAM until an explicit Save is issued.
  *
  *  Rule 4 – Saving NV:
  *    SaveNV() (menu) copies the current LIVE values → NV members → EEPROM.
- *    This is the natural "commit what I just configured" action from the menu.
  *    saveNV() (MQTT /nv/save/cmd or boot default) writes the current NV
  *    member variables to EEPROM without touching live values.
- *    Either path does NOT alter live subsystem values.
+ *    Neither path alters live subsystem values.
  *
  *  Rule 5 – Reload NV:
  *    LoadNV() copies NV members → live subsystem values only; EEPROM is not
  *    re-read and NV members are not modified.
  *
+ * @section SetNVMenu SetNV Values menu (v2.17.0)
+ * A new "Set NV Values" sub-menu was added inside the Config section,
+ * accessible via DOWN from NetworkInfo.  It provides one edit screen per NV
+ * parameter (heat setpoint, cool setpoint, swing, min run time, min rest time,
+ * door timeout, light timeout).  Changes go through the IMenuHost adjNv*()
+ * mutators which clamp values to valid ranges and update in-RAM NV members only.
+ * EEPROM is not written until the user explicitly navigates to SaveNV or sends
+ * the MQTT /nv/save/cmd.
+ *
  * @section TemperatureSampling
  * The DS18B20 is read asynchronously to keep the main loop non-blocking:
  *   - sensors.setWaitForConversion(false) is called once in begin().
- *   - requestTemperatures() is issued every TEMP_INTERVAL_MS, returning
- *     immediately (no 750 ms stall).
+ *   - requestTemperatures() is issued every TEMP_INTERVAL_MS, returning immediately.
  *   - After TEMP_CONVERSION_MS the result is collected with getTempFByIndex().
- * Motion detection and light activation run at the very top of every loop
- * iteration so they are never delayed by WiFi reconnection or temperature
- * conversion.
  *
- * @section Menu
- * - Main: status screen (door/light/HVAC/motion)
- * - SET: enter submenu
- *   - HVAC: enable/disable heat, adjust setpoint
- *   - Light: set auto-off timeout
- *   - Door: set auto-close timeout and retry attempts
- *   - Config: show network status, trigger reconnect
+ * @version 2.17.0
  */
 
 #include "src/Utility.h"
 #include <EEPROM.h>
-const char *GC_VERSION = "2.16.1";
+const char *GC_VERSION = "2.17.0";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -125,7 +123,7 @@ static constexpr unsigned long TEMP_CONVERSION_MS = 800UL;
 //  Utility helpers (defined here; declared extern in Utility.h)
 // ============================================================
 
-/** @brief Returns millis() – thin wrapper used throughout subsystems. */
+/** @brief Returns millis() — thin wrapper used throughout subsystems. */
 unsigned long now() { return millis(); }
 
 /**
@@ -147,8 +145,8 @@ bool expired(unsigned long last, unsigned long interval)
  *
  * Avoids heap-allocating a String in the main loop when publishing MQTT state.
  *
- * @param door  GarageDoor instance to query.
- * @return      0=open, 1=closed, 2=moving, 3=error, 4=disabled.
+ * @param door GarageDoor instance to query.
+ * @return 0=open, 1=closed, 2=moving, 3=error, 4=disabled.
  */
 uint8_t doorStateCode(const GarageDoor &door)
 {
@@ -177,81 +175,87 @@ GarageController *g_controller = nullptr;
  * @brief Top-level controller that owns and coordinates all subsystems.
  *
  * Subsystems:
- *   - MotionSensor  – PIR debouncing and relay-spike rejection
- *   - GarageLight   – relay-controlled light with auto-off
- *   - GarageDoor    – state machine, auto-close, retry logic
- *   - GarageHVAC    – heating/cooling with hysteresis and lockout
+ *   - MotionSensor   – PIR debouncing and relay-spike rejection
+ *   - GarageLight    – relay-controlled light with auto-off
+ *   - GarageDoor     – state machine, auto-close, retry logic
+ *   - GarageHVAC     – heating/cooling with hysteresis and lockout
  *   - MenuController – debounced 3-button navigation
  *   - LcdController  – 4×20 I2C display rendering
- *   - MQTTManager   – WiFi + MQTT + HA discovery (ENABLE_WIFI only)
+ *   - MQTTManager    – WiFi + MQTT + HA discovery (ENABLE_WIFI only)
+ *
+ * @section IMenuHostImpl IMenuHost implementation
+ * GarageController implements IMenuHost to expose:
+ *   - LoadNV() / SaveNV() for menu commit operations
+ *   - getNv*() getters used by LcdController to display NV values on
+ *     the SetNV edit screens
+ *   - adjNv*() mutators used by MenuController to increment/decrement
+ *     NV members in edit mode without touching live values or EEPROM
  *
  * @section NV Storage Layout
  * EEPROM layout (byte offsets):
- *   [0..3]  NV_MAGIC          – validity sentinel (0x47434E56 = 'GCNV')
- *   [4..7]  nvHeatSet         – float, heat setpoint (°F)
- *   [8..11] nvCoolSet         – float, cool setpoint (°F)
- *   [12..13] nvDoorTimeout    – uint16_t, door auto-close (minutes)
- *   [14..15] nvLightTimeout   – uint16_t, light auto-off  (minutes)
- *   [16..17] nvHVACSwing      – uint16_t, HVAC hysteresis swing (°F)
- *   [18..19] nvHVACMinRunTime – uint16_t, HVAC minimum run time (minutes)
- *   [20..21] nvHVACMinRestTime– uint16_t, HVAC minimum rest time (minutes)
- *
- * @note All NV EEPROM reads/writes go through loadNV() / saveNV() only.
- *       No subsystem accesses EEPROM directly.
+ *   [0..3]   NV_MAGIC           – validity sentinel ('GCNV')
+ *   [4..7]   nvHeatSet          – float, heat setpoint (°F)
+ *   [8..11]  nvCoolSet          – float, cool setpoint (°F)
+ *   [12..13] nvDoorTimeout      – uint16_t, door auto-close (minutes)
+ *   [14..15] nvLightTimeout     – uint16_t, light auto-off  (minutes)
+ *   [16..17] nvHVACSwing        – uint16_t, HVAC hysteresis swing (°F)
+ *   [18..19] nvHVACMinRunTime   – uint16_t, HVAC minimum run time (minutes)
+ *   [20..21] nvHVACMinRestTime  – uint16_t, HVAC minimum rest time (minutes)
  */
 class GarageController : public IMenuHost
 {
 public:
-  // ── Subsystem objects ────────────────────────────────────────────────────
-  MotionSensor          motion;
-  GarageLight           lights;
-  GarageDoor            door;
-  GarageHVAC            hvac;
-  MenuController        menu;
-  LiquidCrystal_I2C     lcd;
-  LcdController         lcdDisplay;
-  OneWire               oneWire;
-  DallasTemperature     sensors;
+  // ── Subsystem objects ─────────────────────────────────────────────────────
+  MotionSensor      motion;
+  GarageLight       lights;
+  GarageDoor        door;
+  GarageHVAC        hvac;
+  MenuController    menu;
+  LiquidCrystal_I2C lcd;
+  LcdController     lcdDisplay;
+  OneWire           oneWire;
+  DallasTemperature sensors;
 
   // ── NV (EEPROM) settings ─────────────────────────────────────────────────
   /**
    * @defgroup NVSettings Non-volatile settings (RAM mirrors of EEPROM)
    *
-   * These members hold the "pending NV" values.  They are written by:
-   *   - loadNV()  on boot (reads from EEPROM)
-   *   - MQTT /nv/ command topics (update RAM only, no auto-save)
-   *   - SaveNV()  from the menu (copies from live subsystem values first)
+   * Updated by:
+   *   - loadNV()            on boot (reads from EEPROM)
+   *   - adjNv*() mutators   from the SetNV menu screens (Rule 3 — RAM only)
+   *   - MQTT /nv/ topics    (Rule 3 — RAM only)
+   *   - SaveNV()            from the menu (copies live → NV → EEPROM)
    *
-   * They are NOT updated by live subsystem changes (Rule 2).
-   * They are NOT auto-saved to EEPROM on every change (Rule 3).
-   * EEPROM is only written by saveNV() (Rule 4).
+   * NOT updated by live subsystem changes (Rule 2).
+   * NOT auto-saved to EEPROM on change (Rule 3).
+   * EEPROM written only by saveNV() (Rule 4).
    * @{
    */
   float         nvHeatSet         = 65.0f;          ///< NV HVAC heat setpoint (°F)
   float         nvCoolSet         = 85.0f;          ///< NV HVAC cool setpoint (°F)
-  uint16_t      nvHVACSwing       = 1;               ///< NV HVAC hysteresis swing (°F)
-  uint16_t      nvHVACMinRunTime  = 2;               ///< NV HVAC minimum runtime (minutes)
-  uint16_t      nvHVACMinRestTime = 5;               ///< NV HVAC minimum rest time (minutes)
+  uint16_t      nvHVACSwing       = 1;              ///< NV HVAC hysteresis swing (°F)
+  uint16_t      nvHVACMinRunTime  = 2;              ///< NV HVAC minimum runtime (minutes)
+  uint16_t      nvHVACMinRestTime = 5;              ///< NV HVAC minimum rest time (minutes)
   unsigned long nvDoorTimeout     = 30UL * 60000UL; ///< NV door auto-close duration (ms)
   unsigned long nvLightTimeout    = 20UL * 60000UL; ///< NV light auto-off duration (ms)
   /** @} */
 
   // ── Temperature state ─────────────────────────────────────────────────────
-  float         tempF          = 0.0f;  ///< Last valid temperature reading (°F)
-  unsigned long lastTempPoll   = 0;     ///< Timestamp of last requestTemperatures() call
-  unsigned long lastTempRequest= 0;     ///< Timestamp when the last conversion was started
-  bool          tempPending    = false; ///< True while waiting for DS18B20 conversion
+  float         tempF           = 0.0f;  ///< Last valid temperature reading (°F)
+  unsigned long lastTempPoll    = 0;     ///< Timestamp of last requestTemperatures() call
+  unsigned long lastTempRequest = 0;     ///< Timestamp when the last conversion started
+  bool          tempPending     = false; ///< True while waiting for DS18B20 conversion
 
   // ── NV EEPROM layout ──────────────────────────────────────────────────────
-  static constexpr uint32_t NV_MAGIC          = 0x47434E56U; ///< 'GCNV' sentinel
-  static constexpr int      NV_ADDR_MAGIC     = 0;
-  static constexpr int      NV_ADDR_HEAT_SET  = NV_ADDR_MAGIC    + sizeof(NV_MAGIC);
-  static constexpr int      NV_ADDR_COOL_SET  = NV_ADDR_HEAT_SET + sizeof(float);
-  static constexpr int      NV_ADDR_DOOR_TIMEOUT    = NV_ADDR_COOL_SET    + sizeof(float);
-  static constexpr int      NV_ADDR_LIGHT_TIMEOUT   = NV_ADDR_DOOR_TIMEOUT + sizeof(uint16_t);
-  static constexpr int      NV_ADDR_HVAC_SWING      = NV_ADDR_LIGHT_TIMEOUT + sizeof(uint16_t);
-  static constexpr int      NV_ADDR_HVAC_MIN_RUN    = NV_ADDR_HVAC_SWING  + sizeof(uint16_t);
-  static constexpr int      NV_ADDR_HVAC_MIN_REST   = NV_ADDR_HVAC_MIN_RUN + sizeof(uint16_t);
+  static constexpr uint32_t NV_MAGIC              = 0x47434E56U; ///< 'GCNV' sentinel
+  static constexpr int      NV_ADDR_MAGIC         = 0;
+  static constexpr int      NV_ADDR_HEAT_SET      = NV_ADDR_MAGIC         + sizeof(NV_MAGIC);
+  static constexpr int      NV_ADDR_COOL_SET      = NV_ADDR_HEAT_SET      + sizeof(float);
+  static constexpr int      NV_ADDR_DOOR_TIMEOUT  = NV_ADDR_COOL_SET      + sizeof(float);
+  static constexpr int      NV_ADDR_LIGHT_TIMEOUT = NV_ADDR_DOOR_TIMEOUT  + sizeof(uint16_t);
+  static constexpr int      NV_ADDR_HVAC_SWING    = NV_ADDR_LIGHT_TIMEOUT + sizeof(uint16_t);
+  static constexpr int      NV_ADDR_HVAC_MIN_RUN  = NV_ADDR_HVAC_SWING    + sizeof(uint16_t);
+  static constexpr int      NV_ADDR_HVAC_MIN_REST = NV_ADDR_HVAC_MIN_RUN  + sizeof(uint16_t);
 
   // ── MQTT command debounce timestamps (ENABLE_WIFI only) ──────────────────
 #if ENABLE_WIFI
@@ -288,14 +292,15 @@ public:
   // ── begin() ───────────────────────────────────────────────────────────────
 
   /**
-   * @brief Initialises all subsystems and kicks off the first temperature read.
+   * @brief Initialises all subsystems.
    *
    * Call once from Arduino setup().  Order matters:
    *   1. Serial + sensor hardware
    *   2. Menu and LCD (shows splash)
-   *   3. NV load (or defaults + save)
-   *   4. Async temperature request – result available after TEMP_CONVERSION_MS
-   *   5. WiFi/MQTT init (ENABLE_WIFI only)
+   *   3. Wire LcdController to this (IMenuHost) for NV value display
+   *   4. NV load (or defaults + save)
+   *   5. Async temperature request
+   *   6. WiFi/MQTT init (ENABLE_WIFI only)
    */
   void begin()
   {
@@ -303,27 +308,27 @@ public:
 
     // ── Temperature sensor ──────────────────────────────────────────────────
     sensors.begin();
-    // Disable blocking wait so requestTemperatures() returns immediately.
-    // The main loop collects the result after TEMP_CONVERSION_MS has elapsed.
+    // Disable blocking wait; main loop collects result after TEMP_CONVERSION_MS.
     sensors.setWaitForConversion(false);
 
-    // Kick off the very first conversion so tempF is valid within ~800 ms
-    // rather than waiting the full TEMP_INTERVAL_MS (30 s) before boot.
+    // Kick off the first conversion immediately so tempF is valid within ~800 ms
     sensors.requestTemperatures();
     lastTempRequest = now();
     tempPending     = true;
-    lastTempPoll    = now(); // start the 30-s interval from boot
+    lastTempPoll    = now();
 
     // ── Menu + LCD ───────────────────────────────────────────────────────────
     menu.begin();
     lcdDisplay.begin();
+
+    // Wire the IMenuHost pointer so LcdController can query NV values for
+    // the SetNV edit screens.  Must be called before the first updateDisplay().
+    lcdDisplay.setHost(this);
+
     lcdDisplay.SetDirty(true);
     Serial.println(F("Controller:LCD ready"));
 
     // ── NV settings ──────────────────────────────────────────────────────────
-    // On a valid NV block: EEPROM → NV members → live subsystems (all in sync).
-    // On a missing/invalid block: use compiled defaults, then persist them so
-    // the next boot has a valid NV block to read.
     if (loadNV())
     {
       Serial.println(F("Controller:Loaded NV settings"));
@@ -331,7 +336,7 @@ public:
     else
     {
       Serial.println(F("Controller:NV missing/invalid - using defaults"));
-      saveNV(); // write defaults to EEPROM
+      saveNV(); // persist compiled defaults
     }
 
     // ── Network (production builds only) ─────────────────────────────────────
@@ -340,17 +345,139 @@ public:
 #endif
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  //  IMenuHost – NV getter implementations
+  //  Used by LcdController::updateDisplay() to display NV values on
+  //  the SetNV edit screens without coupling LcdController to GarageController.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /** @brief Returns the current in-RAM NV heat setpoint (°F). */
+  float getNvHeatSet() const override { return nvHeatSet; }
+
+  /** @brief Returns the current in-RAM NV cool setpoint (°F). */
+  float getNvCoolSet() const override { return nvCoolSet; }
+
+  /** @brief Returns the current in-RAM NV HVAC hysteresis swing (°F). */
+  int getNvSwing() const override { return (int)nvHVACSwing; }
+
+  /** @brief Returns the current in-RAM NV minimum HVAC run time (minutes). */
+  uint16_t getNvMinRunTime() const override { return nvHVACMinRunTime; }
+
+  /** @brief Returns the current in-RAM NV minimum HVAC rest time (minutes). */
+  uint16_t getNvMinRestTime() const override { return nvHVACMinRestTime; }
+
+  /** @brief Returns the current in-RAM NV door auto-close duration (ms). */
+  unsigned long getNvDoorTimeout() const override { return nvDoorTimeout; }
+
+  /** @brief Returns the current in-RAM NV light auto-off duration (ms). */
+  unsigned long getNvLightTimeout() const override { return nvLightTimeout; }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  IMenuHost – NV mutator implementations (Rule 3: RAM only, no EEPROM)
+  //  Called by MenuController::handleUp() / handleDown() when a SetNV
+  //  screen is in EditMode.  Each mutator clamps to valid bounds.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * @brief Adjusts the NV heat setpoint by delta °F; clamps to [30, 100].
+   *
+   * Does NOT touch hvac.heatSet (live value) or EEPROM.
+   * @param delta Amount to add (+1 for UP, -1 for DOWN from menu).
+   */
+  void adjNvHeatSet(float delta) override
+  {
+    nvHeatSet = constrain(nvHeatSet + delta, 30.0f, 100.0f);
+    Serial.println(F("NV:heat_set adjusted (menu, unsaved)"));
+  }
+
+  /**
+   * @brief Adjusts the NV cool setpoint by delta °F; clamps to [30, 100].
+   *
+   * Does NOT touch hvac.coolSet (live value) or EEPROM.
+   * @param delta Amount to add (+1 for UP, -1 for DOWN from menu).
+   */
+  void adjNvCoolSet(float delta) override
+  {
+    nvCoolSet = constrain(nvCoolSet + delta, 30.0f, 100.0f);
+    Serial.println(F("NV:cool_set adjusted (menu, unsaved)"));
+  }
+
+  /**
+   * @brief Adjusts the NV HVAC swing by delta °F; clamps to [0, 20].
+   *
+   * Does NOT touch hvac.HVACSwing (live value) or EEPROM.
+   * @param delta Amount to add (+1 or -1 from menu).
+   */
+  void adjNvSwing(int delta) override
+  {
+    nvHVACSwing = (uint16_t)constrain((int)nvHVACSwing + delta, 0, 20);
+    Serial.println(F("NV:swing adjusted (menu, unsaved)"));
+  }
+
+  /**
+   * @brief Adjusts the NV minimum HVAC run time by delta minutes; clamps to [1, 120].
+   *
+   * Does NOT touch hvac.minRunTimeMins (live value) or EEPROM.
+   * @param delta Amount to add (+1 or -1 from menu).
+   */
+  void adjNvMinRunTime(int delta) override
+  {
+    int v = (int)nvHVACMinRunTime + delta;
+    nvHVACMinRunTime = (uint16_t)constrain(v, 1, 120);
+    Serial.println(F("NV:minRunTime adjusted (menu, unsaved)"));
+  }
+
+  /**
+   * @brief Adjusts the NV minimum HVAC rest time by delta minutes; clamps to [0, 120].
+   *
+   * Does NOT touch hvac.minRestTimeMins (live value) or EEPROM.
+   * @param delta Amount to add (+1 or -1 from menu).
+   */
+  void adjNvMinRestTime(int delta) override
+  {
+    int v = (int)nvHVACMinRestTime + delta;
+    nvHVACMinRestTime = (uint16_t)constrain(v, 0, 120);
+    Serial.println(F("NV:minRestTime adjusted (menu, unsaved)"));
+  }
+
+  /**
+   * @brief Adjusts the NV door auto-close timeout by deltaMs; clamps to [1, 120] minutes.
+   *
+   * deltaMs should be a multiple of 60 000 (one minute step).
+   * Does NOT touch door.autoCloseDuration (live value) or EEPROM.
+   *
+   * @param deltaMs Milliseconds to add (+60000 for UP, -60000 for DOWN from menu).
+   */
+  void adjNvDoorTimeout(long deltaMs) override
+  {
+    long mins = (long)(nvDoorTimeout / 60000UL) + (deltaMs / 60000L);
+    mins = constrain(mins, 1L, 120L);
+    nvDoorTimeout = (unsigned long)mins * 60000UL;
+    Serial.println(F("NV:doorTimeout adjusted (menu, unsaved)"));
+  }
+
+  /**
+   * @brief Adjusts the NV light auto-off timeout by deltaMs; clamps to [1, 120] minutes.
+   *
+   * deltaMs should be a multiple of 60 000 (one minute step).
+   * Does NOT touch lights.duration (live value) or EEPROM.
+   *
+   * @param deltaMs Milliseconds to add (+60000 for UP, -60000 for DOWN from menu).
+   */
+  void adjNvLightTimeout(long deltaMs) override
+  {
+    long mins = (long)(nvLightTimeout / 60000UL) + (deltaMs / 60000L);
+    mins = constrain(mins, 1L, 120L);
+    nvLightTimeout = (unsigned long)mins * 60000UL;
+    Serial.println(F("NV:lightTimeout adjusted (menu, unsaved)"));
+  }
+
   // ── NV helpers ────────────────────────────────────────────────────────────
 
   /**
    * @brief Reads NV settings from EEPROM and applies them to all subsystems.
    *
    * Implements Rule 1 (boot sync): EEPROM → NV members → live subsystem values.
-   * Sets BOTH the NV member variables AND the live subsystem values so that
-   * all three layers are in agreement immediately after this call.
-   *
-   * Called once on boot.  Also available via LoadNV() if the caller explicitly
-   * wants to re-read EEPROM (rare; normally LoadNV() just replays NV members).
    *
    * @return true  if EEPROM contained a valid NV block with in-range values.
    * @return false if magic was absent or any value failed the sanity check.
@@ -359,8 +486,7 @@ public:
   {
     uint32_t magic = 0;
     EEPROM.get(NV_ADDR_MAGIC, magic);
-    if (magic != NV_MAGIC)
-      return false;
+    if (magic != NV_MAGIC) return false;
 
     float    heatSetNV        = 0.0f;
     float    coolSetNV        = 0.0f;
@@ -415,11 +541,9 @@ public:
    * @brief Writes the current NV member variables to EEPROM.
    *
    * Implements Rule 4 (NV→EEPROM path for MQTT /nv/save/cmd and boot defaults).
-   * Persists exactly what is in the NV member variables at the time of the call.
-   * Live subsystem values are deliberately NOT read here; only NV members are written.
-   *
-   * EEPROM.put() uses a read-modify-write internally so cells are only physically
-   * written if the value has changed, preserving EEPROM write-cycle lifetime.
+   * Does NOT read live subsystem values; only NV members are written.
+   * EEPROM.put() skips the physical write if the value is unchanged, preserving
+   * EEPROM write-cycle lifetime.
    *
    * @return true always (reserved for future write-error detection).
    */
@@ -428,9 +552,9 @@ public:
     // Convert milliseconds to minutes for compact EEPROM storage.
     uint16_t doorMins    = (uint16_t)constrain((long)(nvDoorTimeout  / 60000UL), 1L, 120L);
     uint16_t lightMins   = (uint16_t)constrain((long)(nvLightTimeout / 60000UL), 1L, 120L);
-    uint16_t hvacSwing   = (uint16_t)constrain((int)nvHVACSwing,       0,  20);
-    uint16_t minRunMins  = (uint16_t)constrain((int)nvHVACMinRunTime,  1, 120);
-    uint16_t minRestMins = (uint16_t)constrain((int)nvHVACMinRestTime, 0, 120);
+    uint16_t hvacSwing   = (uint16_t)constrain((int)nvHVACSwing,        0,  20);
+    uint16_t minRunMins  = (uint16_t)constrain((int)nvHVACMinRunTime,   1, 120);
+    uint16_t minRestMins = (uint16_t)constrain((int)nvHVACMinRestTime,  0, 120);
 
     EEPROM.put(NV_ADDR_MAGIC,         NV_MAGIC);
     EEPROM.put(NV_ADDR_HEAT_SET,      nvHeatSet);
@@ -452,16 +576,9 @@ public:
   /**
    * @brief Copies current live subsystem values → NV members → EEPROM.
    *
-   * This is the IMenuHost::SaveNV() implementation called by the SaveNV menu
-   * screen.  It is the natural "commit what I just configured" action:
-   *   - The user edits live values via the menu (heat setpoint, timeouts, etc.)
-   *   - Pressing SaveNV snapshots those live values into the NV members, then
-   *     persists them to EEPROM via saveNV().
-   *
-   * This is distinct from saveNV() (which saves NV members as-is, without
-   * reading live values) and is the ONLY place where live values are copied
-   * into the NV layer.  Rule 4 is satisfied: live subsystem values are not
-   * modified by this call.
+   * IMenuHost::SaveNV() implementation — called by the SaveNV menu screen.
+   * This is the natural "commit what I just configured via the live menus" action.
+   * Live subsystem values are NOT modified by this call (Rule 4).
    */
   void SaveNV() override
   {
@@ -482,9 +599,9 @@ public:
   /**
    * @brief Restores all live subsystem values from the NV member variables.
    *
-   * Implements Rule 5 (LoadNV): copies NV members → live subsystems.
-   * Does NOT re-read EEPROM and does NOT modify NV members.
-   * Called by the LoadNV menu screen and the /nv/reload/cmd MQTT topic.
+   * IMenuHost::LoadNV() implementation — called by the LoadNV menu screen
+   * and the /nv/reload/cmd MQTT topic.
+   * Does NOT re-read EEPROM and does NOT modify NV members (Rule 5).
    */
   void LoadNV() override
   {
@@ -498,8 +615,6 @@ public:
     Serial.println(F("Controller:NV->live (reload)"));
   }
 
-
-
   // ── MQTT command handler (ENABLE_WIFI only) ───────────────────────────────
 #if ENABLE_WIFI
 
@@ -507,18 +622,10 @@ public:
    * @brief Dispatches an inbound MQTT command to the appropriate subsystem.
    *
    * Topic routing follows the NV model strictly:
-   *
-   *   /cmd    topics  → modify LIVE subsystem values only; NV and EEPROM untouched.
-   *
-   *   /nv/…/cmd topics → modify NV member variables in RAM only; live subsystems
-   *                       and EEPROM are NOT touched.  Changes accumulate until
-   *                       a /nv/save/cmd is received (Rule 3).
-   *
-   *   /nv/save/cmd     → persist current NV members to EEPROM (Rule 4 MQTT path).
-   *   /nv/reload/cmd   → copy NV members → live subsystems (Rule 5).
-   *
-   * @param topic    Null-terminated MQTT topic string.
-   * @param payload  Command payload as an Arduino String.
+   *   /cmd    topics  → modify LIVE subsystem values only (Rule 2).
+   *   /nv/…/cmd       → modify NV member variables in RAM only (Rule 3).
+   *   /nv/save/cmd    → persist NV members to EEPROM (Rule 4).
+   *   /nv/reload/cmd  → copy NV members → live subsystems (Rule 5).
    */
   void handleMQTT(const char *topic, const String &payload)
   {
@@ -529,13 +636,10 @@ public:
 
     // ════════════════════════════════════════════════════════════════════════
     //  LIVE topics – update live subsystem values ONLY (Rule 2).
-    //  NV members and EEPROM are intentionally not touched here.
     // ════════════════════════════════════════════════════════════════════════
 
-    // ── Door command (LIVE only) ──────────────────────────────────────────
     if (strcmp(topic, mqttManager.getTopic(F("/door/cmd"))) == 0)
     {
-      // Debounce rapid toggles (2-second window).
       if (expired(lastDoorCmd, 2000UL))
       {
         door.manualActivate();
@@ -543,18 +647,15 @@ public:
         lcdDisplay.SetDirty(true);
       }
     }
-    // ── Door current timeout (LIVE only – Rule 2) ─────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/door/duration/cmd"))) == 0)
     {
       int mins = payload.toInt();
       if (mins > 0 && mins <= 120)
       {
-        // Update live auto-close duration; NV member nvDoorTimeout unchanged.
         door.autoCloseDuration = (unsigned long)mins * 60000UL;
         lcdDisplay.SetDirty(false);
       }
     }
-    // ── Light command (LIVE only) ─────────────────────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/light/cmd"))) == 0)
     {
       if (expired(lastLightCmd, 500UL))
@@ -573,18 +674,15 @@ public:
         lastLightCmd = now();
       }
     }
-    // ── Light current timeout (LIVE only – Rule 2) ────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/light/duration/cmd"))) == 0)
     {
       int mins = payload.toInt();
       if (mins > 0 && mins <= 120)
       {
-        // Update live light-off duration; NV member nvLightTimeout unchanged.
         lights.duration = (unsigned long)mins * 60000UL;
         lcdDisplay.SetDirty(false);
       }
     }
-    // ── HVAC heat setpoint (LIVE only – Rule 2) ───────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/hvac/heat_set/cmd"))) == 0)
     {
       if (expired(lastHvacCmd, 1000UL))
@@ -592,14 +690,12 @@ public:
         float val = payload.toFloat();
         if (val > 30 && val < 100)
         {
-          // Update live setpoint only; nvHeatSet is NOT changed.
           hvac.heatSet = val;
           lcdDisplay.SetDirty(false);
         }
         lastHvacCmd = now();
       }
     }
-    // ── HVAC mode (LIVE only) ─────────────────────────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/hvac/mode/cmd"))) == 0)
     {
       if (expired(lastHvacCmd, 1000UL))
@@ -612,7 +708,6 @@ public:
         lastHvacCmd = now();
       }
     }
-    // ── HVAC cool setpoint (LIVE only – Rule 2) ───────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/hvac/cool_set/cmd"))) == 0)
     {
       if (expired(lastHvacCmd, 1000UL))
@@ -620,7 +715,6 @@ public:
         float val = payload.toFloat();
         if (val > 30 && val < 100)
         {
-          // Update live setpoint only; nvCoolSet is NOT changed.
           hvac.coolSet = val;
           lcdDisplay.SetDirty(false);
         }
@@ -630,50 +724,44 @@ public:
 
     // ════════════════════════════════════════════════════════════════════════
     //  NV topics – update NV member variables in RAM ONLY (Rule 3).
-    //  Live subsystem values and EEPROM are NOT touched here.
-    //  Changes accumulate in RAM until /nv/save/cmd is received.
     // ════════════════════════════════════════════════════════════════════════
 
-    // ── NV heat setpoint (NV RAM only – Rule 3) ───────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/nv/hvac/heat_set/cmd"))) == 0)
     {
       float val = payload.toFloat();
       if (val > 30 && val < 100)
       {
-        nvHeatSet = val; // NV member updated in RAM; hvac.heatSet unchanged; no EEPROM write.
+        nvHeatSet = val;
         Serial.println(F("NV:heat_set updated (unsaved)"));
         lcdDisplay.SetDirty(false);
       }
     }
-    // ── NV cool setpoint (NV RAM only – Rule 3) ───────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/nv/hvac/cool_set/cmd"))) == 0)
     {
       float val = payload.toFloat();
       if (val > 30 && val < 100)
       {
-        nvCoolSet = val; // NV member updated in RAM; hvac.coolSet unchanged; no EEPROM write.
+        nvCoolSet = val;
         Serial.println(F("NV:cool_set updated (unsaved)"));
         lcdDisplay.SetDirty(false);
       }
     }
-    // ── NV door timeout (NV RAM only – Rule 3) ────────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/nv/door_timeout/cmd"))) == 0)
     {
       int mins = payload.toInt();
       if (mins > 0 && mins <= 120)
       {
-        nvDoorTimeout = (unsigned long)mins * 60000UL; // door.autoCloseDuration unchanged; no EEPROM write.
+        nvDoorTimeout = (unsigned long)mins * 60000UL;
         Serial.println(F("NV:door_timeout updated (unsaved)"));
         lcdDisplay.SetDirty(false);
       }
     }
-    // ── NV light timeout (NV RAM only – Rule 3) ───────────────────────────
     else if (strcmp(topic, mqttManager.getTopic(F("/nv/light_timeout/cmd"))) == 0)
     {
       int mins = payload.toInt();
       if (mins > 0 && mins <= 120)
       {
-        nvLightTimeout = (unsigned long)mins * 60000UL; // lights.duration unchanged; no EEPROM write.
+        nvLightTimeout = (unsigned long)mins * 60000UL;
         Serial.println(F("NV:light_timeout updated (unsaved)"));
         lcdDisplay.SetDirty(false);
       }
@@ -683,30 +771,26 @@ public:
     //  NV control topics
     // ════════════════════════════════════════════════════════════════════════
 
-    // ── Save NV to EEPROM (Rule 4 – MQTT path) ────────────────────────────
-    // Writes current NV member variables to EEPROM without touching live values.
-    // Use after sending /nv/ updates to commit them permanently.
     else if (strcmp(topic, mqttManager.getTopic(F("/nv/save/cmd"))) == 0)
     {
+      // Persist current NV members to EEPROM (Rule 4 – MQTT path).
       saveNV();
       Serial.println(F("Controller:NV saved via MQTT"));
       lcdDisplay.SetDirty(false);
     }
-    // ── Reload NV → live subsystems (Rule 5) ─────────────────────────────
-    // Copies NV members → live subsystems without re-reading EEPROM.
     else if (strcmp(topic, mqttManager.getTopic(F("/nv/reload/cmd"))) == 0)
     {
+      // Copy NV members → live subsystems (Rule 5).
       LoadNV();
       lcdDisplay.SetDirty(false);
     }
   }
 
   /**
-   * @brief Static PubSubClient callback – forwards to the controller instance.
+   * @brief Static PubSubClient callback — forwards to the controller instance.
    *
    * PubSubClient requires a static (or free) function pointer.  This shim
-   * builds a String from the raw byte payload once and delegates to the
-   * instance method handleMQTT().
+   * builds a String from the raw byte payload and delegates to handleMQTT().
    *
    * @param topic   Null-terminated topic string from broker.
    * @param payload Raw payload bytes (not null-terminated).
@@ -728,31 +812,23 @@ public:
   /**
    * @brief Executes one iteration of the main control loop.
    *
-   * Called repeatedly from Arduino loop().  The order of operations is
-   * deliberately chosen to minimise latency for time-critical paths:
+   * Called repeatedly from Arduino loop().  Operations are ordered to
+   * minimise latency for time-critical paths:
    *
    *  1. Motion poll + light activation  ← FIRST, never delayed
    *  2. Light timeout check
    *  3. Backlight auto-off on light-off transition
-   *  4. MQTT loop (may reconnect WiFi – can block up to ~5 s)
+   *  4. MQTT loop (may reconnect WiFi — can block up to ~5 s)
    *  5. Door state machine
    *  6. HVAC lockout update
    *  7. Async temperature collection (non-blocking)
    *  8. Menu button poll
-   *  9. MQTT state publish (change-detected, no heap allocations)
+   *  9. MQTT state publish (change-detected)
    * 10. LCD display update (dirty-flag gated)
-   *
-   * @note *this is passed to menu.poll() – do NOT use the global
-   *       `controller` variable here; that would be a scope error even
-   *       though both refer to the same object with the current single-
-   *       instance design.
    */
   void loop()
   {
     // ── 1. Motion detection + light activation ────────────────────────────
-    // Poll the PIR sensor at the very top of every loop so that relay
-    // switching, WiFi reconnection, or temperature conversion never delays
-    // the light-on response when someone enters the garage.
     bool motionDetected = motion.poll();
 
     if (motionDetected)
@@ -768,7 +844,6 @@ public:
     lights.poll();
 
     // ── 3. Backlight follows light state ─────────────────────────────────
-    // If the garage light just timed out or was turned off, dim the LCD.
     if (lightWasOn && !lights.isOn())
     {
       Serial.println(F("Controller:Light off->backlight off"));
@@ -776,8 +851,6 @@ public:
     }
 
     // ── 4. Network / MQTT heartbeat ──────────────────────────────────────
-    // Placed AFTER motion/light so a WiFi reconnect (up to ~5 s) does not
-    // delay the PIR-to-light response.
 #if ENABLE_WIFI
     mqttManager.loop();
 #endif
@@ -788,11 +861,8 @@ public:
     // ── 6. HVAC lockout: block heating/cooling when door is open ─────────
     hvac.lockout = (doorState != GarageDoor::Closed);
 
-    // ── 7. Async temperature sampling ────────────────────────────────────
-    //
+    // ── 7. Async temperature sampling ─────────────────────────────────────
     // Phase A – Start a new conversion every TEMP_INTERVAL_MS.
-    //   requestTemperatures() returns immediately because
-    //   setWaitForConversion(false) was called in begin().
     if (!tempPending && expired(lastTempPoll, TEMP_INTERVAL_MS))
     {
       sensors.requestTemperatures();
@@ -800,44 +870,37 @@ public:
       tempPending     = true;
     }
 
-    // Phase B – Collect the result once the DS18B20 has finished converting.
-    //   12-bit conversion takes ≤ 750 ms; TEMP_CONVERSION_MS adds margin.
+    // Phase B – Collect result once DS18B20 has finished converting.
     if (tempPending && expired(lastTempRequest, TEMP_CONVERSION_MS))
     {
       float newTemp = sensors.getTempFByIndex(0);
-      // Reject sentinel error values (DallasTemperature returns –196.6 °F
-      // for DEVICE_DISCONNECTED and similar constants for faults).
+      // Reject sentinel error values (e.g. DEVICE_DISCONNECTED = -196.6 °F).
       if (!isnan(newTemp) && newTemp > -100.0f)
         tempF = newTemp;
 
-      lastTempPoll = now(); // restart the 30-s interval from this read
+      lastTempPoll = now();
       tempPending  = false;
 
-      // Run HVAC switching logic with the fresh reading.
       hvac.poll(tempF);
       lcdDisplay.SetDirty(false);
     }
 
     // ── 8. Menu button poll ───────────────────────────────────────────────
-    // Pass *this (not the global `controller`) to avoid a scope ambiguity:
+    // Pass *this (not the global `controller`) to avoid scope ambiguity:
     // inside a GarageController member function, `controller` resolves to
-    // the file-scope global, not the current instance.  Using *this is
-    // explicit and correct regardless of how many instances exist.
+    // the file-scope global, not the current instance.
     bool menuEvent = menu.poll(*this, hvac, lights, door);
     if (menuEvent)
       lcdDisplay.SetDirty(true);
 
     // ── 9. MQTT state publish ─────────────────────────────────────────────
-    // Pass NV timeouts separately so HA sees independent current vs NV
-    // sensor entities and they can diverge when the user changes one without
-    // immediately saving.
 #if ENABLE_WIFI
     mqttManager.publishStateChanges(
         lights.isOn(),
-        lights.duration        / 60000UL,  // current light timeout (min)
-        lights.lightRemaining() / 60000UL,  // time until auto-off (min)
-        doorStateCode(door),                // uint8_t – no String allocation
-        door.autoCloseDuration / 60000UL,  // current door timeout (min)
+        lights.duration         / 60000UL,
+        lights.lightRemaining() / 60000UL,
+        doorStateCode(door),
+        door.autoCloseDuration  / 60000UL,
         door.getDoorRemainingTime() / 60000UL,
         tempF,
         hvac.heatSet,
@@ -845,8 +908,8 @@ public:
         nvHeatSet,
         nvCoolSet,
         hvac.HVACSwing,
-        nvDoorTimeout  / 60000UL,          // NV door timeout (min)
-        nvLightTimeout / 60000UL,          // NV light timeout (min)
+        nvDoorTimeout  / 60000UL,
+        nvLightTimeout / 60000UL,
         (uint8_t)hvac.mode,
         (uint8_t)hvac.state,
         motion.isActive(),
@@ -865,7 +928,7 @@ GarageController controller;
 //  Arduino entry points
 // ============================================================
 
-/** @brief One-time hardware and subsystem initialisation. */
+/** @brief One-time hardware and subsystem initialization. */
 void setup()
 {
   Serial.begin(9600);

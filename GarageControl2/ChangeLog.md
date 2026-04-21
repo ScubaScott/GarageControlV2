@@ -1,3 +1,32 @@
+# GarageControl2 – Change Log
+
+## [2.17.0] – 2026-04-20
+
+### Added
+- **SetNV Menu System (v2.17.0)**: New sub-menu under Config → NetworkInfo to edit non-volatile (NV) settings
+  - Independent NV value editing without affecting live subsystem values (Rule 3)
+  - Screens for: heat setpoint, cool setpoint, HVAC swing, min run time, min rest time, door timeout, light timeout
+  - Changes persist in RAM; EEPROM update via SaveNV or `/nv/save/cmd`
+
+### Fixed
+- **[CRITICAL] NV Interface Compilation Errors**: Added missing virtual method declarations to `IMenuHost` base class
+  - Added 7 getter methods: `getNvHeatSet()`, `getNvCoolSet()`, `getNvSwing()`, `getNvMinRunTime()`, `getNvMinRestTime()`, `getNvDoorTimeout()`, `getNvLightTimeout()`
+  - Added 8 setter methods: `adjNvHeatSet()`, `adjNvCoolSet()`, `adjNvSwing()`, `adjNvMinRunTime()`, `adjNvMinRestTime()`, `adjNvDoorTimeout()`, `adjNvLightTimeout()`
+  - Updated `LcdController` with `host` pointer and `setHost()` method for NV value display
+  - Resolved "marked 'override', but does not override" compilation errors
+
+### Architecture
+- Strict NV model with five rules:
+  - **Rule 1 (Boot)**: EEPROM → NV members → live values (synchronized at startup)
+  - **Rule 2 (Live Changes)**: Direct subsystem updates only (no NV/EEPROM impact)
+  - **Rule 3 (NV Changes)**: RAM-only NV member updates (no live/EEPROM impact)
+  - **Rule 4 (Save)**: Live → NV → EEPROM or NV → EEPROM
+  - **Rule 5 (Reload)**: NV → live values (EEPROM unchanged)
+
+---
+
+## Version History Overview
+
  * ── Build modes ──────────────────────────────────────────────────────────────
  *   DEV  (ENABLE_WIFI 0)  All WiFi / MQTT / PubSubClient code excluded.
  *                         Safe to flash on boards without WiFi hardware.
