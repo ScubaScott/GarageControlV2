@@ -146,14 +146,14 @@ bool MenuController::poll(IMenuHost &controller, GarageHVAC &hvac, GarageLight &
     {
       noteActivity();
       Serial.println(F("Menu:UP"));
-      handleUp(hvac, lights, door);
+      handleUp(controller, hvac, lights, door);
       activity = true;
     }
     if (pressed(BTN_DOWN))
     {
       noteActivity();
       Serial.println(F("Menu:DOWN"));
-      handleDown(hvac, lights, door);
+      handleDown(controller, hvac, lights, door);
       activity = true;
     }
     if (pressed(BTN_SET))
@@ -233,7 +233,42 @@ void MenuController::handleSet(IMenuHost &controller)
     current = Screen::NetworkInfo;
     break;
   case Screen::NetworkInfo:
+    if (!EditMode)
+    {
+      current = Screen::SetNVMenu;
+    }
+    else
+    {
+      EditMode = false;
+    }
+    break;
+  case Screen::SetNVMenu:
+    current = Screen::SetNVHeatSet;
+    EditMode = false;
+    break;
+  case Screen::SetNVHeatSet:
     EditMode = !EditMode;
+    break;
+  case Screen::SetNVCoolSet:
+    EditMode = !EditMode;
+    break;
+  case Screen::SetNVSwing:
+    EditMode = !EditMode;
+    break;
+  case Screen::SetNVMinRunTime:
+    EditMode = !EditMode;
+    break;
+  case Screen::SetNVMinRestTime:
+    EditMode = !EditMode;
+    break;
+  case Screen::SetNVDoorTimeout:
+    EditMode = !EditMode;
+    break;
+  case Screen::SetNVLightTimeout:
+    EditMode = !EditMode;
+    break;
+  case Screen::SetNVBack:
+    current = Screen::SetNVMenu;
     break;
   case Screen::ConfigBack:
     current = Screen::ConfigMenu;
@@ -247,7 +282,7 @@ void MenuController::handleSet(IMenuHost &controller)
   }
 }
 
-void MenuController::handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door)
+void MenuController::handleUp(IMenuHost &controller, GarageHVAC &hvac, GarageLight &lights, GarageDoor &door)
 {
   switch (current)
   {
@@ -344,8 +379,54 @@ void MenuController::handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor 
       EditMode = false;
     }
     break;
-  case Screen::LoadNV:
+  case Screen::SetNVMenu:
     current = Screen::NetworkInfo;
+    break;
+  case Screen::SetNVHeatSet:
+    if (EditMode)
+      controller.adjNvHeatSet(1.0f);
+    break;
+  case Screen::SetNVCoolSet:
+    if (EditMode)
+      controller.adjNvCoolSet(1.0f);
+    else
+      current = Screen::SetNVHeatSet;
+    break;
+  case Screen::SetNVSwing:
+    if (EditMode)
+      controller.adjNvSwing(1);
+    else
+      current = Screen::SetNVCoolSet;
+    break;
+  case Screen::SetNVMinRunTime:
+    if (EditMode)
+      controller.adjNvMinRunTime(1);
+    else
+      current = Screen::SetNVSwing;
+    break;
+  case Screen::SetNVMinRestTime:
+    if (EditMode)
+      controller.adjNvMinRestTime(1);
+    else
+      current = Screen::SetNVMinRunTime;
+    break;
+  case Screen::SetNVDoorTimeout:
+    if (EditMode)
+      controller.adjNvDoorTimeout(60000UL);
+    else
+      current = Screen::SetNVMinRestTime;
+    break;
+  case Screen::SetNVLightTimeout:
+    if (EditMode)
+      controller.adjNvLightTimeout(60000UL);
+    else
+      current = Screen::SetNVDoorTimeout;
+    break;
+  case Screen::SetNVBack:
+    current = Screen::SetNVLightTimeout;
+    break;
+  case Screen::LoadNV:
+    current = Screen::SetNVMenu;
     break;
   case Screen::SaveNV:
     current = Screen::LoadNV;
@@ -359,7 +440,7 @@ void MenuController::handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor 
   }
 }
 
-void MenuController::handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door)
+void MenuController::handleDown(IMenuHost &controller, GarageHVAC &hvac, GarageLight &lights, GarageDoor &door)
 {
   switch (current)
   {
@@ -453,7 +534,55 @@ void MenuController::handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoo
       EditMode = false;
     }
     else
-      current = Screen::LoadNV;
+      current = Screen::SetNVMenu;
+    break;
+  case Screen::SetNVMenu:
+    current = Screen::LoadNV;
+    break;
+  case Screen::SetNVHeatSet:
+    if (EditMode)
+      controller.adjNvHeatSet(-1.0f);
+    else
+      current = Screen::SetNVCoolSet;
+    break;
+  case Screen::SetNVCoolSet:
+    if (EditMode)
+      controller.adjNvCoolSet(-1.0f);
+    else
+      current = Screen::SetNVSwing;
+    break;
+  case Screen::SetNVSwing:
+    if (EditMode)
+      controller.adjNvSwing(-1);
+    else
+      current = Screen::SetNVMinRunTime;
+    break;
+  case Screen::SetNVMinRunTime:
+    if (EditMode)
+      controller.adjNvMinRunTime(-1);
+    else
+      current = Screen::SetNVMinRestTime;
+    break;
+  case Screen::SetNVMinRestTime:
+    if (EditMode)
+      controller.adjNvMinRestTime(-1);
+    else
+      current = Screen::SetNVDoorTimeout;
+    break;
+  case Screen::SetNVDoorTimeout:
+    if (EditMode)
+      controller.adjNvDoorTimeout(-60000UL);
+    else
+      current = Screen::SetNVLightTimeout;
+    break;
+  case Screen::SetNVLightTimeout:
+    if (EditMode)
+      controller.adjNvLightTimeout(-60000UL);
+    else
+      current = Screen::SetNVBack;
+    break;
+  case Screen::SetNVBack:
+    current = Screen::LoadNV;
     break;
   case Screen::LoadNV:
     current = Screen::SaveNV;

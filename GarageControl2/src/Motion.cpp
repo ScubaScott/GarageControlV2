@@ -1,9 +1,9 @@
 /**
  * @file Motion.cpp
- * @brief Implementation of motion sensor controller.
+ * @brief Implementation of motion sensor controller with hardware interrupt integration.
  *
  * This file implements the MotionSensor class methods for PIR motion detection,
- * debouncing, and forced acknowledgment functionality.
+ * forced acknowledgment functionality, and ISR integration via recordMotion().
  */
 
 #include <Arduino.h>
@@ -21,15 +21,18 @@
 MotionSensor::MotionSensor(byte p) : pin(p) { pinMode(pin, INPUT); }
 
 /**
- * @brief Polls the motion sensor for activity with debouncing.
- * @return True if new motion detected and acknowledged, false otherwise.
+ * @brief Polls the motion sensor for acknowledged activity.
+ *
+ * Returns true once when motion is detected and not suppressed by forced-ack.
+ * Called from main loop; hardware interrupt debouncing is handled by RISING edge
+ * detection in pirISR(). This method provides acknowledgment logic for subsystems
+ * (e.g., garage door timeout extension) that need occupancy-based state changes.
+ *
+ * @return True if new motion detected and not in forced-ack window, false otherwise.
  */
 bool MotionSensor::poll()
 {
-  int sum = 0;
-  for (int i = 0; i < 10; i++)
-    sum += digitalRead(pin);
-  bool motion = (sum >= 5);
+  bool motion = (digitalRead(pin) == HIGH);
 
   if (motion && !acked)
   {
@@ -42,14 +45,25 @@ bool MotionSensor::poll()
     else
     {
       acked = true;
-      lastMotion = now();
-      Serial.println(F("Motion:Detected+Ackd"));
+      Serial.println(F("Motion:Poll confirmed"));
       return true;
     }
   }
   if (!motion)
     acked = false;
   return false;
+}
+
+/**
+ * @brief Records motion detection and updates lastMotion timestamp.
+ *
+ * Called from pirISR() when hardware interrupt detects RISING edge.
+ * Updates lastMotion for subsystems needing occupancy-based timeout extension.
+ */
+void MotionSensor::recordMotion()
+{
+  lastMotion = now();
+  Serial.println(F("Motion:ISR recorded"));
 }
 
 /**
@@ -64,11 +78,13 @@ bool MotionSensor::recentlyActive(unsigned long timeout)
 
 /**
  * @brief Forces acknowledgment to suppress false triggers from relay spikes.
+ *
+ * Prevents the pin from being interpreted as new motion on the next poll() call.
+ * Does NOT update lastMotion; that is handled by recordMotion() from pirISR().
  */
 void MotionSensor::forceAck()
 {
   ForcedAck = true;
-  lastMotion = now();
   Serial.println(F("Motion:ForceAck"));
 }
 

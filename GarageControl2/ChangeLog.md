@@ -1,5 +1,29 @@
 # GarageControl2 – Change Log
 
+## [2.19.0] – 2026-04-23
+
+### Refactored
+- **Motion Polling Architecture (v2.19.0)**: Eliminated redundant debouncing in main loop
+  - Removed 10-sample debouncing loop from `motion.poll()` – hardware interrupt RISING edge already debounces
+  - Added `motion.recordMotion()` method for `pirISR()` to update timestamp immediately
+  - Reduced poll() overhead: single `digitalRead()` instead of 10 samples per loop cycle
+  - Maintains compatibility with all motion-dependent features (door timeout extension, light timeout)
+
+### Fixed
+- **[PERFORMANCE] Main Loop Efficiency**: Eliminated 10 redundant GPIO reads per polling cycle
+  - `motion.poll()` now does single pin state check instead of sampling loop
+  - Hardware interrupt provides edge detection; no need for software debouncing
+  - Motion timestamp updated by ISR at interrupt-time for immediate occupancy tracking
+  - Door auto-close and light timeout extension remain fully functional
+
+### Architecture
+- **ISR Flow**: `pirISR()` → `motion.recordMotion()` (timestamp) → `lights.turnOn()` (sub-ms response)
+- **Poll Flow**: `motion.poll()` checks pin state once, returns true once per motion event
+- **Motion Timestamp**: Updated by ISR for real-time occupancy; poll() handles acknowledgment logic
+- Maintains ForcedAck mechanism for relay spike suppression (no timestamp update in forceAck now)
+
+---
+
 ## [2.18.0] – 2026-04-20
 
 ### Added

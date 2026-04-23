@@ -1,15 +1,20 @@
 /**
  * @file Motion.h
- * @brief PIR motion sensor with debouncing and electromagnetic interference rejection.
+ * @brief PIR motion sensor with hardware interrupt integration and EMI rejection.
  *
  * This file defines the MotionSensor class which manages passive infrared (PIR)
- * motion detection with digital debouncing and a forced-acknowledge mechanism to
- * suppress false motion triggers caused by electromagnetic interference from
- * relay switching.
+ * motion detection with hardware interrupt (RISING edge) and a forced-acknowledge
+ * mechanism to suppress false motion triggers caused by electromagnetic interference
+ * from relay switching.
  *
- * The forced acknowledge feature is critical for reliable operation, as the
- * electromagnetic relay pulses can trigger false positive motion events if not
- * suppressed at the sensor level.
+ * The hardware interrupt provides immediate light activation when motion is detected,
+ * while the forced acknowledge feature suppresses false triggers from electromagnetic
+ * relay pulses that would otherwise be misinterpreted as human motion.
+ *
+ * @section ISR Integration
+ * The recordMotion() method should be called from pirISR() when the hardware
+ * interrupt triggers, recording the motion timestamp for subsystems that need
+ * occupancy-based timeout extension (e.g., garage door auto-close).
  */
 
 #ifndef MOTION_H
@@ -19,20 +24,25 @@
 
 /**
  * @class MotionSensor
- * @brief PIR motion sensor with debouncing and relay spike rejection.
+ * @brief PIR motion sensor with hardware interrupt and relay spike rejection.
  *
  * This class provides:
- * - **Digital debouncing** to filter electrical noise and prevent fluttering
- * - **Motion detection** via HIGH signal from PIR sensor module
+ * - **Hardware interrupt** (RISING edge) for immediate motion detection
+ * - **ISR integration** via recordMotion() called from pirISR()
+ * - **Poll-based acknowledgment** for subsystems requiring occupancy timeout extension
  * - **Forced acknowledgment** to suppress false triggers from EMI/relay spikes
  * - **Timeout-based activity tracking** for configurable-duration occupancy detection
  *
- * The forced acknowledgment mechanism is called by the GarageLight controller
- * immediately after relay activation, preventing the electromagnetic pulse from
- * being misinterpreted as human motion detection.
+ * The hardware interrupt (pirISR) provides immediate light activation. The recordMotion()
+ * method records the timestamp for other subsystems (e.g., garage door) that need to
+ * extend timeouts based on recent occupancy. The forced acknowledgment mechanism
+ * suppresses false motion triggers from electromagnetic relay pulses.
  *
- * @note Debouncing is simple HIGH-to-LOW state verification. For more sophisticated
- *       filtering, examine the implementation for duration-based requirements.
+ * @section Flow
+ * 1. Hardware detects RISING edge on PIR pin
+ * 2. pirISR() calls recordMotion() to update lastMotion timestamp
+ * 3. pirISR() immediately activates lights (no poll delay)
+ * 4. poll() is called in main loop, returns true once per motion event for other subsystems
  */
 class MotionSensor
 {
@@ -53,17 +63,20 @@ public:
     MotionSensor(byte p);
 
     /**
-     * @brief Polls the motion sensor for new motion activity.
+     * @brief Polls the motion sensor for acknowledged motion activity.
      *
-     * Should be called once per main loop iteration (typically 100-200ms).
-     * Returns true only once per motion event, even if PIR signal remains high.
-     * Motion detection is suppressed during forced acknowledgment window.
+     * Called once per main loop iteration (typically 100-200ms). Returns true only
+     * once per motion event, even if PIR signal remains high. Motion detection is
+     * suppressed during forced acknowledgment window.
+     *
+     * Hardware interrupt (recordMotion) handles debouncing via RISING edge detection.
+     * This poll method simply checks acknowledgment state and suppression windows
+     * for subsystems (e.g., door timeout extension) that depend on occupancy.
      *
      * @return True if NEW motion detected and not in forced-ack window,
      *         false otherwise (including during suppression period)
      *
-     * @note This method implements debouncing by verifying the pin state
-     *       has stabilized HIGH. See poll() implementation for timing details.
+     * @note Called from main loop. recordMotion() is called from pirISR().
      */
     bool poll();
 
@@ -81,6 +94,18 @@ public:
      *       timestamp, making it suitable for multiple independent consumers.
      */
     bool recentlyActive(unsigned long timeout);
+
+    /**
+     * @brief Records a motion detection event and updates the timestamp.
+     *
+     * Called from pirISR() when hardware interrupt (RISING edge) detects motion.
+     * Updates the lastMotion timestamp for subsystems needing occupancy-based
+     * timeout extension (e.g., garage door auto-close, light timeout).
+     *
+     * @note This is called at interrupt level from pirISR().
+     * @see pirISR() in GarageControl2.ino
+     */
+    void recordMotion();
 
     /**
      * @brief Forces acknowledgment to suppress false motion triggers.

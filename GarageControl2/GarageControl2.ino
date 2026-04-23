@@ -65,12 +65,11 @@
  *   - requestTemperatures() is issued every TEMP_INTERVAL_MS, returning immediately.
  *   - After TEMP_CONVERSION_MS the result is collected with getTempFByIndex().
  *
- * @version 2.18.0
  */
 
 #include "src/Utility.h"
 #include <EEPROM.h>
-const char *GC_VERSION = "2.18.0";
+const char *GC_VERSION = "2.19.0";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -945,17 +944,27 @@ public:
  * @brief Hardware interrupt service routine for PIR motion sensor.
  *
  * Triggered by RISING signal on PIR pin (hardware interrupt).
- * Forces lights on immediately, even if MQTT is reconnecting.
+ * Immediately records motion timestamp and activates lights, even if MQTT is
+ * reconnecting. Provides sub-millisecond response for immediate light activation.
  *
- * The 15-second cooldown after manual turn-off is respected:
- * if lights were just manually turned off, the interrupt is blocked
- * allowing occupants to exit without unwanted reactivation.
+ * Actions:
+ *   1. recordMotion() – Updates lastMotion timestamp for subsystems needing
+ *      occupancy-based timeout extension (e.g., door auto-close)
+ *   2. turnOn() – Activates lights unless in cooldown period
+ *
+ * The 15-second cooldown after manual turn-off is respected: if lights were just
+ * manually turned off, the interrupt is blocked allowing occupants to exit without
+ * unwanted reactivation.
  *
  * @note This runs at interrupt level with minimal context,
- *       so we call a simple member function with no parameters.
+ *       so we keep ISR operations simple and fast.
  */
 void pirISR()
 {
+  // Record the motion event for occupancy-based timeout extension
+  if (g_controller)
+    g_controller->motion.recordMotion();
+
   // Check if we have a valid controller and if we're not in cooldown
   if (g_controller && !g_controller->lights.isInCooldown())
   {

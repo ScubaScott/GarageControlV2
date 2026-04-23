@@ -257,8 +257,8 @@ private:
   // Internal button and menu handlers (called by poll())
   bool pressed(byte btnIndex);
   void handleSet(IMenuHost &controller);
-  void handleUp(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
-  void handleDown(GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
+  void handleUp(IMenuHost &controller, GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
+  void handleDown(IMenuHost &controller, GarageHVAC &hvac, GarageLight &lights, GarageDoor &door);
 
 public:
   /**

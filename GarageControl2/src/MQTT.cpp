@@ -165,8 +165,8 @@ void MQTTManager::init(GarageController *ctrl,
   connectWiFi();
   mqtt.setServer(MQTT_SERVER, MQTT_PORT);
   mqtt.setCallback(callback);
-  // Buffer size increased to 1280 to accommodate the large climate discovery payload.
-  mqtt.setBufferSize(1280);
+  // Buffer size increased to 2048 to accommodate the large climate discovery payload.
+  mqtt.setBufferSize(2048);
   connectMQTT();
   publishDiscovery();
 }
@@ -183,7 +183,7 @@ void MQTTManager::loop()
   // ── Disabled: hourly reconnect attempt only ───────────────────────────
   if (netStatus == NetStatus::Disabled)
   {
-    if (millis() - lastHourlyRetry >= 3600000UL)
+    if (millis() - lastHourlyRetry >= 900000UL) // 15 minutes
     {
       lastHourlyRetry     = millis();
       consecutiveFailures = 0;
@@ -645,7 +645,7 @@ void MQTTManager::publishDiscovery()
   }
 
   // ── Shared buffers ────────────────────────────────────────────────────────
-  char buf[1024];  // Reused for every entity payload.
+  char buf[2048];  // Reused for every entity payload (increased from 1024 to prevent truncation).
 
   char avail[64];
   strncpy(avail, buildTopic(F("/availability")), sizeof(avail));
@@ -901,10 +901,10 @@ void MQTTManager::publishDiscovery()
   }
 
   // ── Climate (HVAC thermostat) ─────────────────────────────────────────────
-  // Uses a larger StaticJsonDocument (1024 bytes) because the climate entity
+  // Uses a larger StaticJsonDocument (2048 bytes) because the climate entity
   // contains many topic fields, all of which include the DEVICE_ID.
   {
-    StaticJsonDocument<1024> doc;
+    StaticJsonDocument<2048> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_hvac", DEVICE_ID);
     doc["name"]    = "Garage Thermostat";
     doc["uniq_id"] = uniq;
