@@ -64,10 +64,10 @@ void LcdController::begin()
   lcd.init();
 
   // Define custom bitmaps for navigation arrows and degree symbol
-  byte UpArrow[]    = {B00100, B01110, B10101, B00100, B00100, B00100, B00100, B00100};
-  byte DownArrow[]  = {B00100, B00100, B00100, B00100, B00100, B10101, B01110, B00100};
-  byte DoubleArrow[]= {B00100, B01110, B10101, B00100, B00100, B10101, B01110, B00100};
-  byte Degree[]     = {B01000, B10100, B01000, B00000, B00000, B00000, B00000, B00000};
+  byte UpArrow[] = {B00100, B01110, B10101, B00100, B00100, B00100, B00100, B00100};
+  byte DownArrow[] = {B00100, B00100, B00100, B00100, B00100, B10101, B01110, B00100};
+  byte DoubleArrow[] = {B00100, B01110, B10101, B00100, B00100, B10101, B01110, B00100};
+  byte Degree[] = {B01000, B10100, B01000, B00000, B00000, B00000, B00000, B00000};
 
   lcd.createChar(0, UpArrow);
   lcd.createChar(1, DownArrow);
@@ -115,7 +115,8 @@ void LcdController::printLCDText(int row, bool center, const char *text)
   if (center)
   {
     col = (20 - len) / 2;
-    if (col < 0) col = 0;
+    if (col < 0)
+      col = 0;
   }
   lcd.setCursor(col, row - 1);
   lcd.print(text);
@@ -134,11 +135,16 @@ const char *LcdController::getDoorStateString(const GarageDoor &door)
 {
   switch (door.getState())
   {
-  case GarageDoor::Open:     return "Open";
-  case GarageDoor::Closed:   return "Closed";
-  case GarageDoor::Moving:   return "Moving";
-  case GarageDoor::Error:    return "Error";
-  case GarageDoor::Disabled: return "Dsbld";
+  case GarageDoor::Open:
+    return "Open";
+  case GarageDoor::Closed:
+    return "Closed";
+  case GarageDoor::Moving:
+    return "Moving";
+  case GarageDoor::Error:
+    return "Error";
+  case GarageDoor::Disabled:
+    return "Dsbld";
   }
   return "Unknown";
 }
@@ -152,10 +158,14 @@ const char *LcdController::getHvacStateString(const GarageHVAC &hvac)
 {
   switch (hvac.state)
   {
-  case GarageHVAC::Heating: return "Heat";
-  case GarageHVAC::Cooling: return "Cool";
-  case GarageHVAC::Pending: return "Pend";
-  default:                  return "Wait";
+  case GarageHVAC::Heating:
+    return "Heat";
+  case GarageHVAC::Cooling:
+    return "Cool";
+  case GarageHVAC::Pending:
+    return "Pend";
+  default:
+    return "Wait";
   }
 }
 
@@ -220,7 +230,8 @@ void LcdController::setBacklight(bool on)
 void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
                                   GarageLight &lights, float tempF)
 {
-  if (!IsDirty) return;
+  if (!IsDirty)
+    return;
 
   Serial.println(F("LCD:Update"));
   IsDirty = false;
@@ -254,11 +265,21 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     const char *modeStr;
     switch (hvac.mode)
     {
-    case GarageHVAC::Off:       modeStr = "Off";  break;
-    case GarageHVAC::Heat:      modeStr = "Heat"; break;
-    case GarageHVAC::Heat_Cool: modeStr = "H+C";  break;
-    case GarageHVAC::Cool:      modeStr = "Cool"; break;
-    default:                    modeStr = "???";  break;
+    case GarageHVAC::Off:
+      modeStr = "Off";
+      break;
+    case GarageHVAC::Heat:
+      modeStr = "Heat";
+      break;
+    case GarageHVAC::Heat_Cool:
+      modeStr = "H+C";
+      break;
+    case GarageHVAC::Cool:
+      modeStr = "Cool";
+      break;
+    default:
+      modeStr = "???";
+      break;
     }
     snprintf(buf, sizeof(buf), "Mode:%s", modeStr);
     printLCDText(3, true, buf);
@@ -328,11 +349,21 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     const char *modeStr2;
     switch (hvac.mode)
     {
-    case GarageHVAC::Off:       modeStr2 = "Off";  break;
-    case GarageHVAC::Heat:      modeStr2 = "Heat"; break;
-    case GarageHVAC::Heat_Cool: modeStr2 = "H+C";  break;
-    case GarageHVAC::Cool:      modeStr2 = "Cool"; break;
-    default:                    modeStr2 = "???";  break;
+    case GarageHVAC::Off:
+      modeStr2 = "Off";
+      break;
+    case GarageHVAC::Heat:
+      modeStr2 = "Heat";
+      break;
+    case GarageHVAC::Heat_Cool:
+      modeStr2 = "H+C";
+      break;
+    case GarageHVAC::Cool:
+      modeStr2 = "Cool";
+      break;
+    default:
+      modeStr2 = "???";
+      break;
     }
     printLCDText(3, true, modeStr2);
     printLCDText(4, false, "\x02");
@@ -421,50 +452,70 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
   case MenuController::Screen::NetworkInfo:
   {
     char ipStr[21];
-    char mqttStr[21];
+
     const char *statusStr = "n/a";
 
 #if ENABLE_WIFI
     if (g_mqttManager)
     {
       g_mqttManager->getLocalIP(ipStr, sizeof(ipStr));
-      g_mqttManager->getMqttServerIP(mqttStr, sizeof(mqttStr));
-      statusStr = g_mqttManager->getNetStatusString();
     }
     else
     {
-      strncpy(ipStr,   "n/a", sizeof(ipStr));   ipStr[sizeof(ipStr)-1]   = '\0';
-      strncpy(mqttStr, "n/a", sizeof(mqttStr)); mqttStr[sizeof(mqttStr)-1]= '\0';
+      strncpy(ipStr, "n/a", sizeof(ipStr));
+      ipStr[sizeof(ipStr) - 1] = '\0';
     }
 #else
-    strncpy(ipStr,   "n/a", sizeof(ipStr));   ipStr[sizeof(ipStr)-1]   = '\0';
-    strncpy(mqttStr, "n/a", sizeof(mqttStr)); mqttStr[sizeof(mqttStr)-1]= '\0';
-    statusStr = "Disabled";
+    strncpy(ipStr, "n/a", sizeof(ipStr));
+    ipStr[sizeof(ipStr) - 1] = '\0';
 #endif
 
     printLCDText(1, true, "Network Info");
     snprintf(buf, sizeof(buf), "IP: %s", ipStr);
     printLCDText(2, true, buf);
-    snprintf(buf, sizeof(buf), "MQTT: %s", mqttStr);
-    printLCDText(3, true, buf);
-    EditMode ? lcd.blink_on() : lcd.blink_off();
-    snprintf(buf, sizeof(buf), "\x01 Status: %s", statusStr);
-    printLCDText(4, false, buf);
     break;
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  SetNV Values sub-menu screens (v2.17.0)
-  //
-  //  Each edit screen:
-  //    Row 1 – screen title
-  //    Row 3 – current NV value (read via host->getNv*(); "---" if host null)
-  //    Row 4 – navigation arrow indicator
-  //  EditMode enables LCD cursor blink to indicate an editable field.
-  //
-  //  Changes made here update the in-RAM NV members only; EEPROM is not
-  //  written until the user navigates to SaveNV or sends /nv/save/cmd.
-  // ══════════════════════════════════════════════════════════════════════════
+  case MenuController::Screen::MQTTMenu:
+    char mqttStr[21];
+#if ENABLE_WIFI
+    if (g_mqttManager)
+    {
+      g_mqttManager->getMqttServerIP(mqttStr, sizeof(mqttStr));
+      statusStr = g_mqttManager->getNetStatusString();
+    }
+    else
+    {
+      strncpy(mqttStr, "n/a", sizeof(mqttStr));
+      mqttStr[sizeof(mqttStr) - 1] = '\0';
+    }
+#else
+    strncpy(mqttStr, "n/a", sizeof(mqttStr));
+    mqttStr[sizeof(mqttStr) - 1] = '\0';
+    statusStr = "Disabled";
+#endif
+
+    EditMode ? lcd.blink_on() : lcd.blink_off();
+    printLCDText(1, true, "MQTT Connection");
+    snprintf(buf, sizeof(buf), "MQTT: %s", mqttStr);
+    printLCDText(2, true, buf);
+    snprintf(buf, sizeof(buf), "\x01 Status: %s", statusStr);
+    printLCDText(3, false, buf);
+    printLCDText(4, false, "\x00");
+    break;
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  SetNV Values sub-menu screens (v2.17.0)
+    //
+    //  Each edit screen:
+    //    Row 1 – screen title
+    //    Row 3 – current NV value (read via host->getNv*(); "---" if host null)
+    //    Row 4 – navigation arrow indicator
+    //  EditMode enables LCD cursor blink to indicate an editable field.
+    //
+    //  Changes made here update the in-RAM NV members only; EEPROM is not
+    //  written until the user navigates to SaveNV or sends /nv/save/cmd.
+    // ══════════════════════════════════════════════════════════════════════════
 
   case MenuController::Screen::NVMenu:
     // Overview / entry screen for the NV editing sub-menu.

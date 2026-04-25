@@ -481,7 +481,10 @@ void MenuController::handleDown(IMenuHost &controller, GarageHVAC &hvac, GarageL
   case Screen::NetworkMenu:
     current = Screen::NVMenu;
     break;
-  // NVMenu has no down option
+  case Screen::NVMenu:
+    current = Screen::MenuExit;
+    break;
+  // MenuExit has no down option
   // HVAC menu
   case Screen::SetHeat:
     if (EditMode)
@@ -580,7 +583,8 @@ void MenuController::handleDown(IMenuHost &controller, GarageHVAC &hvac, GarageL
     else
       current = Screen::NetworkBack;
     break;
-//NVmenu
+    // NetworkBack has no down option
+    // NVmenu
   case Screen::LoadNV:
     current = Screen::SaveNV;
     break;
@@ -629,7 +633,7 @@ void MenuController::handleDown(IMenuHost &controller, GarageHVAC &hvac, GarageL
     else
       current = Screen::SetNVBack;
     break;
-    //SetNVBack has no down option
+    // SetNVBack has no down option
   default:
     break;
   }
