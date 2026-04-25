@@ -50,7 +50,7 @@
  *    LoadNV() copies NV members → live subsystem values only; EEPROM is not
  *    re-read and NV members are not modified.
  *
- * @section SetNVMenu SetNV Values menu (v2.17.0)
+ * @section NVMenu SetNV Values menu (v2.17.0)
  * A new "Set NV Values" sub-menu was added inside the Config section,
  * accessible via DOWN from NetworkInfo.  It provides one edit screen per NV
  * parameter (heat setpoint, cool setpoint, swing, min run time, min rest time,
@@ -69,7 +69,7 @@
 
 #include "src/Utility.h"
 #include <EEPROM.h>
-const char *GC_VERSION = "2.19.0";
+const char *GC_VERSION = "2.19.2";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -266,6 +266,18 @@ public:
   unsigned long lastHvacCmd  = 0;
 #endif
 
+  // ── Auto-revert tracking ──────────────────────────────────────────────────
+  /**
+   * @brief Timestamp when a live value last diverged from its NV counterpart.
+   * 
+   * When any of the four adjustable live values (heatSet, coolSet, doorTimeout,
+   * lightTimeout) changes via menu or MQTT, this timestamp is recorded. If 24
+   * hours pass without another change, all four values revert to their NV
+   * counterparts. Zero means no active divergence.
+   */
+  unsigned long lastLiveChangeTime = 0;
+  static constexpr unsigned long AUTO_REVERT_INTERVAL_MS = 24UL * 60UL * 60UL * 1000UL; ///< 24 hours
+
 #if ENABLE_WIFI
   MQTTManager mqttManager;
 #endif
@@ -380,6 +392,66 @@ public:
 
   /** @brief Returns the current in-RAM NV light auto-off duration (ms). */
   unsigned long getNvLightTimeout() const override { return nvLightTimeout; }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  Auto-revert helpers – track and apply 24h timeout for live value changes
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * @brief Records that a live value has been modified (diverged from NV).
+   *
+   * Called whenever hvac.heatSet, hvac.coolSet, door.autoCloseDuration, or
+   * lights.duration are changed via menu or MQTT. Starts the 24-hour auto-revert
+   * timer. Once 24 hours pass without another change, all four values revert to
+   * their NV counterparts via checkAndRevertAutoValues().
+   *
+   * @note NOT called during LoadNV() or initialization.
+   */
+  void notifyLiveValueChanged() override
+  {
+    lastLiveChangeTime = millis();
+  }
+
+  /**
+   * @brief Checks if 24 hours have passed since the last live value change.
+   *
+   * If the timeout has expired AND any of the four values (heatSet, coolSet,
+   * doorTimeout, lightTimeout) differ from their NV counterparts, all four are
+   * reverted to NV values. The timer is then cleared.
+   *
+   * Called periodically from loop() to detect and apply the auto-revert.
+   */
+  void checkAndRevertAutoValues()
+  {
+    // Skip if timer is not active
+    if (lastLiveChangeTime == 0)
+      return;
+
+    unsigned long now = millis();
+    
+    // Check if 24 hours have passed
+    if (now - lastLiveChangeTime > AUTO_REVERT_INTERVAL_MS)
+    {
+      // Check if any live value differs from NV
+      if (hvac.heatSet != nvHeatSet ||
+          hvac.coolSet != nvCoolSet ||
+          door.autoCloseDuration != nvDoorTimeout ||
+          lights.duration != nvLightTimeout)
+      {
+        // Revert all to NV values
+        hvac.heatSet           = nvHeatSet;
+        hvac.coolSet           = nvCoolSet;
+        door.autoCloseDuration = nvDoorTimeout;
+        lights.duration        = nvLightTimeout;
+        
+        Serial.println(F("Auto-revert: Live values reverted to NV after 24h"));
+        lcdDisplay.SetDirty(true);
+      }
+      
+      // Clear the timer
+      lastLiveChangeTime = 0;
+    }
+  }
 
   // ══════════════════════════════════════════════════════════════════════════
   //  IMenuHost – NV mutator implementations (Rule 3: RAM only, no EEPROM)
@@ -662,6 +734,7 @@ public:
       if (mins > 0 && mins <= 120)
       {
         door.autoCloseDuration = (unsigned long)mins * 60000UL;
+        notifyLiveValueChanged();
         lcdDisplay.SetDirty(false);
       }
     }
@@ -689,6 +762,7 @@ public:
       if (mins > 0 && mins <= 120)
       {
         lights.duration = (unsigned long)mins * 60000UL;
+        notifyLiveValueChanged();
         lcdDisplay.SetDirty(false);
       }
     }
@@ -700,6 +774,7 @@ public:
         if (val > 30 && val < 100)
         {
           hvac.heatSet = val;
+          notifyLiveValueChanged();
           lcdDisplay.SetDirty(false);
         }
         lastHvacCmd = now();
@@ -725,6 +800,7 @@ public:
         if (val > 30 && val < 100)
         {
           hvac.coolSet = val;
+          notifyLiveValueChanged();
           lcdDisplay.SetDirty(false);
         }
         lastHvacCmd = now();
@@ -865,18 +941,21 @@ public:
       lcdDisplay.setBacklight(false);
     }
 
-    // ── 4. Network / MQTT heartbeat ──────────────────────────────────────
+    // ── 4. Auto-revert check (live values → NV after 24h) ─────────────────
+    checkAndRevertAutoValues();
+
+    // ── 5. Network / MQTT heartbeat ──────────────────────────────────────
 #if ENABLE_WIFI
     mqttManager.loop();
 #endif
 
-    // ── 5. Door state machine ─────────────────────────────────────────────
+    // ── 6. Door state machine ─────────────────────────────────────────────
     GarageDoor::State doorState = door.poll(motionDetected);
 
-    // ── 6. HVAC lockout: block heating/cooling when door is open ─────────
+    // ── 7. HVAC lockout: block heating/cooling when door is open ─────────
     hvac.lockout = (doorState != GarageDoor::Closed);
 
-    // ── 7. Async temperature sampling ─────────────────────────────────────
+    // ── 8. Async temperature sampling ─────────────────────────────────────
     // Phase A – Start a new conversion every TEMP_INTERVAL_MS.
     if (!tempPending && expired(lastTempPoll, TEMP_INTERVAL_MS))
     {

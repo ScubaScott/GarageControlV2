@@ -120,6 +120,17 @@ public:
 
   /** @} */
 
+  /**
+   * @brief Notifies that a live subsystem value has been modified.
+   *
+   * Called by menu and MQTT handlers when a live value (not NV) is changed.
+   * Starts the 24-hour auto-revert timer. If 24 hours pass without another
+   * change, live values revert to their NV counterparts.
+   *
+   * @note NOT called during LoadNV() or initialization.
+   */
+  virtual void notifyLiveValueChanged() = 0;
+
   virtual ~IMenuHost() = default;
 };
 
@@ -187,8 +198,6 @@ public:
     SetMinRunTime,  ///< Edit HVAC minimum runtime (minutes)
     SetMinRestTime, ///< Edit HVAC minimum rest time (minutes)
     SetMode,        ///< Select HVAC mode (Off/Heat/Heat_Cool/Cool)
-    LoadNV,         ///< Load settings from NV storage
-    SaveNV,         ///< Save settings to NV storage
     HVACBack,       ///< Return from HVAC menu to Main
 
     // ── Light Configuration Submenu ─────────────────────────
@@ -203,21 +212,23 @@ public:
     DoorBack,        ///< Return from Door menu to Main
 
     // ── Network/Config Submenu ─────────────────────────────
-    ConfigMenu,   ///< Config menu: view status or trigger actions
-    NetworkInfo,  ///< Display network status (WiFi/MQTT connection state)
-    NetworkReset, ///< Trigger network reconnection attempt
-    ConfigBack,   ///< Return from Config menu to Main
+    NetworkMenu, ///< Config menu: view status or trigger actions
+    NetworkInfo, ///< Display network status (WiFi/MQTT connection state)
+    MQTTMenu,    ///< Trigger network reconnection attempt
+    NetworkBack,  ///< Return from Config menu to Main
 
-    SetNVMenu,
-    SetNVHeatSet,
-    SetNVCoolSet,
-    SetNVSwing,
-    SetNVMinRunTime,
-    SetNVMinRestTime,
-    SetNVDoorTimeout,
-    SetNVLightTimeout,
-    SetNVBack,
-    
+    NVMenu,            ///< NV menu: Set, adjusts and loads NV values
+    LoadNV,            ///< Load settings from NV storage
+    SaveNV,            ///< Save settings to NV storage
+    SetNVHeatSet,      ///< Edit NV Heat Setpoint (°F)
+    SetNVCoolSet,      ///< Edit NV Cool Setpoint (°F)
+    SetNVSwing,        ///< Edit NV Temperature hysteresis/swing (°F)
+    SetNVMinRunTime,   ///< Edit NV HVAC minimum runtime (minutes)
+    SetNVMinRestTime,  ///< Edit NV HVAC minimum rest time (minutes)
+    SetNVDoorTimeout,  ///< Edit NV auto-close timeout duration (minutes)
+    SetNVLightTimeout, ///< Edit NV auto-off timeout duration (minutes)
+    SetNVBack,         ///< Return from NV menu to Main
+
     // ── Menu Control ────────────────────────────────────────
     MenuExit, ///< Exit menu system and return to Main
     Count     ///< Internal: total number of screens (for bounds checking)

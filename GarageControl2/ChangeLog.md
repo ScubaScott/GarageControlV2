@@ -1,5 +1,25 @@
 # GarageControl2 – Change Log
 
+## [2.19.1] – 2026-04-23
+
+### Added
+- **24-Hour Auto-Revert for Live Values**: Temporary modifications to HVAC setpoints and timeouts now automatically revert to NV values after 24 hours without additional changes
+  - When hvac.heatSet, hvac.coolSet, door.autoCloseDuration, or lights.duration are modified via menu or MQTT, a 24-hour timer starts
+  - Any change to these values resets the timer (single unified timer for all 4 values)
+  - If 24 hours pass without another change, all 4 values automatically revert to their NV (stored) counterparts
+  - Allows temporary adjustments during garage work without manual SaveNV; auto-reverts if forgotten
+  - Auto-revert check runs in main loop with no notifications (silently reverts in background)
+
+### Architecture
+- **Auto-Revert Implementation**:
+  - `lastLiveChangeTime` tracks when a live value was last modified
+  - `notifyLiveValueChanged()` (IMenuHost interface) called by menu/MQTT handlers to record timestamp
+  - `checkAndRevertAutoValues()` runs each loop iteration to detect 24h timeout expiry
+  - Reverts all 4 values atomically when timer expires; clears timer after revert
+  - NV values serve as the "commit point" – if user wants to keep temp changes, must SaveNV before 24h window
+
+---
+
 ## [2.19.0] – 2026-04-23
 
 ### Refactored

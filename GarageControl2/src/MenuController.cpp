@@ -174,13 +174,32 @@ void MenuController::handleSet(IMenuHost &controller)
 {
   switch (current)
   {
+    // Main screen
   case Screen::Main:
     current = Screen::HVACMenu;
     EditMode = false;
     break;
+  // Top Level
   case Screen::HVACMenu:
     current = Screen::SetHeat;
     break;
+  case Screen::LightMenu:
+    current = Screen::SetLightTimeout;
+    break;
+  case Screen::DoorMenu:
+    current = Screen::SetDoorTimeout;
+    break;
+  case Screen::NetworkMenu:
+    current = Screen::NetworkInfo;
+    break;
+  case Screen::NVMenu:
+    current = Screen::SetNVHeatSet;
+    EditMode = false;
+    break;
+  case Screen::MenuExit:
+    current = Screen::Main;
+    break;
+    // HVAC Menus
   case Screen::SetHeat:
     EditMode = !EditMode;
     break;
@@ -199,27 +218,17 @@ void MenuController::handleSet(IMenuHost &controller)
   case Screen::SetMode:
     EditMode = !EditMode;
     break;
-  case Screen::LoadNV:
-    controller.LoadNV();
-    break;
-  case Screen::SaveNV:
-    controller.SaveNV();
-    break;
   case Screen::HVACBack:
     current = Screen::HVACMenu;
     break;
-  case Screen::LightMenu:
-    current = Screen::SetLightTimeout;
-    break;
+    // Light Menu
   case Screen::SetLightTimeout:
     EditMode = !EditMode;
     break;
   case Screen::LightBack:
     current = Screen::LightMenu;
     break;
-  case Screen::DoorMenu:
-    current = Screen::SetDoorTimeout;
-    break;
+    // Door Menu
   case Screen::SetDoorTimeout:
     EditMode = !EditMode;
     break;
@@ -229,22 +238,20 @@ void MenuController::handleSet(IMenuHost &controller)
   case Screen::DoorBack:
     current = Screen::DoorMenu;
     break;
-  case Screen::ConfigMenu:
-    current = Screen::NetworkInfo;
+    // Network MQTT
+    // Network info menu has no set option
+  case Screen::MQTTMenu:
+    EditMode = !EditMode;
     break;
-  case Screen::NetworkInfo:
-    if (!EditMode)
-    {
-      current = Screen::SetNVMenu;
-    }
-    else
-    {
-      EditMode = false;
-    }
+  case Screen::NetworkBack:
+    current = Screen::NetworkMenu;
     break;
-  case Screen::SetNVMenu:
-    current = Screen::SetNVHeatSet;
-    EditMode = false;
+    // NV menu
+  case Screen::LoadNV:
+    controller.LoadNV();
+    break;
+  case Screen::SaveNV:
+    controller.SaveNV();
     break;
   case Screen::SetNVHeatSet:
     EditMode = !EditMode;
@@ -268,13 +275,7 @@ void MenuController::handleSet(IMenuHost &controller)
     EditMode = !EditMode;
     break;
   case Screen::SetNVBack:
-    current = Screen::SetNVMenu;
-    break;
-  case Screen::ConfigBack:
-    current = Screen::ConfigMenu;
-    break;
-  case Screen::MenuExit:
-    current = Screen::Main;
+    current = Screen::NVMenu;
     break;
   default:
     current = Screen::Main;
@@ -287,26 +288,36 @@ void MenuController::handleUp(IMenuHost &controller, GarageHVAC &hvac, GarageLig
   switch (current)
   {
     // First Level Menu
+    // HVAC menu has no up option
   case Screen::LightMenu:
     current = Screen::HVACMenu;
     break;
   case Screen::DoorMenu:
     current = Screen::LightMenu;
     break;
-  case Screen::ConfigMenu:
+  case Screen::NetworkMenu:
     current = Screen::DoorMenu;
     break;
+  case Screen::NVMenu:
+    current = Screen::NetworkMenu;
+    break;
   case Screen::MenuExit:
-    current = Screen::ConfigMenu;
+    current = Screen::NVMenu;
     break;
     // HVAC Menu
   case Screen::SetHeat:
     if (EditMode)
+    {
       hvac.heatSet++;
+      controller.notifyLiveValueChanged();
+    } // theres no up option for heat when not in edit
     break;
   case Screen::SetCool:
     if (EditMode)
+    {
       hvac.coolSet++;
+      controller.notifyLiveValueChanged();
+    }
     else
       current = Screen::SetHeat;
     break;
@@ -346,7 +357,10 @@ void MenuController::handleUp(IMenuHost &controller, GarageHVAC &hvac, GarageLig
     // Light menu
   case Screen::SetLightTimeout:
     if (EditMode)
+    {
       lights.duration += 60000UL;
+      controller.notifyLiveValueChanged();
+    } // there is no up optoins from light when not in edit
     break;
   case Screen::LightBack:
     current = Screen::SetLightTimeout;
@@ -354,7 +368,10 @@ void MenuController::handleUp(IMenuHost &controller, GarageHVAC &hvac, GarageLig
   // Door Menu
   case Screen::SetDoorTimeout:
     if (EditMode)
+    {
       door.setAutoClose(door.getAutoClose() + 60000UL);
+      controller.notifyLiveValueChanged();
+    }
     break;
   case Screen::SetDoorAttempts:
     if (EditMode)
@@ -365,8 +382,9 @@ void MenuController::handleUp(IMenuHost &controller, GarageHVAC &hvac, GarageLig
   case Screen::DoorBack:
     current = Screen::SetDoorAttempts;
     break;
-  // Config Menu
-  case Screen::NetworkInfo:
+    // Network Menu
+    // network info has no up option
+  case Screen::MQTTMenu:
     if (EditMode)
     {
 #if ENABLE_WIFI
@@ -378,13 +396,28 @@ void MenuController::handleUp(IMenuHost &controller, GarageHVAC &hvac, GarageLig
 #endif
       EditMode = false;
     }
+    else
+    {
+      current = Screen::NetworkMenu;
+    }
     break;
-  case Screen::SetNVMenu:
-    current = Screen::NetworkInfo;
+  case Screen::NetworkBack:
+    current = Screen::MQTTMenu;
+    break;
+    // NVMenu
+    // there is no up option from loadNV
+  case Screen::SaveNV:
+    current = Screen::LoadNV;
     break;
   case Screen::SetNVHeatSet:
     if (EditMode)
+    {
       controller.adjNvHeatSet(1.0f);
+    }
+    else
+    {
+      current = Screen::SaveNV;
+    }
     break;
   case Screen::SetNVCoolSet:
     if (EditMode)
@@ -425,15 +458,6 @@ void MenuController::handleUp(IMenuHost &controller, GarageHVAC &hvac, GarageLig
   case Screen::SetNVBack:
     current = Screen::SetNVLightTimeout;
     break;
-  case Screen::LoadNV:
-    current = Screen::SetNVMenu;
-    break;
-  case Screen::SaveNV:
-    current = Screen::LoadNV;
-    break;
-  case Screen::ConfigBack:
-    current = Screen::SaveNV;
-    break;
     // fail safe
   default:
     break;
@@ -452,21 +476,28 @@ void MenuController::handleDown(IMenuHost &controller, GarageHVAC &hvac, GarageL
     current = Screen::DoorMenu;
     break;
   case Screen::DoorMenu:
-    current = Screen::ConfigMenu;
+    current = Screen::NetworkMenu;
     break;
-  case Screen::ConfigMenu:
-    current = Screen::MenuExit;
+  case Screen::NetworkMenu:
+    current = Screen::NVMenu;
     break;
-
+  // NVMenu has no down option
+  // HVAC menu
   case Screen::SetHeat:
     if (EditMode)
+    {
       hvac.heatSet--;
+      controller.notifyLiveValueChanged();
+    }
     else
       current = Screen::SetCool;
     break;
   case Screen::SetCool:
     if (EditMode)
+    {
       hvac.coolSet--;
+      controller.notifyLiveValueChanged();
+    }
     else
       current = Screen::SetSwing;
     break;
@@ -500,17 +531,25 @@ void MenuController::handleDown(IMenuHost &controller, GarageHVAC &hvac, GarageL
     else
       current = Screen::HVACBack;
     break;
+    // HVACBack has no down option
     // Light Menu
   case Screen::SetLightTimeout:
     if (EditMode)
+    {
       lights.duration -= 60000UL;
+      controller.notifyLiveValueChanged();
+    }
     else
       current = Screen::LightBack;
     break;
-    // Door menu
+    // LightBack has no down option
+    //  Door menu
   case Screen::SetDoorTimeout:
     if (EditMode)
+    {
       door.setAutoClose(door.getAutoClose() - 60000UL);
+      controller.notifyLiveValueChanged();
+    }
     else
       current = Screen::SetDoorAttempts;
     break;
@@ -520,8 +559,13 @@ void MenuController::handleDown(IMenuHost &controller, GarageHVAC &hvac, GarageL
     else
       current = Screen::DoorBack;
     break;
+    // DoorBack has no down option
     // Config menu
+
   case Screen::NetworkInfo:
+    current = Screen::MQTTMenu;
+    break;
+  case Screen::MQTTMenu:
     if (EditMode)
     {
 #if ENABLE_WIFI
@@ -534,10 +578,14 @@ void MenuController::handleDown(IMenuHost &controller, GarageHVAC &hvac, GarageL
       EditMode = false;
     }
     else
-      current = Screen::SetNVMenu;
+      current = Screen::NetworkBack;
     break;
-  case Screen::SetNVMenu:
-    current = Screen::LoadNV;
+//NVmenu
+  case Screen::LoadNV:
+    current = Screen::SaveNV;
+    break;
+  case Screen::SaveNV:
+    current = Screen::SetNVHeatSet;
     break;
   case Screen::SetNVHeatSet:
     if (EditMode)
@@ -581,15 +629,7 @@ void MenuController::handleDown(IMenuHost &controller, GarageHVAC &hvac, GarageL
     else
       current = Screen::SetNVBack;
     break;
-  case Screen::SetNVBack:
-    current = Screen::LoadNV;
-    break;
-  case Screen::LoadNV:
-    current = Screen::SaveNV;
-    break;
-  case Screen::SaveNV:
-    current = Screen::ConfigBack;
-    break;
+    //SetNVBack has no down option
   default:
     break;
   }

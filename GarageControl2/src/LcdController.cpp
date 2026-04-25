@@ -10,7 +10,7 @@
  * Eight new cases were added to the updateDisplay() switch block to render
  * the SetNV Values sub-menu:
  *
- *   SetNVMenu        – entry / overview screen
+ *   NVMenu           – entry / overview screen
  *   SetNVHeatSet     – NV heat setpoint (°F)
  *   SetNVCoolSet     – NV cool setpoint (°F)
  *   SetNVSwing       – NV HVAC hysteresis swing (°F)
@@ -411,7 +411,7 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
   // ══════════════════════════════════════════════════════════════════════════
   //  Config sub-menu screens
   // ══════════════════════════════════════════════════════════════════════════
-  case MenuController::Screen::ConfigMenu:
+  case MenuController::Screen::NetworkMenu:
     printLCDText(1, true, "Config Settings");
     snprintf(buf, sizeof(buf), "Version: %s", GC_VERSION);
     printLCDText(2, true, buf);
@@ -466,12 +466,10 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
   //  written until the user navigates to SaveNV or sends /nv/save/cmd.
   // ══════════════════════════════════════════════════════════════════════════
 
-  case MenuController::Screen::SetNVMenu:
+  case MenuController::Screen::NVMenu:
     // Overview / entry screen for the NV editing sub-menu.
     // Row 2 gives a hint of what can be edited here.
     printLCDText(1, true, "Set NV Values");
-    printLCDText(2, true, "Ht/Cl/Sw/Run/Rest");
-    printLCDText(3, true, "Dr/Lt Timeouts");
     printLCDText(4, false, "\x02"); // double arrow — UP goes back to NetworkInfo, DOWN goes to LoadNV
     break;
 
@@ -561,16 +559,15 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
 
   case MenuController::Screen::SetNVBack:
     // Navigation screen at the bottom of the SetNV sub-menu.
-    // UP returns to SetNVLightTimeout; SET returns to SetNVMenu.
+    // UP returns to SetNVLightTimeout; SET returns to NVMenu.
     printLCDText(1, true, "NV Values Back");
-    printLCDText(3, true, "SET->NV Menu");
     printLCDText(4, false, "\x00"); // up arrow — navigate back up through sub-menu
     break;
 
   // ══════════════════════════════════════════════════════════════════════════
   //  Menu-level navigation screens
   // ══════════════════════════════════════════════════════════════════════════
-  case MenuController::Screen::ConfigBack:
+  case MenuController::Screen::NetworkBack:
     printLCDText(1, true, "Back...");
     printLCDText(4, false, "\x00");
     break;
