@@ -79,6 +79,7 @@ private:
   GarageController *controller;
   unsigned long lastMqttReconnect = 0;
   unsigned long lastHourlyRetry   = 0;  ///< Rate-limits reconnect when Disabled
+  bool mqttReconnectAttempted     = false; ///< Ensures only one reconnect attempt per disconnect event
   bool pendingFullPublish         = false; ///< Forces full re-publish after (re)connect
 
   // ── Previous-state cache (change detection for publishStateChanges) ──────

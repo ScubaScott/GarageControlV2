@@ -9,7 +9,7 @@
  * for the debounce period — requiring long holds to register reliably.
  *
  * Debounce logic: a press is registered on the falling edge (HIGH→LOW),
- * provided the pin has been stable for at least DEBOUNCE_MS. This fires
+ * provided the pin has been stable for at least DEBOUNCE_MS (500ms). This fires
  * exactly once per physical press regardless of how long the button is held.
  */
 
@@ -564,7 +564,6 @@ void MenuController::handleDown(IMenuHost &controller, GarageHVAC &hvac, GarageL
     break;
     // DoorBack has no down option
     // Config menu
-
   case Screen::NetworkInfo:
     current = Screen::MQTTMenu;
     break;

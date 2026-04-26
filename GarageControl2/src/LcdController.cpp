@@ -477,7 +477,9 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
   }
 
   case MenuController::Screen::MQTTMenu:
+  {
     char mqttStr[21];
+    const char *statusStr = "n/a";
 #if ENABLE_WIFI
     if (g_mqttManager)
     {
@@ -503,6 +505,7 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     printLCDText(3, false, buf);
     printLCDText(4, false, "\x00");
     break;
+  }
 
     // ══════════════════════════════════════════════════════════════════════════
     //  SetNV Values sub-menu screens (v2.17.0)

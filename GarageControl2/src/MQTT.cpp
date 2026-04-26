@@ -177,6 +177,8 @@ void MQTTManager::init(GarageController *ctrl,
  * When Disabled, attempts a full reconnect once per hour.  When WiFi drops,
  * connectWiFi() may block up to 15 s – this is why the main loop calls
  * mqttManager.loop() AFTER the time-critical motion/light code.
+ *
+ * MQTT reconnects only once every 15 minutes per disconnect event to keep response time quick.
  */
 void MQTTManager::loop()
 {
@@ -204,11 +206,16 @@ void MQTTManager::loop()
   if (!mqtt.connected())
   {
     netStatus = NetStatus::Connecting;
-    if (millis() - lastMqttReconnect >= 5000UL)
+    if (!mqttReconnectAttempted && millis() - lastMqttReconnect >= 900000UL) // 15 minutes
     {
       lastMqttReconnect = millis();
+      mqttReconnectAttempted = true;
       connectMQTT();
     }
+  }
+  else
+  {
+    mqttReconnectAttempted = false; // Reset on successful connection
   }
 
   // ── Normal operation: service the MQTT client ─────────────────────────

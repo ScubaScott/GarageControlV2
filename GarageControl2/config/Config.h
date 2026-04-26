@@ -42,12 +42,12 @@
 /**
  * @brief MQTT broker username (if authentication required)
  */
-#define CONFIG_MQTT_USER "mqtt_user"
+#define CONFIG_MQTT_USER "garagecoltroller"
 
 /**
  * @brief MQTT broker password (if authentication required)
  */
-#define CONFIG_MQTT_PASSWORD "mqtt_password"
+#define CONFIG_MQTT_PASSWORD "ScubaGarage!"
 
 // ============================================================
 //  Device Identity Configuration

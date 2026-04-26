@@ -249,7 +249,7 @@ private:
   // Timeout and debouncing configuration
   unsigned long lastActivity = 0;             // Timestamp of last user activity
   const unsigned long MENU_TIMEOUT = 20000UL; // Return to Main after 20 seconds of inactivity
-  const unsigned long DEBOUNCE_MS = 50UL;     // Button debounce threshold (milliseconds)
+  const unsigned long DEBOUNCE_MS = 500UL;    // Button debounce threshold (milliseconds) - increased to 0.5s to prevent double presses
 
   // Hardware button pin assignments
   byte pinUp, pinDown, pinSet;

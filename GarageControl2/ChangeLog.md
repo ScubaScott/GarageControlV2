@@ -1,5 +1,19 @@
 # GarageControl2 – Change Log
 
+## [2.19.5] – 2026-04-26
+
+### Fixed
+- **MQTT Reconnect Logic**: Changed MQTT reconnect to attempt only once every 15 minutes per disconnect event, instead of retrying every 5 seconds, to improve system responsiveness.
+
+---
+
+## [2.19.4] – 2026-04-26
+
+### Fixed
+- **Button Debounce Time**: Increased menu button debounce from 50ms to 500ms to prevent double button presses during navigation.
+
+---
+
 ## [2.19.1] – 2026-04-23
 
 ### Added
