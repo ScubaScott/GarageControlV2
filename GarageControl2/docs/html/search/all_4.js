@@ -1,7 +1,4 @@
 var searchData=
 [
-  ['editmode_0',['EditMode',['../class_menu_controller.html#a72ffa69d5fe0e1a81fa57856ca6c463d',1,'MenuController']]],
-  ['enable_5fwifi_1',['ENABLE_WIFI',['../_utility_8h.html#a81720996cdc4653ddeccf5811a6f8976',1,'Utility.h']]],
-  ['error_2',['Error',['../class_garage_door.html#a560992b9f1422133cb1bd4eb7c560b87a5b322ab65f3d407ba0d120aca432fe64',1,'GarageDoor']]],
-  ['expired_3',['expired',['../_utility_8h.html#a40e1498cfd1819c6e35d092a7ec96cf5',1,'Utility.h']]]
+  ['begin_0',['begin',['../class_lcd_controller.html#a43e43b70c1b541175625c15fdd306093',1,'LcdController::begin()'],['../class_menu_controller.html#aac92364e3f5854b59e7f8b98f23eb62a',1,'MenuController::begin()']]]
 ];

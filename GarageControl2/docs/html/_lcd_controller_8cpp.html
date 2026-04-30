@@ -93,7 +93,7 @@ $(function(){initNavTree('_lcd_controller_8cpp.html','',''); });
 </div><!--header-->
 <div class="contents">
 
-<p>Implementation of LCD display controller for garage control system.  
+<p>LCD display controller implementation for garage control system.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;Arduino.h&gt;</code><br />
 <code>#include &lt;LiquidCrystal_I2C.h&gt;</code><br />
@@ -110,8 +110,14 @@ Include dependency graph for LcdController.cpp:</div>
 <div class="center"><div class="zoom"><iframe scrolling="no" loading="lazy" frameborder="0" src="_lcd_controller_8cpp__incl.svg" width="100%" height="496"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 </div><a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Implementation of LCD display controller for garage control system. </p>
-<p>This file implements the <a class="el" href="class_lcd_controller.html" title="Manages a 4x20 I2C LCD display for status and menu rendering.">LcdController</a> class methods for managing a 4x20 I2C LCD display, including initialization, text display, backlight control, and status updates. </p>
+<div class="textblock"><p>LCD display controller implementation for garage control system. </p>
+<p>Implements <a class="el" href="class_lcd_controller.html" title="Manages a 4x20 I2C LCD display for status and menu rendering.">LcdController</a> class methods for managing a 4x20 I2C LCD display: initialization, splash screen, custom characters, status rendering, menu screen rendering, backlight control, and dirty-flag-gated updates.</p>
+<h1 class="doxsection"><a class="anchor" id="SetNVRendering"></a>
+SetNV screen rendering (v2.17.0)</h1>
+<p>Eight new cases were added to the updateDisplay() switch block to render the SetNV Values sub-menu:</p>
+<p>NVMenu – entry / overview screen SetNVHeatSet – NV heat setpoint (°F) SetNVCoolSet – NV cool setpoint (°F) SetNVSwing – NV HVAC hysteresis swing (°F) SetNVMinRunTime – NV minimum HVAC run time (minutes) SetNVMinRestTime – NV minimum HVAC rest time (minutes) SetNVDoorTimeout – NV door auto-close timeout (minutes) SetNVLightTimeout– NV light auto-off timeout (minutes) SetNVBack – back navigation screen</p>
+<p>Each edit screen reads the current NV value via host-&gt;getNv*() and enables the LCD cursor blink when EditMode is active. If host is null (should not occur in normal operation) the value field shows "---".</p>
+<dl class="section version"><dt>Version</dt><dd>2.17.0 </dd></dl>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
 <div id="page-nav" class="page-nav-panel">

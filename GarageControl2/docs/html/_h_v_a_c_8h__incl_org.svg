@@ -38,7 +38,7 @@
 <!-- Node3 -->
 <g id="Node000003" class="node">
 <title>Node3</title>
-<g id="a_Node000003"><a xlink:href="_motion_8h.html" target="_top" xlink:title="PIR motion sensor with debouncing and electromagnetic interference rejection.">
+<g id="a_Node000003"><a xlink:href="_motion_8h.html" target="_top" xlink:title="PIR motion sensor with hardware interrupt integration and EMI rejection.">
 <polygon fill="white" stroke="#666666" points="83.38,-76 29.88,-76 29.88,-56 83.38,-56 83.38,-76"/>
 <text xml:space="preserve" text-anchor="middle" x="56.62" y="-62.5" font-family="Helvetica,sans-Serif" font-size="10.00">Motion.h</text>
 </a>

@@ -1,9 +1,12 @@
 var searchData=
 [
-  ['diagram_0',['Diagram',['../class_garage_door.html#State',1,'']]],
-  ['disabled_1',['Disabled',['../class_garage_door.html#a560992b9f1422133cb1bd4eb7c560b87a414801742f0dab487810104a8ffee4ea',1,'GarageDoor::Disabled'],['../class_m_q_t_t_manager.html#a5e3dcf779c5858b144b624558ef88c78ab9f5c797ebbf55adccdd8539a65a0241',1,'MQTTManager::Disabled']]],
-  ['disablenetwork_2',['disableNetwork',['../class_m_q_t_t_manager.html#aa89d67fb249d57e1f803e407da9c5d37',1,'MQTTManager']]],
-  ['doorback_3',['DoorBack',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a8f6b561a873c37aa71d9aca980852abb',1,'MenuController']]],
-  ['doormenu_4',['DoorMenu',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40aa5e13bd78827fd24e541bc1ab3421460',1,'MenuController']]],
-  ['duration_5',['duration',['../class_garage_light.html#aa47d9f2d410aca496549b93fe15c87c2',1,'GarageLight']]]
+  ['adddevice_0',['addDevice',['../class_m_q_t_t_manager.html#a31383885c0192542564f196bd75ad606',1,'MQTTManager']]],
+  ['adjnvcoolset_1',['adjNvCoolSet',['../group___n_v_mutators.html#gae2fe9df693ef0df97ea0e9a9ac61cbf3',1,'IMenuHost']]],
+  ['adjnvdoortimeout_2',['adjNvDoorTimeout',['../group___n_v_mutators.html#ga53cb322cceb48b7c3af6fe864ca06b72',1,'IMenuHost']]],
+  ['adjnvheatset_3',['adjNvHeatSet',['../group___n_v_mutators.html#ga46c4ec0cae5c049936dcfce277ac043c',1,'IMenuHost']]],
+  ['adjnvlighttimeout_4',['adjNvLightTimeout',['../group___n_v_mutators.html#ga0a157cb038a52fab29c29d492244fc0f',1,'IMenuHost']]],
+  ['adjnvminresttime_5',['adjNvMinRestTime',['../group___n_v_mutators.html#ga53f54fe339d5d4e6cb2c4314fcddf22a',1,'IMenuHost']]],
+  ['adjnvminruntime_6',['adjNvMinRunTime',['../group___n_v_mutators.html#gac8cdec88297af9f8173c0df52e98bd5a',1,'IMenuHost']]],
+  ['adjnvswing_7',['adjNvSwing',['../group___n_v_mutators.html#ga09fcc8b7047ea74ad8d1b16e255a0179',1,'IMenuHost']]],
+  ['autocloseduration_8',['autoCloseDuration',['../class_garage_door.html#abb6f69dff8476013acfd368f5fc679b5',1,'GarageDoor']]]
 ];

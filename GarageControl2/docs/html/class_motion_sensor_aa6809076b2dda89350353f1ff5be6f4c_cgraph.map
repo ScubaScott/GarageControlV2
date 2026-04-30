@@ -1,0 +1,5 @@
+<map id="MotionSensor::recordMotion" name="MotionSensor::recordMotion">
+<area shape="rect" id="Node000001" title="Records a motion detection event and updates the timestamp." alt="" coords="5,5,190,32"/>
+<area shape="rect" id="Node000002" href="$_utility_8h.html#a0b367d87e38eb8541b95194a0d870322" title=" " alt="" coords="238,5,283,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="190,16,225,19,220,19,190,21"/>
+</map>

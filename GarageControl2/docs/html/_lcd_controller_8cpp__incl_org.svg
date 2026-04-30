@@ -11,7 +11,7 @@
 <!-- Node1 -->
 <g id="Node000001" class="node">
 <title>Node1</title>
-<g id="a_Node000001"><a xlink:title="Implementation of LCD display controller for garage control system.">
+<g id="a_Node000001"><a xlink:title="LCD display controller implementation for garage control system.">
 <polygon fill="#999999" stroke="#666666" points="337,-188 244.5,-188 244.5,-168 337,-168 337,-188"/>
 <text xml:space="preserve" text-anchor="middle" x="290.75" y="-174.5" font-family="Helvetica,sans-Serif" font-size="10.00">LcdController.cpp</text>
 </a>
@@ -236,7 +236,7 @@
 <!-- Node9 -->
 <g id="Node000009" class="node">
 <title>Node9</title>
-<g id="a_Node000009"><a xlink:href="_motion_8h.html" target="_top" xlink:title="PIR motion sensor with debouncing and electromagnetic interference rejection.">
+<g id="a_Node000009"><a xlink:href="_motion_8h.html" target="_top" xlink:title="PIR motion sensor with hardware interrupt integration and EMI rejection.">
 <polygon fill="white" stroke="#666666" points="448.5,-76 395,-76 395,-56 448.5,-56 448.5,-76"/>
 <text xml:space="preserve" text-anchor="middle" x="421.75" y="-62.5" font-family="Helvetica,sans-Serif" font-size="10.00">Motion.h</text>
 </a>

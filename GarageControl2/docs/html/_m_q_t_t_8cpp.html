@@ -123,7 +123,10 @@ Memory strategy</h1>
 </ol>
 <h1 class="doxsection"><a class="anchor" id="NVSeparation"></a>
 NV vs current value separation</h1>
-<p>publishStateChanges() accepts BOTH the current live timeout values AND the NV (persisted) timeout values as distinct parameters. They are compared against separate prev-state members (prevDoorDuration vs prevNvDoorTimeout, prevLightDuration vs prevNvLightTimeout) and published to separate MQTT topics. This means Home Assistant will reflect the correct NV value even when the user has temporarily changed the current setting without reloading. </p>
+<p>publishStateChanges() accepts BOTH the current live timeout values AND the NV (persisted) timeout values as distinct parameters. They are compared against separate prev-state members (prevDoorDuration vs prevNvDoorTimeout, prevLightDuration vs prevNvLightTimeout) and published to separate MQTT topics. This means Home Assistant will reflect the correct NV value even when the user has temporarily changed the current setting without saving.</p>
+<h1 class="doxsection"><a class="anchor" id="NVSaveModel"></a>
+NV save model</h1>
+<p>/nv/ command topics update the NV member variables in RAM only (no auto-save). Changes accumulate in RAM until the client sends /nv/save/cmd, which triggers saveNV() to persist all NV members to EEPROM in a single write pass. This eliminates per-step EEPROM writes when adjusting values incrementally (e.g., stepping a setpoint from 65→75 via HA) and greatly reduces write-cycle wear on the EEPROM cells. </p>
 </div><a name="doc-var-members" id="doc-var-members"></a><h2 id="header-doc-var-members" class="groupheader">Variable Documentation</h2>
 <a id="a5e69bb05400d5785f2358d2234fb36e3" name="a5e69bb05400d5785f2358d2234fb36e3"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5e69bb05400d5785f2358d2234fb36e3">&#9670;&#160;</a></span>g_mqttManager</h2>

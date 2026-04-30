@@ -1,5 +1,9 @@
 <map id="GarageLight::poll" name="GarageLight::poll">
-<area shape="rect" id="Node000001" title="Checks timeout and automatically turns off light if expired." alt="" coords="5,5,125,32"/>
-<area shape="rect" id="Node000002" href="$_utility_8h.html#a40e1498cfd1819c6e35d092a7ec96cf5" title="Checks if a time interval has expired since a given timestamp." alt="" coords="173,5,236,32"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="125,16,160,18,154,19,125,21"/>
+<area shape="rect" id="Node000001" title="Checks timeout and automatically turns off light if expired." alt="" coords="5,31,125,57"/>
+<area shape="rect" id="Node000002" href="$_utility_8h.html#a40e1498cfd1819c6e35d092a7ec96cf5" title="Checks if a time interval has expired since a given timestamp." alt="" coords="210,5,274,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="125,33,198,24,193,26,126,38"/>
+<area shape="rect" id="Node000003" href="$class_garage_light.html#a1150f89bf14fc9c886325b5e8a7512ed" title="Turns the light off immediately." alt="" coords="173,56,311,83"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="125,50,160,57,155,58,125,55"/>
+<area shape="rect" id="Node000004" href="$_utility_8h.html#a0b367d87e38eb8541b95194a0d870322" title=" " alt="" coords="359,56,404,83"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="311,67,346,69,341,69,311,72"/>
 </map>

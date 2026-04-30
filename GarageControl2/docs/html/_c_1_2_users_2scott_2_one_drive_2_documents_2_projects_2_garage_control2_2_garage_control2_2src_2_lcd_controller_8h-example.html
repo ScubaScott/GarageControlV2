@@ -113,31 +113,35 @@ $(function(){initNavTree('_c_1_2_users_2scott_2_one_drive_2_documents_2_projects
 <div class="line"><span class="keyword">class </span><a id="_a1" name="_a1"></a><a class="code hl_class" href="class_garage_h_v_a_c.html">GarageHVAC</a>;</div>
 <div class="line"><span class="keyword">class </span><a id="_a2" name="_a2"></a><a class="code hl_class" href="class_garage_door.html">GarageDoor</a>;</div>
 <div class="line"><span class="keyword">class </span><a id="_a3" name="_a3"></a><a class="code hl_class" href="class_garage_light.html">GarageLight</a>;</div>
+<div class="line"><span class="keyword">class </span><a id="_a4" name="_a4"></a><a class="code hl_class" href="class_i_menu_host.html">IMenuHost</a>;</div>
 <div class="line"></div>
-<div class="line"><span class="keyword">class </span><a id="_a4" name="_a4"></a><a class="code hl_class" href="class_lcd_controller.html">LcdController</a></div>
+<div class="line"><span class="keyword">class </span><a id="_a5" name="_a5"></a><a class="code hl_class" href="class_lcd_controller.html">LcdController</a></div>
 <div class="line">{</div>
 <div class="line"><span class="keyword">private</span>:</div>
 <div class="line">  <span class="comment">// Hardware references</span></div>
 <div class="line">  LiquidCrystal_I2C &amp;lcd;   </div>
 <div class="line">  <a class="code hl_class" href="class_menu_controller.html">MenuController</a>    &amp;menu;  </div>
+<div class="line">  <a class="code hl_class" href="class_i_menu_host.html">IMenuHost</a>         *host;  </div>
 <div class="line"> </div>
 <div class="line">  <span class="comment">// Display update tracking</span></div>
 <div class="line">  <span class="keywordtype">bool</span> IsDirty    = <span class="keyword">false</span>;  </div>
 <div class="line">  <span class="keywordtype">bool</span> backlightOn = <span class="keyword">false</span>; </div>
 <div class="line"> </div>
 <div class="line"><span class="keyword">public</span>:</div>
-<div class="line">  <a id="a5" name="a5"></a><a class="code hl_function" href="class_lcd_controller.html#a4e1453dcd56d7485eed7d7b3a8fb4966">LcdController</a>(LiquidCrystal_I2C &amp;lcdRef, <a class="code hl_class" href="class_menu_controller.html">MenuController</a> &amp;menuRef);</div>
+<div class="line">  <a id="a6" name="a6"></a><a class="code hl_function" href="class_lcd_controller.html#a4e1453dcd56d7485eed7d7b3a8fb4966">LcdController</a>(LiquidCrystal_I2C &amp;lcdRef, <a class="code hl_class" href="class_menu_controller.html">MenuController</a> &amp;menuRef);</div>
 <div class="line"></div>
-<div class="line">  <span class="keywordtype">void</span> <a id="a6" name="a6"></a><a class="code hl_function" href="class_lcd_controller.html#a43e43b70c1b541175625c15fdd306093">begin</a>();</div>
+<div class="line">  <span class="keywordtype">void</span> <a id="a7" name="a7"></a><a class="code hl_function" href="class_lcd_controller.html#a43e43b70c1b541175625c15fdd306093">begin</a>();</div>
 <div class="line"></div>
-<div class="line">  <span class="keywordtype">void</span> <a id="a7" name="a7"></a><a class="code hl_function" href="class_lcd_controller.html#a7f2e8e18a11a1432c4c4833b8240a421">SetDirty</a>(<span class="keywordtype">bool</span> WakeBackLight);</div>
+<div class="line">  <span class="keywordtype">void</span> <a id="a8" name="a8"></a><a class="code hl_function" href="class_lcd_controller.html#a7f2e8e18a11a1432c4c4833b8240a421">SetDirty</a>(<span class="keywordtype">bool</span> WakeBackLight);</div>
 <div class="line"></div>
-<div class="line">  <span class="keywordtype">void</span> <a id="a8" name="a8"></a><a class="code hl_function" href="class_lcd_controller.html#a495d658fb009c6c8c0f06f49db6a5788">updateDisplay</a>(<a class="code hl_class" href="class_garage_h_v_a_c.html">GarageHVAC</a> &amp;hvac, <a class="code hl_class" href="class_garage_door.html">GarageDoor</a> &amp;door,</div>
+<div class="line">  <span class="keywordtype">void</span> <a id="a9" name="a9"></a><a class="code hl_function" href="class_lcd_controller.html#a495d658fb009c6c8c0f06f49db6a5788">updateDisplay</a>(<a class="code hl_class" href="class_garage_h_v_a_c.html">GarageHVAC</a> &amp;hvac, <a class="code hl_class" href="class_garage_door.html">GarageDoor</a> &amp;door,</div>
 <div class="line">                     <a class="code hl_class" href="class_garage_light.html">GarageLight</a> &amp;lights, <span class="keywordtype">float</span> tempF);</div>
 <div class="line"></div>
-<div class="line">  <span class="keywordtype">void</span> <a id="a9" name="a9"></a><a class="code hl_function" href="class_lcd_controller.html#afa36e9171638184325b2d296e469dbed">setBacklight</a>(<span class="keywordtype">bool</span> on);</div>
+<div class="line">  <span class="keywordtype">void</span> <a id="a10" name="a10"></a><a class="code hl_function" href="class_lcd_controller.html#afa36e9171638184325b2d296e469dbed">setBacklight</a>(<span class="keywordtype">bool</span> on);</div>
 <div class="line"></div>
-<div class="line">  <span class="keywordtype">bool</span> <a id="a10" name="a10"></a><a class="code hl_function" href="class_lcd_controller.html#a5c29b2d39105177d045e2a40dbdf1993">isBacklightOn</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> backlightOn; }</div>
+<div class="line">  <span class="keywordtype">bool</span> <a id="a11" name="a11"></a><a class="code hl_function" href="class_lcd_controller.html#a5c29b2d39105177d045e2a40dbdf1993">isBacklightOn</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> backlightOn; }</div>
+<div class="line"></div>
+<div class="line">  <span class="keywordtype">void</span> <a id="a12" name="a12"></a><a class="code hl_function" href="class_lcd_controller.html#a5b89e158f7a2ff2602937e77046369cb">setHost</a>(<a class="code hl_class" href="class_i_menu_host.html">IMenuHost</a> *hostPtr) { host = hostPtr; }</div>
 <div class="line"> </div>
 <div class="line"><span class="keyword">private</span>:</div>
 <div class="line">  <span class="comment">// Internal display rendering methods</span></div>
@@ -148,23 +152,25 @@ $(function(){initNavTree('_c_1_2_users_2scott_2_one_drive_2_documents_2_projects
 <div class="line"></div>
 <div class="line">  <span class="keywordtype">void</span> printLCDText(<span class="keywordtype">int</span> row, <span class="keywordtype">bool</span> center, <span class="keyword">const</span> <span class="keywordtype">char</span> *text);</div>
 <div class="line"></div>
-<div class="line">  <span class="keyword">const</span> <span class="keywordtype">char</span>* getHvacStateString(<span class="keyword">const</span> <a class="code hl_class" href="class_garage_h_v_a_c.html">GarageHVAC</a> &amp;hvac);</div>
+<div class="line">  <span class="keyword">const</span> <span class="keywordtype">char</span>* getHvacStateString(<span class="keyword">const</span> GarageHVAC &amp;hvac);</div>
 <div class="line"></div>
-<div class="line">  <span class="keyword">const</span> <span class="keywordtype">char</span>* getDoorStateString(<span class="keyword">const</span> <a class="code hl_class" href="class_garage_door.html">GarageDoor</a> &amp;door);</div>
+<div class="line">  <span class="keyword">const</span> <span class="keywordtype">char</span>* getDoorStateString(<span class="keyword">const</span> GarageDoor &amp;door);</div>
 <div class="line">};</div>
 <div class="line"> </div>
 <div class="line"><span class="preprocessor">#endif</span></div>
 <div class="ttc" id="aclass_garage_door_html"><div class="ttname"><a href="class_garage_door.html">GarageDoor</a></div><div class="ttdoc">Manages garage door operation, state tracking, and automatic closing.</div><div class="ttdef"><b>Definition</b> GarageDoor.h:44</div></div>
 <div class="ttc" id="aclass_garage_h_v_a_c_html"><div class="ttname"><a href="class_garage_h_v_a_c.html">GarageHVAC</a></div><div class="ttdoc">Controls heating and cooling relays based on temperature setpoints.</div><div class="ttdef"><b>Definition</b> HVAC.h:42</div></div>
-<div class="ttc" id="aclass_garage_light_html"><div class="ttname"><a href="class_garage_light.html">GarageLight</a></div><div class="ttdoc">Controls garage light relay with configurable auto-off timeout.</div><div class="ttdef"><b>Definition</b> GarageLight.h:38</div></div>
-<div class="ttc" id="aclass_lcd_controller_html"><div class="ttname"><a href="class_lcd_controller.html">LcdController</a></div><div class="ttdoc">Manages a 4x20 I2C LCD display for status and menu rendering.</div><div class="ttdef"><b>Definition</b> LcdController.h:52</div></div>
-<div class="ttc" id="aclass_lcd_controller_html_a43e43b70c1b541175625c15fdd306093"><div class="ttname"><a href="class_lcd_controller.html#a43e43b70c1b541175625c15fdd306093">LcdController::begin</a></div><div class="ttdeci">void begin()</div><div class="ttdoc">Initializes the LCD display.</div><div class="ttdef"><b>Definition</b> LcdController.cpp:37</div></div>
-<div class="ttc" id="aclass_lcd_controller_html_a495d658fb009c6c8c0f06f49db6a5788"><div class="ttname"><a href="class_lcd_controller.html#a495d658fb009c6c8c0f06f49db6a5788">LcdController::updateDisplay</a></div><div class="ttdeci">void updateDisplay(GarageHVAC &amp;hvac, GarageDoor &amp;door, GarageLight &amp;lights, float tempF)</div><div class="ttdoc">Updates the LCD display with current system state.</div><div class="ttdef"><b>Definition</b> LcdController.cpp:171</div></div>
-<div class="ttc" id="aclass_lcd_controller_html_a4e1453dcd56d7485eed7d7b3a8fb4966"><div class="ttname"><a href="class_lcd_controller.html#a4e1453dcd56d7485eed7d7b3a8fb4966">LcdController::LcdController</a></div><div class="ttdeci">LcdController(LiquidCrystal_I2C &amp;lcdRef, MenuController &amp;menuRef)</div><div class="ttdoc">Constructor for LcdController.</div><div class="ttdef"><b>Definition</b> LcdController.cpp:31</div></div>
-<div class="ttc" id="aclass_lcd_controller_html_a5c29b2d39105177d045e2a40dbdf1993"><div class="ttname"><a href="class_lcd_controller.html#a5c29b2d39105177d045e2a40dbdf1993">LcdController::isBacklightOn</a></div><div class="ttdeci">bool isBacklightOn() const</div><div class="ttdoc">Gets the current backlight on/off state.</div><div class="ttdef"><b>Definition</b> LcdController.h:149</div></div>
-<div class="ttc" id="aclass_lcd_controller_html_a7f2e8e18a11a1432c4c4833b8240a421"><div class="ttname"><a href="class_lcd_controller.html#a7f2e8e18a11a1432c4c4833b8240a421">LcdController::SetDirty</a></div><div class="ttdeci">void SetDirty(bool WakeBackLight)</div><div class="ttdoc">Marks the display as needing an update.</div><div class="ttdef"><b>Definition</b> LcdController.cpp:154</div></div>
-<div class="ttc" id="aclass_lcd_controller_html_afa36e9171638184325b2d296e469dbed"><div class="ttname"><a href="class_lcd_controller.html#afa36e9171638184325b2d296e469dbed">LcdController::setBacklight</a></div><div class="ttdeci">void setBacklight(bool on)</div><div class="ttdoc">Controls the LCD backlight on/off state.</div><div class="ttdef"><b>Definition</b> LcdController.cpp:437</div></div>
-<div class="ttc" id="aclass_menu_controller_html"><div class="ttname"><a href="class_menu_controller.html">MenuController</a></div><div class="ttdoc">Manages hierarchical LCD menu navigation and button input processing.</div><div class="ttdef"><b>Definition</b> MenuController.h:58</div></div>
+<div class="ttc" id="aclass_garage_light_html"><div class="ttname"><a href="class_garage_light.html">GarageLight</a></div><div class="ttdoc">Controls garage light relay with configurable auto-off timeout.</div><div class="ttdef"><b>Definition</b> GarageLight.h:43</div></div>
+<div class="ttc" id="aclass_i_menu_host_html"><div class="ttname"><a href="class_i_menu_host.html">IMenuHost</a></div><div class="ttdef"><b>Definition</b> MenuController.h:20</div></div>
+<div class="ttc" id="aclass_lcd_controller_html"><div class="ttname"><a href="class_lcd_controller.html">LcdController</a></div><div class="ttdoc">Manages a 4x20 I2C LCD display for status and menu rendering.</div><div class="ttdef"><b>Definition</b> LcdController.h:53</div></div>
+<div class="ttc" id="aclass_lcd_controller_html_a43e43b70c1b541175625c15fdd306093"><div class="ttname"><a href="class_lcd_controller.html#a43e43b70c1b541175625c15fdd306093">LcdController::begin</a></div><div class="ttdeci">void begin()</div><div class="ttdoc">Initializes the LCD display.</div><div class="ttdef"><b>Definition</b> LcdController.cpp:62</div></div>
+<div class="ttc" id="aclass_lcd_controller_html_a495d658fb009c6c8c0f06f49db6a5788"><div class="ttname"><a href="class_lcd_controller.html#a495d658fb009c6c8c0f06f49db6a5788">LcdController::updateDisplay</a></div><div class="ttdeci">void updateDisplay(GarageHVAC &amp;hvac, GarageDoor &amp;door, GarageLight &amp;lights, float tempF)</div><div class="ttdoc">Updates the LCD display with current system state.</div><div class="ttdef"><b>Definition</b> LcdController.cpp:230</div></div>
+<div class="ttc" id="aclass_lcd_controller_html_a4e1453dcd56d7485eed7d7b3a8fb4966"><div class="ttname"><a href="class_lcd_controller.html#a4e1453dcd56d7485eed7d7b3a8fb4966">LcdController::LcdController</a></div><div class="ttdeci">LcdController(LiquidCrystal_I2C &amp;lcdRef, MenuController &amp;menuRef)</div><div class="ttdoc">Constructor for LcdController.</div><div class="ttdef"><b>Definition</b> LcdController.cpp:50</div></div>
+<div class="ttc" id="aclass_lcd_controller_html_a5b89e158f7a2ff2602937e77046369cb"><div class="ttname"><a href="class_lcd_controller.html#a5b89e158f7a2ff2602937e77046369cb">LcdController::setHost</a></div><div class="ttdeci">void setHost(IMenuHost *hostPtr)</div><div class="ttdoc">Sets the IMenuHost pointer for NV value access.</div><div class="ttdef"><b>Definition</b> LcdController.h:167</div></div>
+<div class="ttc" id="aclass_lcd_controller_html_a5c29b2d39105177d045e2a40dbdf1993"><div class="ttname"><a href="class_lcd_controller.html#a5c29b2d39105177d045e2a40dbdf1993">LcdController::isBacklightOn</a></div><div class="ttdeci">bool isBacklightOn() const</div><div class="ttdoc">Gets the current backlight on/off state.</div><div class="ttdef"><b>Definition</b> LcdController.h:151</div></div>
+<div class="ttc" id="aclass_lcd_controller_html_a7f2e8e18a11a1432c4c4833b8240a421"><div class="ttname"><a href="class_lcd_controller.html#a7f2e8e18a11a1432c4c4833b8240a421">LcdController::SetDirty</a></div><div class="ttdeci">void SetDirty(bool WakeBackLight)</div><div class="ttdoc">Marks the display as needing a full redraw.</div><div class="ttdef"><b>Definition</b> LcdController.cpp:180</div></div>
+<div class="ttc" id="aclass_lcd_controller_html_afa36e9171638184325b2d296e469dbed"><div class="ttname"><a href="class_lcd_controller.html#afa36e9171638184325b2d296e469dbed">LcdController::setBacklight</a></div><div class="ttdeci">void setBacklight(bool on)</div><div class="ttdoc">Controls the LCD backlight on/off state.</div><div class="ttdef"><b>Definition</b> LcdController.cpp:194</div></div>
+<div class="ttc" id="aclass_menu_controller_html"><div class="ttname"><a href="class_menu_controller.html">MenuController</a></div><div class="ttdoc">Manages hierarchical LCD menu navigation and button input processing.</div><div class="ttdef"><b>Definition</b> MenuController.h:169</div></div>
 </div><!-- fragment --> </div><!-- contents -->
 </div><!-- doc-content -->
 </div><!-- container -->

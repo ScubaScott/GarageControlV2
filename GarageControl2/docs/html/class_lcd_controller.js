@@ -5,5 +5,6 @@ var class_lcd_controller =
     [ "isBacklightOn", "class_lcd_controller.html#a5c29b2d39105177d045e2a40dbdf1993", null ],
     [ "setBacklight", "class_lcd_controller.html#afa36e9171638184325b2d296e469dbed", null ],
     [ "SetDirty", "class_lcd_controller.html#a7f2e8e18a11a1432c4c4833b8240a421", null ],
+    [ "setHost", "class_lcd_controller.html#a5b89e158f7a2ff2602937e77046369cb", null ],
     [ "updateDisplay", "class_lcd_controller.html#a495d658fb009c6c8c0f06f49db6a5788", null ]
 ];

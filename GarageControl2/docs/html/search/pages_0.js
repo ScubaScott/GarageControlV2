@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['current_20value_20separation_0',['NV vs current value separation',['../_m_q_t_t_8cpp.html#NVSeparation',1,'']]]
+  ['0_0',['SetNV screen rendering (v2.17.0)',['../_lcd_controller_8cpp.html#SetNVRendering',1,'']]]
 ];

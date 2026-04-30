@@ -21,7 +21,7 @@
  * Updated for each release. Printed to Serial on boot and published
  * to MQTT discovery for remote diagnostics. Format: MAJOR.MINOR.PATCH
  *
- * Update this constant in GarageControl2_DEV.ino when releasing new versions.
+ * Update this constant in GarageControl2.ino when releasing new versions.
  *
  * @example
  *   const char *GC_VERSION = "2.8.2";

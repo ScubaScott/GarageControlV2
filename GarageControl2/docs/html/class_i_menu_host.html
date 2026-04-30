@@ -97,10 +97,46 @@ $(function(){initNavTree('class_i_menu_host.html','',''); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
+<tr class="memitem:aed2f6c0fda130f064f8c91eb4ed50b83" id="r_aed2f6c0fda130f064f8c91eb4ed50b83"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#aed2f6c0fda130f064f8c91eb4ed50b83">SaveNV</a> ()=0</td></tr>
+<tr class="memdesc:aed2f6c0fda130f064f8c91eb4ed50b83"><td class="mdescLeft">&#160;</td><td class="mdescRight">Saves current live subsystem values to NV members and persists to EEPROM.  <br /></td></tr>
 <tr class="memitem:a40d6dab61bd100ebe29a600c37ac413a" id="r_a40d6dab61bd100ebe29a600c37ac413a"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#a40d6dab61bd100ebe29a600c37ac413a">LoadNV</a> ()=0</td></tr>
+<tr class="memdesc:a40d6dab61bd100ebe29a600c37ac413a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Restores all live subsystem values from NV members.  <br /></td></tr>
+<tr class="memitem:gac58e0078fb3a4645670591ae1ecd9e5c" id="r_gac58e0078fb3a4645670591ae1ecd9e5c"><td class="memItemLeft">virtual float&#160;</td><td class="memItemRight"><a class="el" href="group___n_v_getters.html#gac58e0078fb3a4645670591ae1ecd9e5c">getNvHeatSet</a> () const =0</td></tr>
+<tr class="memdesc:gac58e0078fb3a4645670591ae1ecd9e5c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the current in-RAM NV heat setpoint (°F).  <br /></td></tr>
+<tr class="memitem:ga369bb7b07ff4b8bde49dbad00c0b2069" id="r_ga369bb7b07ff4b8bde49dbad00c0b2069"><td class="memItemLeft">virtual float&#160;</td><td class="memItemRight"><a class="el" href="group___n_v_getters.html#ga369bb7b07ff4b8bde49dbad00c0b2069">getNvCoolSet</a> () const =0</td></tr>
+<tr class="memdesc:ga369bb7b07ff4b8bde49dbad00c0b2069"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the current in-RAM NV cool setpoint (°F).  <br /></td></tr>
+<tr class="memitem:gaed28b65927ae105f50a5467251b070c5" id="r_gaed28b65927ae105f50a5467251b070c5"><td class="memItemLeft">virtual int&#160;</td><td class="memItemRight"><a class="el" href="group___n_v_getters.html#gaed28b65927ae105f50a5467251b070c5">getNvSwing</a> () const =0</td></tr>
+<tr class="memdesc:gaed28b65927ae105f50a5467251b070c5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the current in-RAM NV HVAC hysteresis swing (°F).  <br /></td></tr>
+<tr class="memitem:ga1c3f60aefcf7fb83babd06b07f2fa524" id="r_ga1c3f60aefcf7fb83babd06b07f2fa524"><td class="memItemLeft">virtual uint16_t&#160;</td><td class="memItemRight"><a class="el" href="group___n_v_getters.html#ga1c3f60aefcf7fb83babd06b07f2fa524">getNvMinRunTime</a> () const =0</td></tr>
+<tr class="memdesc:ga1c3f60aefcf7fb83babd06b07f2fa524"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the current in-RAM NV minimum HVAC run time (minutes).  <br /></td></tr>
+<tr class="memitem:ga9d2574a7aeb1f2085f65a2617b279311" id="r_ga9d2574a7aeb1f2085f65a2617b279311"><td class="memItemLeft">virtual uint16_t&#160;</td><td class="memItemRight"><a class="el" href="group___n_v_getters.html#ga9d2574a7aeb1f2085f65a2617b279311">getNvMinRestTime</a> () const =0</td></tr>
+<tr class="memdesc:ga9d2574a7aeb1f2085f65a2617b279311"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the current in-RAM NV minimum HVAC rest time (minutes).  <br /></td></tr>
+<tr class="memitem:ga0a3416fc455523963b7c439cea76724e" id="r_ga0a3416fc455523963b7c439cea76724e"><td class="memItemLeft">virtual unsigned long&#160;</td><td class="memItemRight"><a class="el" href="group___n_v_getters.html#ga0a3416fc455523963b7c439cea76724e">getNvDoorTimeout</a> () const =0</td></tr>
+<tr class="memdesc:ga0a3416fc455523963b7c439cea76724e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the current in-RAM NV door auto-close duration (ms).  <br /></td></tr>
+<tr class="memitem:gaec2c87246bc343fe50a5e103a17fc3a3" id="r_gaec2c87246bc343fe50a5e103a17fc3a3"><td class="memItemLeft">virtual unsigned long&#160;</td><td class="memItemRight"><a class="el" href="group___n_v_getters.html#gaec2c87246bc343fe50a5e103a17fc3a3">getNvLightTimeout</a> () const =0</td></tr>
+<tr class="memdesc:gaec2c87246bc343fe50a5e103a17fc3a3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the current in-RAM NV light auto-off duration (ms).  <br /></td></tr>
+<tr class="memitem:ga46c4ec0cae5c049936dcfce277ac043c" id="r_ga46c4ec0cae5c049936dcfce277ac043c"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="group___n_v_mutators.html#ga46c4ec0cae5c049936dcfce277ac043c">adjNvHeatSet</a> (float delta)=0</td></tr>
+<tr class="memdesc:ga46c4ec0cae5c049936dcfce277ac043c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adjusts NV heat setpoint by delta °F; clamps to [30, 100].  <br /></td></tr>
+<tr class="memitem:gae2fe9df693ef0df97ea0e9a9ac61cbf3" id="r_gae2fe9df693ef0df97ea0e9a9ac61cbf3"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="group___n_v_mutators.html#gae2fe9df693ef0df97ea0e9a9ac61cbf3">adjNvCoolSet</a> (float delta)=0</td></tr>
+<tr class="memdesc:gae2fe9df693ef0df97ea0e9a9ac61cbf3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adjusts NV cool setpoint by delta °F; clamps to [30, 100].  <br /></td></tr>
+<tr class="memitem:ga09fcc8b7047ea74ad8d1b16e255a0179" id="r_ga09fcc8b7047ea74ad8d1b16e255a0179"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="group___n_v_mutators.html#ga09fcc8b7047ea74ad8d1b16e255a0179">adjNvSwing</a> (int delta)=0</td></tr>
+<tr class="memdesc:ga09fcc8b7047ea74ad8d1b16e255a0179"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adjusts NV HVAC swing by delta °F; clamps to [0, 20].  <br /></td></tr>
+<tr class="memitem:gac8cdec88297af9f8173c0df52e98bd5a" id="r_gac8cdec88297af9f8173c0df52e98bd5a"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="group___n_v_mutators.html#gac8cdec88297af9f8173c0df52e98bd5a">adjNvMinRunTime</a> (int delta)=0</td></tr>
+<tr class="memdesc:gac8cdec88297af9f8173c0df52e98bd5a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adjusts NV minimum HVAC run time by delta minutes; clamps to [1, 120].  <br /></td></tr>
+<tr class="memitem:ga53f54fe339d5d4e6cb2c4314fcddf22a" id="r_ga53f54fe339d5d4e6cb2c4314fcddf22a"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="group___n_v_mutators.html#ga53f54fe339d5d4e6cb2c4314fcddf22a">adjNvMinRestTime</a> (int delta)=0</td></tr>
+<tr class="memdesc:ga53f54fe339d5d4e6cb2c4314fcddf22a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adjusts NV minimum HVAC rest time by delta minutes; clamps to [0, 120].  <br /></td></tr>
+<tr class="memitem:ga53cb322cceb48b7c3af6fe864ca06b72" id="r_ga53cb322cceb48b7c3af6fe864ca06b72"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="group___n_v_mutators.html#ga53cb322cceb48b7c3af6fe864ca06b72">adjNvDoorTimeout</a> (long deltaMs)=0</td></tr>
+<tr class="memdesc:ga53cb322cceb48b7c3af6fe864ca06b72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adjusts NV door auto-close timeout by deltaMs; clamps to [1, 120] minutes.  <br /></td></tr>
+<tr class="memitem:ga0a157cb038a52fab29c29d492244fc0f" id="r_ga0a157cb038a52fab29c29d492244fc0f"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="group___n_v_mutators.html#ga0a157cb038a52fab29c29d492244fc0f">adjNvLightTimeout</a> (long deltaMs)=0</td></tr>
+<tr class="memdesc:ga0a157cb038a52fab29c29d492244fc0f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adjusts NV light auto-off timeout by deltaMs; clamps to [1, 120] minutes.  <br /></td></tr>
+<tr class="memitem:ac2f43aea730d57d317705f57a0db9067" id="r_ac2f43aea730d57d317705f57a0db9067"><td class="memItemLeft">virtual void&#160;</td><td class="memItemRight"><a class="el" href="#ac2f43aea730d57d317705f57a0db9067">notifyLiveValueChanged</a> ()=0</td></tr>
+<tr class="memdesc:ac2f43aea730d57d317705f57a0db9067"><td class="mdescLeft">&#160;</td><td class="mdescRight">Notifies that a live subsystem value has been modified.  <br /></td></tr>
 <tr class="memitem:a4170c7da0cc97cfa5f99fafece0eb5f7" id="r_a4170c7da0cc97cfa5f99fafece0eb5f7"><td class="memItemLeft">virtual&#160;</td><td class="memItemRight"><a class="el" href="#a4170c7da0cc97cfa5f99fafece0eb5f7">~IMenuHost</a> ()=default</td></tr>
 </table>
-<a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
+<div class="textblock"><dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#_a4">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
+</dl>
+</div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a4170c7da0cc97cfa5f99fafece0eb5f7" name="a4170c7da0cc97cfa5f99fafece0eb5f7"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a4170c7da0cc97cfa5f99fafece0eb5f7">&#9670;&#160;</a></span>~IMenuHost()</h2>
 
@@ -149,6 +185,66 @@ Public Member Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
+
+<p>Restores all live subsystem values from NV members. </p>
+<p>Implements Rule 5 (NV → live) for the LoadNV menu screen. Does NOT re-read EEPROM; uses the in-RAM NV member variables. </p>
+
+</div>
+</div>
+<a id="ac2f43aea730d57d317705f57a0db9067" name="ac2f43aea730d57d317705f57a0db9067"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac2f43aea730d57d317705f57a0db9067">&#9670;&#160;</a></span>notifyLiveValueChanged()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void IMenuHost::notifyLiveValueChanged </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Notifies that a live subsystem value has been modified. </p>
+<p>Called by menu and MQTT handlers when a live value (not NV) is changed. Starts the 24-hour auto-revert timer. If 24 hours pass without another change, live values revert to their NV counterparts.</p>
+<dl class="section note"><dt>Note</dt><dd>NOT called during <a class="el" href="#a40d6dab61bd100ebe29a600c37ac413a" title="Restores all live subsystem values from NV members.">LoadNV()</a> or initialization. </dd></dl>
+
+</div>
+</div>
+<a id="aed2f6c0fda130f064f8c91eb4ed50b83" name="aed2f6c0fda130f064f8c91eb4ed50b83"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aed2f6c0fda130f064f8c91eb4ed50b83">&#9670;&#160;</a></span>SaveNV()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void IMenuHost::SaveNV </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel pure-virtual">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Saves current live subsystem values to NV members and persists to EEPROM. </p>
+<p>Implements Rule 4 (live → NV → EEPROM) for the SaveNV menu screen. Called when the user commits configuration changes via the menu. </p>
 
 </div>
 </div>

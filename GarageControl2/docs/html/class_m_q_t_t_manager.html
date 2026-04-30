@@ -127,8 +127,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:adcfdc7f643db3fc7ec24a44e78bb36aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes the configured MQTT server address into buf.  <br /></td></tr>
 <tr class="memitem:ad86d91717c783e0b597409618051d1f5" id="r_ad86d91717c783e0b597409618051d1f5"><td class="memItemLeft">const char *&#160;</td><td class="memItemRight"><a class="el" href="#ad86d91717c783e0b597409618051d1f5">getTopic</a> (const __FlashStringHelper *suffix)</td></tr>
 <tr class="memdesc:ad86d91717c783e0b597409618051d1f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns _topicBuf containing the requested runtime topic.  <br /></td></tr>
-<tr class="memitem:a3fc251b03ae7d9184f43bd9d705a12c7" id="r_a3fc251b03ae7d9184f43bd9d705a12c7"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a3fc251b03ae7d9184f43bd9d705a12c7">publishStateChanges</a> (bool lightOn, unsigned long lightDurationMins, unsigned long lightRemainingMins, uint8_t doorCode, unsigned long doorDurationMins, unsigned long doorRemainingMins, float tempF, float heatSet, float coolSet, float nvHeatSet, float nvCoolSet, unsigned long nvDoorTimeoutMins, unsigned long nvLightTimeoutMins, uint8_t mode, uint8_t hvacState, bool motionActive, bool lockout)</td></tr>
-<tr class="memdesc:a3fc251b03ae7d9184f43bd9d705a12c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publishes changed sensor and state values to MQTT.  <br /></td></tr>
+<tr class="memitem:a7ba4cbca75a46b0f202d97e2931320d4" id="r_a7ba4cbca75a46b0f202d97e2931320d4"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a7ba4cbca75a46b0f202d97e2931320d4">publishStateChanges</a> (bool lightOn, unsigned long lightDurationMins, unsigned long lightRemainingMins, uint8_t doorCode, unsigned long doorDurationMins, unsigned long doorRemainingMins, float tempF, float heatSet, float coolSet, float nvHeatSet, float nvCoolSet, unsigned long hvacSwing, unsigned long nvDoorTimeoutMins, unsigned long nvLightTimeoutMins, uint8_t mode, uint8_t hvacState, bool motionActive, bool lockout)</td></tr>
+<tr class="memdesc:a7ba4cbca75a46b0f202d97e2931320d4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publishes changed sensor and state values to MQTT.  <br /></td></tr>
 <tr class="memitem:a31383885c0192542564f196bd75ad606" id="r_a31383885c0192542564f196bd75ad606"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a31383885c0192542564f196bd75ad606">addDevice</a> (JsonObject dev)</td></tr>
 <tr class="memdesc:a31383885c0192542564f196bd75ad606"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populates a JSON "dev" object with device identity fields.  <br /></td></tr>
 <tr class="memitem:af4014a04e79b8b584de3d58d266cae9e" id="r_af4014a04e79b8b584de3d58d266cae9e"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#af4014a04e79b8b584de3d58d266cae9e">makeTopic</a> (char *out, size_t len, const char *base, const char *suffix)</td></tr>
@@ -147,7 +147,7 @@ Memory</h1>
 </ul>
 <h1 class="doxsection"><a class="anchor" id="NVvsCurrent"></a>
 NVvsCurrent</h1>
-<p><a class="el" href="#a3fc251b03ae7d9184f43bd9d705a12c7" title="Publishes changed sensor and state values to MQTT.">publishStateChanges()</a> receives BOTH current values (live subsystem state) AND NV values (non-volatile EEPROM copies) for door timeout and light timeout. These are published to separate MQTT topics so that Home Assistant can independently display and control each:</p><ul>
+<p><a class="el" href="#a7ba4cbca75a46b0f202d97e2931320d4" title="Publishes changed sensor and state values to MQTT.">publishStateChanges()</a> receives BOTH current values (live subsystem state) AND NV values (non-volatile EEPROM copies) for door timeout and light timeout. These are published to separate MQTT topics so that Home Assistant can independently display and control each:</p><ul>
 <li>/door/duration/state – current door auto-close timeout</li>
 <li>/nv/door_timeout/state – NV (persisted) door auto-close timeout</li>
 <li>/light/duration/state – current light auto-off timeout</li>
@@ -445,7 +445,7 @@ NVvsCurrent</h1>
 <p>Main loop handler – services MQTT and reconnects as needed. </p>
 <p>Services the MQTT connection and reconnects as needed.</p>
 <p>Must be called frequently from the main loop. When WiFi is disconnected, connectWiFi() may block up to ~15 s. For this reason the main loop calls this AFTER the time-critical motion/light code.</p>
-<p>When Disabled, attempts a full reconnect once per hour. When WiFi drops, connectWiFi() may block up to 15 s – this is why the main loop calls mqttManager.loop() AFTER the time-critical motion/light code. </p>
+<p>When Disabled, waits 15 minutes before retrying. The loop performs at most one WiFi or MQTT reconnect attempt per pass to minimize controller delay. When WiFi drops, connectWiFi() may block up to 15 s – this is why the main loop calls mqttManager.loop() AFTER the time-critical motion/light code. </p>
 
 </div>
 </div>
@@ -496,8 +496,8 @@ NVvsCurrent</h1>
 
 </div>
 </div>
-<a id="a3fc251b03ae7d9184f43bd9d705a12c7" name="a3fc251b03ae7d9184f43bd9d705a12c7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3fc251b03ae7d9184f43bd9d705a12c7">&#9670;&#160;</a></span>publishStateChanges()</h2>
+<a id="a7ba4cbca75a46b0f202d97e2931320d4" name="a7ba4cbca75a46b0f202d97e2931320d4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7ba4cbca75a46b0f202d97e2931320d4">&#9670;&#160;</a></span>publishStateChanges()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -556,6 +556,11 @@ NVvsCurrent</h1>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>nvCoolSet</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">unsigned long</td>          <td class="paramname"><span class="paramname"><em>hvacSwing</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -631,6 +636,7 @@ NVvsCurrent</h1>
     <tr><td class="paramname">coolSet</td><td>Current live HVAC cool setpoint (°F). </td></tr>
     <tr><td class="paramname">nvHeatSet</td><td>NV HVAC heat setpoint (°F). </td></tr>
     <tr><td class="paramname">nvCoolSet</td><td>NV HVAC cool setpoint (°F). </td></tr>
+    <tr><td class="paramname">hvacSwing</td><td>Current live HVAC swing (°F). </td></tr>
     <tr><td class="paramname">nvDoorTimeoutMins</td><td>NV door auto-close timeout (min) – independent of doorDurationMins. </td></tr>
     <tr><td class="paramname">nvLightTimeoutMins</td><td>NV light auto-off timeout (min) – independent of lightDurationMins. </td></tr>
     <tr><td class="paramname">mode</td><td>HVAC mode code (0–3). </td></tr>

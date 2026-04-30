@@ -38,7 +38,7 @@
 <!-- Node3 -->
 <g id="Node000003" class="node">
 <title>Node3</title>
-<g id="a_Node000003"><a xlink:href="_lcd_controller_8cpp.html" target="_top" xlink:title="Implementation of LCD display controller for garage control system.">
+<g id="a_Node000003"><a xlink:href="_lcd_controller_8cpp.html" target="_top" xlink:title="LCD display controller implementation for garage control system.">
 <polygon fill="white" stroke="#666666" points="197.88,-20 105.38,-20 105.38,0 197.88,0 197.88,-20"/>
 <text xml:space="preserve" text-anchor="middle" x="151.62" y="-6.5" font-family="Helvetica,sans-Serif" font-size="10.00">LcdController.cpp</text>
 </a>

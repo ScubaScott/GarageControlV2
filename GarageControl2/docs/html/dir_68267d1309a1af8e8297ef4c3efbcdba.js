@@ -2,7 +2,7 @@ var dir_68267d1309a1af8e8297ef4c3efbcdba =
 [
     [ "GarageDoor.cpp", "_garage_door_8cpp.html", null ],
     [ "GarageDoor.h", "_garage_door_8h.html", "_garage_door_8h" ],
-    [ "GarageLight.cpp", "_garage_light_8cpp.html", null ],
+    [ "GarageLight.cpp", "_garage_light_8cpp.html", "_garage_light_8cpp" ],
     [ "GarageLight.h", "_garage_light_8h.html", "_garage_light_8h" ],
     [ "HVAC.cpp", "_h_v_a_c_8cpp.html", null ],
     [ "HVAC.h", "_h_v_a_c_8h.html", "_h_v_a_c_8h" ],

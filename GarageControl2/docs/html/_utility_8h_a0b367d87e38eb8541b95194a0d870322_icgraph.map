@@ -1,24 +1,29 @@
 <map id="now" name="now">
-<area shape="rect" id="Node000001" title=" " alt="" coords="475,208,520,235"/>
-<area shape="rect" id="Node000002" href="$class_motion_sensor.html#adcc6799f2b0f91e9a1440d7b65226cd6" title="Forces acknowledgment to suppress false motion triggers." alt="" coords="228,5,390,32"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="491,192,484,159,473,119,453,79,425,46,408,35,390,28,389,22,411,30,429,42,458,76,477,117,490,158,496,194"/>
-<area shape="rect" id="Node000003" href="$class_garage_door.html#a4a9610a091a45094fb96021e72bf9166" title="Gets remaining time until auto&#45;close timeout." alt="" coords="191,56,427,83"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="486,192,464,143,447,118,425,97,407,86,407,80,429,93,451,115,469,141,491,194"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="475,233,520,260"/>
+<area shape="rect" id="Node000002" href="$class_garage_door.html#a4a9610a091a45094fb96021e72bf9166" title="Gets remaining time until auto&#45;close timeout." alt="" coords="191,5,427,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="493,217,487,179,476,132,456,85,442,64,425,46,410,35,410,30,429,42,447,61,461,83,481,131,493,178,498,219"/>
+<area shape="rect" id="Node000003" href="$class_garage_light.html#a9d6bc21b9ee8b0be5fe2988ff34cd1f4" title="Checks if the light is in cooldown period after manual turn&#45;off." alt="" coords="220,56,398,83"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="489,217,481,189,468,156,450,124,425,97,399,82,398,76,429,93,454,121,473,154,486,188,494,219"/>
 <area shape="rect" id="Node000004" href="$class_garage_light.html#a9666ccbc01cca5c04758d78a8fedca70" title="Gets time remaining before auto&#45;off timeout expires." alt="" coords="216,107,402,133"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="476,195,455,171,426,148,402,137,401,131,428,143,458,167,482,196"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="482,218,459,182,444,163,426,148,402,135,401,130,428,143,448,159,464,179,487,219"/>
 <area shape="rect" id="Node000005" href="$class_menu_controller.html#ac5a7f6caf6a8eaeeec9f634e539cc3a0" title="Resets the menu timeout due to external activity." alt="" coords="216,157,402,184"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="458,208,426,199,382,187,381,182,428,193,463,207"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="467,223,426,198,395,187,394,182,428,194,473,223"/>
 <area shape="rect" id="Node000007" href="$class_garage_door.html#a74913ffd9a17b595220242308a1bc8f5" title="Polls door sensors and updates internal state." alt="" coords="249,208,368,235"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="457,222,370,224,369,219,462,220"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="457,243,369,232,369,227,462,241"/>
 <area shape="rect" id="Node000008" href="$class_garage_h_v_a_c.html#acdf8007f5ba87a9b79220370670d4563" title="Polls temperature and controls heating/cooling relays." alt="" coords="245,259,373,285"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="458,236,428,249,374,262,373,257,426,244,463,234"/>
-<area shape="rect" id="Node000009" href="$class_motion_sensor.html#a7e3706aa8425b6c176af5fea28824a0c" title="Polls the motion sensor for new motion activity." alt="" coords="244,309,374,336"/>
-<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="481,246,458,276,428,300,402,311,375,319,373,314,400,306,426,295,455,272,477,249"/>
-<area shape="rect" id="Node000010" href="$class_motion_sensor.html#a9e0a410880fb55d5750db2fef71d9717" title="Checks if motion was detected within a specified timeout window." alt="" coords="213,360,405,387"/>
-<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="491,248,469,302,451,328,429,350,406,363,404,358,425,346,447,325,464,299,486,251"/>
-<area shape="rect" id="Node000011" href="$class_garage_light.html#a7e09277f75a4a1500048b20a156cc33f" title="Turns the light on and resets the timeout." alt="" coords="240,411,378,437"/>
-<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="495,248,490,285,477,326,458,366,429,401,405,415,379,423,378,418,403,410,425,397,453,363,473,324,484,284,492,252"/>
-<area shape="rect" id="Node000006" href="$class_menu_controller.html#a8c93f46cbd85fde1905cc3acea074722" title="Polls button inputs and updates menu state." alt="" coords="5,284,143,311"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="203,191,192,198,160,218,131,242,89,285,85,282,128,238,157,214,189,194,207,188"/>
-<area shape="poly" id="edge11_Node000011_Node000006" title=" " alt="" coords="222,411,189,401,157,381,128,357,86,314,88,309,131,353,160,377,192,396,227,412"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="457,253,374,266,373,261,462,251"/>
+<area shape="rect" id="Node000009" href="$class_motion_sensor.html#a9e0a410880fb55d5750db2fef71d9717" title="Checks if motion was detected within a specified timeout window." alt="" coords="213,309,405,336"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="472,269,428,300,395,311,394,306,426,295,468,271"/>
+<area shape="rect" id="Node000010" href="$class_motion_sensor.html#aa6809076b2dda89350353f1ff5be6f4c" title="Records a motion detection event and updates the timestamp." alt="" coords="217,360,401,387"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="487,273,464,315,448,334,428,350,403,363,401,358,426,346,444,330,459,312,482,276"/>
+<area shape="rect" id="Node000011" href="$class_garage_light.html#a1150f89bf14fc9c886325b5e8a7512ed" title="Turns the light off immediately." alt="" coords="240,461,378,488"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="497,273,493,315,481,363,461,410,447,432,429,451,405,466,379,474,378,469,403,461,425,447,442,429,456,408,476,361,487,314,493,277"/>
+<area shape="rect" id="Node000013" href="$class_garage_light.html#a7e09277f75a4a1500048b20a156cc33f" title="Turns the light on and resets the timeout." alt="" coords="240,411,378,437"/>
+<area shape="poly" id="edge13_Node000001_Node000013" title=" " alt="" coords="493,274,486,306,473,340,454,373,429,401,405,415,379,423,378,417,403,410,425,397,450,370,468,337,481,304,489,277"/>
+<area shape="rect" id="Node000006" href="$class_menu_controller.html#a8c93f46cbd85fde1905cc3acea074722" title="Polls button inputs and updates menu state." alt="" coords="5,411,143,437"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="200,191,192,198,167,222,145,249,112,310,91,368,80,411,76,409,86,367,107,308,141,246,163,218,189,194,204,187"/>
+<area shape="poly" id="edge12_Node000011_Node000006" title=" " alt="" coords="226,458,190,452,139,441,139,435,191,447,231,457"/>
+<area shape="rect" id="Node000012" href="$class_garage_light.html#a5e09a2c1ca7576de73bd979a90aa0442" title="Checks timeout and automatically turns off light if expired." alt="" coords="14,461,134,488"/>
+<area shape="poly" id="edge11_Node000011_Node000012" title=" " alt="" coords="221,475,134,477,134,472,227,474"/>
+<area shape="poly" id="edge14_Node000013_Node000006" title=" " alt="" coords="221,425,144,427,143,421,226,423"/>
 </map>

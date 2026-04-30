@@ -93,7 +93,7 @@ $(function(){initNavTree('_motion_8h.html','',''); });
 </div><!--header-->
 <div class="contents">
 
-<p>PIR motion sensor with debouncing and electromagnetic interference rejection.  
+<p>PIR motion sensor with hardware interrupt integration and EMI rejection.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;Arduino.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
@@ -112,12 +112,15 @@ This graph shows which files directly or indirectly include this file:</div>
 <tr class="heading"><td colspan="2"><h2 id="header-nested-classes" class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Data Structures</h2></td></tr>
 <tr class="memitem:MotionSensor" id="r_MotionSensor"><td class="memItemLeft">class &#160;</td><td class="memItemRight"><a class="el" href="class_motion_sensor.html">MotionSensor</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">PIR motion sensor with debouncing and relay spike rejection.  <a href="class_motion_sensor.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">PIR motion sensor with hardware interrupt and relay spike rejection.  <a href="class_motion_sensor.html#details">More...</a><br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>PIR motion sensor with debouncing and electromagnetic interference rejection. </p>
-<p>This file defines the <a class="el" href="class_motion_sensor.html" title="PIR motion sensor with debouncing and relay spike rejection.">MotionSensor</a> class which manages passive infrared (PIR) motion detection with digital debouncing and a forced-acknowledge mechanism to suppress false motion triggers caused by electromagnetic interference from relay switching.</p>
-<p>The forced acknowledge feature is critical for reliable operation, as the electromagnetic relay pulses can trigger false positive motion events if not suppressed at the sensor level. </p>
+<div class="textblock"><p>PIR motion sensor with hardware interrupt integration and EMI rejection. </p>
+<p>This file defines the <a class="el" href="class_motion_sensor.html" title="PIR motion sensor with hardware interrupt and relay spike rejection.">MotionSensor</a> class which manages passive infrared (PIR) motion detection with hardware interrupt (RISING edge) and a forced-acknowledge mechanism to suppress false motion triggers caused by electromagnetic interference from relay switching.</p>
+<p>The hardware interrupt provides immediate light activation when motion is detected, while the forced acknowledge feature suppresses false triggers from electromagnetic relay pulses that would otherwise be misinterpreted as human motion.</p>
+<h1 class="doxsection"><a class="anchor" id="ISR"></a>
+Integration</h1>
+<p>The recordMotion() method should be called from pirISR() when the hardware interrupt triggers, recording the motion timestamp for subsystems that need occupancy-based timeout extension (e.g., garage door auto-close). </p>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
 <div id="page-nav" class="page-nav-panel">

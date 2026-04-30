@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['waiting_0',['Waiting',['../class_garage_h_v_a_c.html#ac43a9082b29130623b1555c629fbab1cabe66b4ea3ec32acdf81b18ade299a47a',1,'GarageHVAC']]]
+  ['turnoff_0',['turnOff',['../class_garage_light.html#a1150f89bf14fc9c886325b5e8a7512ed',1,'GarageLight']]],
+  ['turnon_1',['turnOn',['../class_garage_light.html#a7e09277f75a4a1500048b20a156cc33f',1,'GarageLight']]]
 ];

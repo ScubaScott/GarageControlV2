@@ -12,6 +12,13 @@ var searchData=
   ['getmqttserverip_9',['getMqttServerIP',['../class_m_q_t_t_manager.html#adcfdc7f643db3fc7ec24a44e78bb36aa',1,'MQTTManager']]],
   ['getnetstatus_10',['getNetStatus',['../class_m_q_t_t_manager.html#a188c5e06c32dcb12713992084fb48825',1,'MQTTManager']]],
   ['getnetstatusstring_11',['getNetStatusString',['../class_m_q_t_t_manager.html#ad59c42bd6cf76d8aa3351c47ea0c0458',1,'MQTTManager']]],
-  ['getstate_12',['getState',['../class_garage_door.html#a32010f3d4897a61ce963ab90031ab649',1,'GarageDoor']]],
-  ['gettopic_13',['getTopic',['../class_m_q_t_t_manager.html#ad86d91717c783e0b597409618051d1f5',1,'MQTTManager']]]
+  ['getnvcoolset_12',['getNvCoolSet',['../group___n_v_getters.html#ga369bb7b07ff4b8bde49dbad00c0b2069',1,'IMenuHost']]],
+  ['getnvdoortimeout_13',['getNvDoorTimeout',['../group___n_v_getters.html#ga0a3416fc455523963b7c439cea76724e',1,'IMenuHost']]],
+  ['getnvheatset_14',['getNvHeatSet',['../group___n_v_getters.html#gac58e0078fb3a4645670591ae1ecd9e5c',1,'IMenuHost']]],
+  ['getnvlighttimeout_15',['getNvLightTimeout',['../group___n_v_getters.html#gaec2c87246bc343fe50a5e103a17fc3a3',1,'IMenuHost']]],
+  ['getnvminresttime_16',['getNvMinRestTime',['../group___n_v_getters.html#ga9d2574a7aeb1f2085f65a2617b279311',1,'IMenuHost']]],
+  ['getnvminruntime_17',['getNvMinRunTime',['../group___n_v_getters.html#ga1c3f60aefcf7fb83babd06b07f2fa524',1,'IMenuHost']]],
+  ['getnvswing_18',['getNvSwing',['../group___n_v_getters.html#gaed28b65927ae105f50a5467251b070c5',1,'IMenuHost']]],
+  ['getstate_19',['getState',['../class_garage_door.html#a32010f3d4897a61ce963ab90031ab649',1,'GarageDoor']]],
+  ['gettopic_20',['getTopic',['../class_m_q_t_t_manager.html#ad86d91717c783e0b597409618051d1f5',1,'MQTTManager']]]
 ];

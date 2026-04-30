@@ -25,6 +25,7 @@
 var NAVTREE =
 [
   [ "Smart Garage Controller", "index.html", [
+    [ "Topics", "topics.html", "topics" ],
     [ "Data Structures", "annotated.html", [
       [ "Data Structures", "annotated.html", "annotated_dup" ],
       [ "Data Structure Index", "classes.html", null ],

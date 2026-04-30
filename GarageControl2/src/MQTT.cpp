@@ -174,53 +174,40 @@ void MQTTManager::init(GarageController *ctrl,
 /**
  * @brief Services the MQTT connection and reconnects as needed.
  *
- * When Disabled, attempts a full reconnect once per hour.  When WiFi drops,
- * connectWiFi() may block up to 15 s – this is why the main loop calls
- * mqttManager.loop() AFTER the time-critical motion/light code.
- *
- * MQTT reconnects only once every 15 minutes per disconnect event to keep response time quick.
+ * When Disabled, waits 15 minutes before retrying. The loop performs at most
+ * one WiFi or MQTT reconnect attempt per pass to minimize controller delay.
+ * When WiFi drops, connectWiFi() may block up to 15 s – this is why the main
+ * loop calls mqttManager.loop() AFTER the time-critical motion/light code.
  */
 void MQTTManager::loop()
 {
-  // ── Disabled: hourly reconnect attempt only ───────────────────────────
   if (netStatus == NetStatus::Disabled)
   {
-    if (millis() - lastHourlyRetry >= 900000UL) // 15 minutes
+    if (millis() - lastDisabledRetry >= DISABLED_RETRY_INTERVAL_MS)
     {
-      lastHourlyRetry     = millis();
-      consecutiveFailures = 0;
-      netStatus           = NetStatus::Connecting;
-      Serial.println(F("MQTT:Hourly reconnect attempt"));
-      connectWiFi();
-      if (WiFi.status() == WL_CONNECTED)
-        connectMQTT();
+      lastDisabledRetry     = millis();
+      consecutiveFailures   = 0;
+      netStatus             = NetStatus::Connecting;
+      Serial.println(F("MQTT:Disabled retry timeout expired, attempting reconnect"));
     }
-    return;
+    else
+    {
+      return;
+    }
   }
 
-  // ── WiFi dropped: reconnect (may block) ──────────────────────────────
   if (WiFi.status() != WL_CONNECTED)
-    connectWiFi();
-
-  // ── MQTT disconnected: throttled reconnect ────────────────────────────
-  if (!mqtt.connected())
   {
-    netStatus = NetStatus::Connecting;
-    if (!mqttReconnectAttempted && millis() - lastMqttReconnect >= 900000UL) // 15 minutes
-    {
-      lastMqttReconnect = millis();
-      mqttReconnectAttempted = true;
-      connectMQTT();
-    }
+    connectWiFi();
+  }
+  else if (!mqtt.connected())
+  {
+    connectMQTT();
   }
   else
   {
-    mqttReconnectAttempted = false; // Reset on successful connection
-  }
-
-  // ── Normal operation: service the MQTT client ─────────────────────────
-  if (netStatus != NetStatus::Disabled && mqtt.connected())
     mqtt.loop();
+  }
 }
 
 // ============================================================
@@ -507,7 +494,8 @@ void MQTTManager::connectWiFi()
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   unsigned long start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < 15000UL)
+  while (WiFi.status() != WL_CONNECTED &&
+         millis() - start < WIFI_CONNECT_TIMEOUT_MS)
   {
     delay(500);
     Serial.print(F("."));
@@ -526,6 +514,7 @@ void MQTTManager::connectWiFi()
     if (consecutiveFailures >= MAX_FAILURES)
     {
       netStatus = NetStatus::Disabled;
+      lastDisabledRetry = millis();
       Serial.println(F("Network disabled due to repeated failures"));
       return;
     }
@@ -611,6 +600,7 @@ void MQTTManager::connectMQTT()
     if (consecutiveFailures >= MAX_FAILURES)
     {
       netStatus = NetStatus::Disabled;
+      lastDisabledRetry = millis();
       Serial.println(F("Network disabled due to repeated failures"));
     }
   }
@@ -1027,6 +1017,7 @@ bool MQTTManager::isNetworkEnabled() const
 void MQTTManager::resetNetStatus()
 {
   consecutiveFailures = 0;
+  lastDisabledRetry = 0;
   if (netStatus == NetStatus::Disabled)
     netStatus = NetStatus::Connecting;
 }
@@ -1035,6 +1026,7 @@ void MQTTManager::resetNetStatus()
 void MQTTManager::disableNetwork()
 {
   netStatus = NetStatus::Disabled;
+  lastDisabledRetry = millis();
   if (mqtt.connected()) mqtt.disconnect();
   WiFi.disconnect();
 }

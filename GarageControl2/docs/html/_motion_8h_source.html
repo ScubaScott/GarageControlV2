@@ -93,38 +93,41 @@ $(function(){initNavTree('_motion_8h_source.html','',''); });
 </div><!--header-->
 <div class="contents">
 <a href="_motion_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span></div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span> </div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#ifndef MOTION_H</span></div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#define MOTION_H</span></div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#include &lt;Arduino.h&gt;</span></div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span></div>
-<div class="foldopen" id="foldopen00037" data-start="{" data-end="};">
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno"><a class="line" href="class_motion_sensor.html">   37</a></span><span class="keyword">class </span><a class="code hl_function" href="class_motion_sensor.html#a09628879e8e38bc2d3e3b02c571c6004">MotionSensor</a></div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>{</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="keywordtype">byte</span> pin;             </div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    <span class="keywordtype">bool</span> ForcedAck = <span class="keyword">false</span>; </div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    <span class="keywordtype">bool</span> acked = <span class="keyword">false</span>;   </div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    <span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> lastMotion = 0; </div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <a class="code hl_function" href="class_motion_sensor.html#a09628879e8e38bc2d3e3b02c571c6004">MotionSensor</a>(<span class="keywordtype">byte</span> p);</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span></div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="class_motion_sensor.html#a7e3706aa8425b6c176af5fea28824a0c">poll</a>();</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span></div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="class_motion_sensor.html#a9e0a410880fb55d5750db2fef71d9717">recentlyActive</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> timeout);</div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span></div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_motion_sensor.html#adcc6799f2b0f91e9a1440d7b65226cd6">forceAck</a>();</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span></div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="class_motion_sensor.html#aea5ebc7bb092b34b9af5aa44bba92ccc">isActive</a>();</div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>};</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#ifndef MOTION_H</span></div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="preprocessor">#define MOTION_H</span></div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#include &lt;Arduino.h&gt;</span></div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span></div>
+<div class="foldopen" id="foldopen00047" data-start="{" data-end="};">
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno"><a class="line" href="class_motion_sensor.html">   47</a></span><span class="keyword">class </span><a class="code hl_function" href="class_motion_sensor.html#a09628879e8e38bc2d3e3b02c571c6004">MotionSensor</a></div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>{</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <span class="keywordtype">byte</span> pin;             </div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    <span class="keywordtype">bool</span> ForcedAck = <span class="keyword">false</span>; </div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="keywordtype">bool</span> acked = <span class="keyword">false</span>;   </div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    <span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> lastMotion = 0; </div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <a class="code hl_function" href="class_motion_sensor.html#a09628879e8e38bc2d3e3b02c571c6004">MotionSensor</a>(<span class="keywordtype">byte</span> p);</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span></div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="class_motion_sensor.html#a7e3706aa8425b6c176af5fea28824a0c">poll</a>();</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span></div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="class_motion_sensor.html#a9e0a410880fb55d5750db2fef71d9717">recentlyActive</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> timeout);</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span></div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_motion_sensor.html#aa6809076b2dda89350353f1ff5be6f4c">recordMotion</a>();</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span></div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_motion_sensor.html#adcc6799f2b0f91e9a1440d7b65226cd6">forceAck</a>();</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span></div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="class_motion_sensor.html#aea5ebc7bb092b34b9af5aa44bba92ccc">isActive</a>();</div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>};</div>
 </div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span><span class="preprocessor">#endif</span></div>
 <div class="ttc" id="aclass_motion_sensor_html_a09628879e8e38bc2d3e3b02c571c6004"><div class="ttname"><a href="class_motion_sensor.html#a09628879e8e38bc2d3e3b02c571c6004">MotionSensor::MotionSensor</a></div><div class="ttdeci">MotionSensor(byte p)</div><div class="ttdoc">Constructor for MotionSensor.</div><div class="ttdef"><b>Definition</b> Motion.cpp:21</div></div>
-<div class="ttc" id="aclass_motion_sensor_html_a7e3706aa8425b6c176af5fea28824a0c"><div class="ttname"><a href="class_motion_sensor.html#a7e3706aa8425b6c176af5fea28824a0c">MotionSensor::poll</a></div><div class="ttdeci">bool poll()</div><div class="ttdoc">Polls the motion sensor for new motion activity.</div><div class="ttdef"><b>Definition</b> Motion.cpp:27</div></div>
-<div class="ttc" id="aclass_motion_sensor_html_a9e0a410880fb55d5750db2fef71d9717"><div class="ttname"><a href="class_motion_sensor.html#a9e0a410880fb55d5750db2fef71d9717">MotionSensor::recentlyActive</a></div><div class="ttdeci">bool recentlyActive(unsigned long timeout)</div><div class="ttdoc">Checks if motion was detected within a specified timeout window.</div><div class="ttdef"><b>Definition</b> Motion.cpp:60</div></div>
-<div class="ttc" id="aclass_motion_sensor_html_adcc6799f2b0f91e9a1440d7b65226cd6"><div class="ttname"><a href="class_motion_sensor.html#adcc6799f2b0f91e9a1440d7b65226cd6">MotionSensor::forceAck</a></div><div class="ttdeci">void forceAck()</div><div class="ttdoc">Forces acknowledgment to suppress false motion triggers.</div><div class="ttdef"><b>Definition</b> Motion.cpp:68</div></div>
-<div class="ttc" id="aclass_motion_sensor_html_aea5ebc7bb092b34b9af5aa44bba92ccc"><div class="ttname"><a href="class_motion_sensor.html#aea5ebc7bb092b34b9af5aa44bba92ccc">MotionSensor::isActive</a></div><div class="ttdeci">bool isActive()</div><div class="ttdoc">Gets the current real-time motion sensor pin state.</div><div class="ttdef"><b>Definition</b> Motion.cpp:79</div></div>
+<div class="ttc" id="aclass_motion_sensor_html_a7e3706aa8425b6c176af5fea28824a0c"><div class="ttname"><a href="class_motion_sensor.html#a7e3706aa8425b6c176af5fea28824a0c">MotionSensor::poll</a></div><div class="ttdeci">bool poll()</div><div class="ttdoc">Polls the motion sensor for acknowledged motion activity.</div><div class="ttdef"><b>Definition</b> Motion.cpp:33</div></div>
+<div class="ttc" id="aclass_motion_sensor_html_a9e0a410880fb55d5750db2fef71d9717"><div class="ttname"><a href="class_motion_sensor.html#a9e0a410880fb55d5750db2fef71d9717">MotionSensor::recentlyActive</a></div><div class="ttdeci">bool recentlyActive(unsigned long timeout)</div><div class="ttdoc">Checks if motion was detected within a specified timeout window.</div><div class="ttdef"><b>Definition</b> Motion.cpp:74</div></div>
+<div class="ttc" id="aclass_motion_sensor_html_aa6809076b2dda89350353f1ff5be6f4c"><div class="ttname"><a href="class_motion_sensor.html#aa6809076b2dda89350353f1ff5be6f4c">MotionSensor::recordMotion</a></div><div class="ttdeci">void recordMotion()</div><div class="ttdoc">Records a motion detection event and updates the timestamp.</div><div class="ttdef"><b>Definition</b> Motion.cpp:63</div></div>
+<div class="ttc" id="aclass_motion_sensor_html_adcc6799f2b0f91e9a1440d7b65226cd6"><div class="ttname"><a href="class_motion_sensor.html#adcc6799f2b0f91e9a1440d7b65226cd6">MotionSensor::forceAck</a></div><div class="ttdeci">void forceAck()</div><div class="ttdoc">Forces acknowledgment to suppress false motion triggers.</div><div class="ttdef"><b>Definition</b> Motion.cpp:85</div></div>
+<div class="ttc" id="aclass_motion_sensor_html_aea5ebc7bb092b34b9af5aa44bba92ccc"><div class="ttname"><a href="class_motion_sensor.html#aea5ebc7bb092b34b9af5aa44bba92ccc">MotionSensor::isActive</a></div><div class="ttdeci">bool isActive()</div><div class="ttdoc">Gets the current real-time motion sensor pin state.</div><div class="ttdef"><b>Definition</b> Motion.cpp:95</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 </div><!-- container -->

@@ -1,6 +1,7 @@
 /**
  * @file GarageControl2.ino
  * @brief Main Arduino sketch for the Garage Control System with Home Assistant MQTT integration.
+ * @version 2.20.0
  *
  * Board: Arduino UNO R4 WiFi (production) / Arduino UNO R4 Minima (dev)
  *
@@ -69,7 +70,7 @@
 
 #include "src/Utility.h"
 #include <EEPROM.h>
-const char *GC_VERSION = "2.19.5";
+const char *GC_VERSION = "2.20.0";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -903,13 +904,14 @@ public:
    *  1. Motion poll + light activation  ← FIRST, never delayed
    *  2. Light timeout check
    *  3. Backlight auto-off on light-off transition
-   *  4. MQTT loop (may reconnect WiFi — can block up to ~5 s)
+   *  4. Auto-revert check (live values → NV)
    *  5. Door state machine
    *  6. HVAC lockout update
    *  7. Async temperature collection (non-blocking)
    *  8. Menu button poll
-   *  9. MQTT state publish (change-detected)
-   * 10. LCD display update (dirty-flag gated)
+   *  9. Network / MQTT heartbeat
+   * 10. MQTT state publish (change-detected)
+   * 11. LCD display update (dirty-flag gated)
    */
   void loop()
   {
@@ -944,18 +946,13 @@ public:
     // ── 4. Auto-revert check (live values → NV after 24h) ─────────────────
     checkAndRevertAutoValues();
 
-    // ── 5. Network / MQTT heartbeat ──────────────────────────────────────
-#if ENABLE_WIFI
-    mqttManager.loop();
-#endif
-
-    // ── 6. Door state machine ─────────────────────────────────────────────
+    // ── 5. Door state machine ─────────────────────────────────────────────
     GarageDoor::State doorState = door.poll(motionDetected);
 
-    // ── 7. HVAC lockout: block heating/cooling when door is open ─────────
+    // ── 6. HVAC lockout: block heating/cooling when door is open ─────────
     hvac.lockout = (doorState != GarageDoor::Closed);
 
-    // ── 8. Async temperature sampling ─────────────────────────────────────
+    // ── 7. Async temperature sampling ─────────────────────────────────────
     // Phase A – Start a new conversion every TEMP_INTERVAL_MS.
     if (!tempPending && expired(lastTempPoll, TEMP_INTERVAL_MS))
     {
@@ -987,7 +984,12 @@ public:
     if (menuEvent)
       lcdDisplay.SetDirty(true);
 
-    // ── 9. MQTT state publish ─────────────────────────────────────────────
+    // ── 9. Network / MQTT heartbeat ──────────────────────────────────────
+#if ENABLE_WIFI
+    mqttManager.loop();
+#endif
+
+    // ── 10. MQTT state publish ────────────────────────────────────────────
 #if ENABLE_WIFI
     mqttManager.publishStateChanges(
         lights.isOn(),
@@ -1010,7 +1012,7 @@ public:
         hvac.lockout);
 #endif
 
-    // ── 10. LCD display update ────────────────────────────────────────────
+    // ── 11. LCD display update ────────────────────────────────────────────
     lcdDisplay.updateDisplay(hvac, door, lights, tempF);
   }
 };

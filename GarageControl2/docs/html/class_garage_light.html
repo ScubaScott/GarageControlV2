@@ -104,14 +104,16 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:addacf9f0fe5c5df69c717a5e7c1c9243"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor for <a class="el" href="class_garage_light.html" title="Controls garage light relay with configurable auto-off timeout.">GarageLight</a>.  <br /></td></tr>
 <tr class="memitem:a7e09277f75a4a1500048b20a156cc33f" id="r_a7e09277f75a4a1500048b20a156cc33f"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a7e09277f75a4a1500048b20a156cc33f">turnOn</a> ()</td></tr>
 <tr class="memdesc:a7e09277f75a4a1500048b20a156cc33f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Turns the light on and resets the timeout.  <br /></td></tr>
-<tr class="memitem:aa04933af970e45cd7d524c7ab69f64f5" id="r_aa04933af970e45cd7d524c7ab69f64f5"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#aa04933af970e45cd7d524c7ab69f64f5">turnOff</a> ()</td></tr>
-<tr class="memdesc:aa04933af970e45cd7d524c7ab69f64f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Turns the light off immediately.  <br /></td></tr>
+<tr class="memitem:a1150f89bf14fc9c886325b5e8a7512ed" id="r_a1150f89bf14fc9c886325b5e8a7512ed"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a1150f89bf14fc9c886325b5e8a7512ed">turnOff</a> (bool isManual=true)</td></tr>
+<tr class="memdesc:a1150f89bf14fc9c886325b5e8a7512ed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Turns the light off immediately.  <br /></td></tr>
 <tr class="memitem:a5e09a2c1ca7576de73bd979a90aa0442" id="r_a5e09a2c1ca7576de73bd979a90aa0442"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a5e09a2c1ca7576de73bd979a90aa0442">poll</a> ()</td></tr>
 <tr class="memdesc:a5e09a2c1ca7576de73bd979a90aa0442"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks timeout and automatically turns off light if expired.  <br /></td></tr>
 <tr class="memitem:a22b20dfc40a4a4cb6b8819e77ad97f95" id="r_a22b20dfc40a4a4cb6b8819e77ad97f95"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a22b20dfc40a4a4cb6b8819e77ad97f95">isOn</a> ()</td></tr>
 <tr class="memdesc:a22b20dfc40a4a4cb6b8819e77ad97f95"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the current light on/off state.  <br /></td></tr>
 <tr class="memitem:a9666ccbc01cca5c04758d78a8fedca70" id="r_a9666ccbc01cca5c04758d78a8fedca70"><td class="memItemLeft">unsigned long&#160;</td><td class="memItemRight"><a class="el" href="#a9666ccbc01cca5c04758d78a8fedca70">lightRemaining</a> ()</td></tr>
 <tr class="memdesc:a9666ccbc01cca5c04758d78a8fedca70"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets time remaining before auto-off timeout expires.  <br /></td></tr>
+<tr class="memitem:a9d6bc21b9ee8b0be5fe2988ff34cd1f4" id="r_a9d6bc21b9ee8b0be5fe2988ff34cd1f4"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a9d6bc21b9ee8b0be5fe2988ff34cd1f4">isInCooldown</a> () const</td></tr>
+<tr class="memdesc:a9d6bc21b9ee8b0be5fe2988ff34cd1f4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks if the light is in cooldown period after manual turn-off.  <br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Data Fields</h2></td></tr>
@@ -124,9 +126,11 @@ Data Fields</h2></td></tr>
 <li><b>Manual control</b> via manual turn on/off methods</li>
 <li><b>Automatic timeout</b> that turns off light after configured duration</li>
 <li><b>Motion extension</b> resets timeout when motion is detected</li>
+<li><b>Motion cooldown</b> blocks motion-triggered lights for 15 seconds after manual off</li>
 <li><b>Relay spike suppression</b> via motion sensor integration</li>
 </ul>
 <p>The light state is controlled by an electromagnetic relay on a GPIO pin. Automatic turn-off is suitable for situations where occupants may forget to manually switch lights off (typical for garage environments).</p>
+<p>When lights are turned off manually (via button or MQTT), a 15-second cooldown period prevents motion from re-triggering the lights, allowing occupants to exit the room without the lights reactivating.</p>
 <dl class="section note"><dt>Note</dt><dd>Timeout is configurable via menu (default: 20 minutes). Motion detection extends each timeout without requiring additional button presses. </dd></dl>
 <dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#_a3">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
 </dl>
@@ -155,9 +159,9 @@ Data Fields</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">p</td><td>Output pin for light relay control (active HIGH) </td></tr>
-    <tr><td class="paramname">m</td><td>Reference to <a class="el" href="class_motion_sensor.html" title="PIR motion sensor with debouncing and relay spike rejection.">MotionSensor</a> for timeout extension on occupancy</td></tr>
+    <tr><td class="paramname">m</td><td>Reference to <a class="el" href="class_motion_sensor.html" title="PIR motion sensor with hardware interrupt and relay spike rejection.">MotionSensor</a> for timeout extension on occupancy</td></tr>
     <tr><td class="paramname">p</td><td>Relay pin number. </td></tr>
-    <tr><td class="paramname">m</td><td>Reference to <a class="el" href="class_motion_sensor.html" title="PIR motion sensor with debouncing and relay spike rejection.">MotionSensor</a> instance. </td></tr>
+    <tr><td class="paramname">m</td><td>Reference to <a class="el" href="class_motion_sensor.html" title="PIR motion sensor with hardware interrupt and relay spike rejection.">MotionSensor</a> instance. </td></tr>
   </table>
   </dd>
 </dl>
@@ -165,6 +169,35 @@ Data Fields</h2></td></tr>
 </div>
 </div>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
+<a id="a9d6bc21b9ee8b0be5fe2988ff34cd1f4" name="a9d6bc21b9ee8b0be5fe2988ff34cd1f4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9d6bc21b9ee8b0be5fe2988ff34cd1f4">&#9670;&#160;</a></span>isInCooldown()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool GarageLight::isInCooldown </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Checks if the light is in cooldown period after manual turn-off. </p>
+<p>Checks if the light is currently in cooldown period after manual turn-off.</p>
+<p>When lights are turned off manually (button or MQTT), a 15-second cooldown period prevents motion from re-triggering the lights, allowing occupants to exit without the lights reactivating.</p>
+<dl class="section return"><dt>Returns</dt><dd>True if currently in cooldown period, false otherwise</dd>
+<dd>
+True if currently in cooldown period, false otherwise. </dd></dl>
+<div class="dynheader">
+Here is the call graph for this function:</div>
+<div class="dyncontent">
+<div class="center"><iframe scrolling="no" loading="lazy" frameborder="0" src="class_garage_light_a9d6bc21b9ee8b0be5fe2988ff34cd1f4_cgraph.svg" width="283" height="38"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
 <a id="a22b20dfc40a4a4cb6b8819e77ad97f95" name="a22b20dfc40a4a4cb6b8819e77ad97f95"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a22b20dfc40a4a4cb6b8819e77ad97f95">&#9670;&#160;</a></span>isOn()</h2>
 
@@ -240,17 +273,18 @@ Here is the call graph for this function:</div>
 <p>Checks timeout and automatically turns off light if expired. </p>
 <p>Checks if the light has been on longer than the set duration, and if so, turns it off.</p>
 <p>Should be called once per main loop iteration. Implements motion-based timeout extension: if motion has been detected since last call, the timeout counter resets, effectively extending the on duration.</p>
-<dl class="section note"><dt>Note</dt><dd>Motion detection suppresses false triggers from relay EMI spikes, making this a dual-purpose sensor integration. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Motion detection suppresses false triggers from relay EMI spikes, making this a dual-purpose sensor integration.</dd></dl>
+<p>When timeout expires, turnOff(false) is called to disable cooldown blocking, allowing motion to immediately re-trigger lights if occupant is still present. </p>
 <div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" loading="lazy" frameborder="0" src="class_garage_light_a5e09a2c1ca7576de73bd979a90aa0442_cgraph.svg" width="242" height="38"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" loading="lazy" frameborder="0" src="class_garage_light_a5e09a2c1ca7576de73bd979a90aa0442_cgraph.svg" width="410" height="88"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
 </div>
-<a id="aa04933af970e45cd7d524c7ab69f64f5" name="aa04933af970e45cd7d524c7ab69f64f5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa04933af970e45cd7d524c7ab69f64f5">&#9670;&#160;</a></span>turnOff()</h2>
+<a id="a1150f89bf14fc9c886325b5e8a7512ed" name="a1150f89bf14fc9c886325b5e8a7512ed"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1150f89bf14fc9c886325b5e8a7512ed">&#9670;&#160;</a></span>turnOff()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -258,7 +292,7 @@ Here is the call graph for this function:</div>
         <tr>
           <td class="memname">void GarageLight::turnOff </td>
           <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>isManual</em></span><span class="paramdefsep"> = </span><span class="paramdefval">true</span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -266,11 +300,30 @@ Here is the call graph for this function:</div>
 
 <p>Turns the light off immediately. </p>
 <p>Turns off the garage light and forces an acknowledgment to suppress false triggers.</p>
-<p>Deactivates the relay. This is called either by manual control or automatically when the timeout expires. </p>
+<p>Deactivates the relay and optionally starts a 15-second cooldown period. The cooldown blocks motion-triggered reactivation, allowing manual turn-offs to prevent lights from turning back on as you exit the room.</p>
+<p>For automatic timeout turn-offs, cooldown is NOT applied, allowing motion detection to immediately re-trigger lights if still in the room.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">isManual</td><td>If true (default), applies 15-second cooldown. If false (timeout-based turn-off), no cooldown is applied.</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>For manual turn-offs (button, MQTT), starts a 15-second cooldown period to prevent motion from re-triggering the lights, allowing occupants to exit without reactivation. For timeout-based turn-offs, no cooldown is applied, allowing motion to immediately re-trigger if the occupant is still present and moves.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">isManual</td><td>If true (default), applies cooldown. If false, no cooldown (timeout). </td></tr>
+  </table>
+  </dd>
+</dl>
+<div class="dynheader">
+Here is the call graph for this function:</div>
+<div class="dyncontent">
+<div class="center"><iframe scrolling="no" loading="lazy" frameborder="0" src="class_garage_light_a1150f89bf14fc9c886325b5e8a7512ed_cgraph.svg" width="243" height="38"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 <div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" loading="lazy" frameborder="0" src="class_garage_light_aa04933af970e45cd7d524c7ab69f64f5_icgraph.svg" width="335" height="38"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" loading="lazy" frameborder="0" src="class_garage_light_a1150f89bf14fc9c886325b5e8a7512ed_icgraph.svg" width="335" height="88"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>

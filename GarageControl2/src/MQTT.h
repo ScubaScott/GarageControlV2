@@ -63,7 +63,7 @@ private:
   // ── Failure tracking ─────────────────────────────────────────────────────
   NetStatus netStatus          = NetStatus::Connecting;
   uint8_t   consecutiveFailures = 0;
-  static constexpr uint8_t MAX_FAILURES = 5;
+  static constexpr uint8_t MAX_FAILURES = 4;
 
   // ── Configuration (pointers into flash – zero SRAM cost) ────────────────
   const char *WIFI_SSID;
@@ -77,9 +77,9 @@ private:
   const char *DISCOVERY_PREFIX;
 
   GarageController *controller;
-  unsigned long lastMqttReconnect = 0;
-  unsigned long lastHourlyRetry   = 0;  ///< Rate-limits reconnect when Disabled
-  bool mqttReconnectAttempted     = false; ///< Ensures only one reconnect attempt per disconnect event
+  unsigned long lastDisabledRetry = 0; ///< Timestamp when Disabled state began; used for retry delay
+  static constexpr unsigned long DISABLED_RETRY_INTERVAL_MS = 900000UL; ///< 15 minutes
+  static constexpr unsigned long WIFI_CONNECT_TIMEOUT_MS     = 15000UL;  ///< WiFi connect attempt window
   bool pendingFullPublish         = false; ///< Forces full re-publish after (re)connect
 
   // ── Previous-state cache (change detection for publishStateChanges) ──────

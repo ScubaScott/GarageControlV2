@@ -1,13 +1,28 @@
 # GarageControl2 – Change Log
 
-## [2.19.5] – 2026-04-26
+## [2.20.0] – 2026-04-30
 
-### Fixed
-- **MQTT Reconnect Logic**: Changed MQTT reconnect to attempt only once every 15 minutes per disconnect event, instead of retrying every 5 seconds, to improve system responsiveness.
+### Reviewed
+- **Full code review completed**: Verified all source files, updated comments, and improved Doxygen headers for clarity and consistency.
+- **Documentation refreshed**: Root `README.md` and `ChangeLog.md` were updated to reflect current release status.
+- **No version bump applied**: Confirmed current firmware version remains `2.20.0` in `GarageControl2.ino`.
+
+### Notes
+- This release is a working baseline for firmware 2.20.0.
+- The existing NV / live value management model and MQTT + Home Assistant integration remain unchanged.
 
 ---
 
-## [2.19.4] – 2026-04-26
+## [2.19.6] – 2026-04-28
+
+### Fixed
+- **MQTT network retry logic**: Network and MQTT are now serviced at the end of the controller loop so sensors have completed initialization before publish.
+- **Single reconnect attempt per loop**: WiFi and MQTT reconnects are limited to one attempt per controller loop.
+- **15-minute disable cycle**: Four consecutive network/MQTT failures now disable the network for 15 minutes, then retry indefinitely.
+
+---
+
+## [2.19.5] – 2026-04-26
 
 ### Fixed
 - **Button Debounce Time**: Increased menu button debounce from 50ms to 500ms to prevent double button presses during navigation.

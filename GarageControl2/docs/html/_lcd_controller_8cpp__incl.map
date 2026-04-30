@@ -1,5 +1,5 @@
 <map id="LcdController.cpp" name="LcdController.cpp">
-<area shape="rect" id="Node000001" title="Implementation of LCD display controller for garage control system." alt="" coords="331,5,455,32"/>
+<area shape="rect" id="Node000001" title="LCD display controller implementation for garage control system." alt="" coords="331,5,455,32"/>
 <area shape="rect" id="Node000002" title=" " alt="" coords="405,229,482,256"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="328,24,253,31,167,41,91,58,61,69,41,82,21,106,10,130,10,155,24,180,49,197,86,211,133,222,186,229,296,237,393,242,388,242,296,243,185,235,132,227,84,216,46,202,20,183,5,156,5,129,16,103,38,78,59,64,89,53,166,36,253,25,333,21"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="34,155,170,181"/>
@@ -24,7 +24,7 @@
 <area shape="poly" id="edge9_Node000006_Node000002" title=" " alt="" coords="399,105,437,215,432,214,396,109"/>
 <area shape="poly" id="edge11_Node000007_Node000002" title=" " alt="" coords="511,106,478,156,453,217,450,213,473,153,506,109"/>
 <area shape="poly" id="edge13_Node000008_Node000002" title=" " alt="" coords="602,106,562,130,521,157,489,187,463,219,460,214,485,184,518,153,559,125,597,108"/>
-<area shape="rect" id="Node000009" href="$_motion_8h.html" title="PIR motion sensor with debouncing and electromagnetic interference rejection." alt="" coords="532,155,603,181"/>
+<area shape="rect" id="Node000009" href="$_motion_8h.html" title="PIR motion sensor with hardware interrupt integration and EMI rejection." alt="" coords="532,155,603,181"/>
 <area shape="poly" id="edge14_Node000008_Node000009" title=" " alt="" coords="621,106,589,145,587,141,616,108"/>
 <area shape="poly" id="edge15_Node000009_Node000002" title=" " alt="" coords="549,181,479,224,477,219,543,183"/>
 <area shape="poly" id="edge17_Node000010_Node000002" title=" " alt="" coords="629,180,496,227,495,221,624,181"/>

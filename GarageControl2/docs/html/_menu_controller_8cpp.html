@@ -111,7 +111,7 @@ Include dependency graph for MenuController.cpp:</div>
 </div><a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Button debounce approach ──────────────────────── Each button has its own lastPressTime and lastPinState so they are completely independent. </p>
 <p>The old code used a single shared <span class="tt">static</span> timestamp, meaning pressing any one button would lock out all three for the debounce period — requiring long holds to register reliably.</p>
-<p>Debounce logic: a press is registered on the falling edge (HIGH→LOW), provided the pin has been stable for at least DEBOUNCE_MS. This fires exactly once per physical press regardless of how long the button is held. </p>
+<p>Debounce logic: a press is registered on the falling edge (HIGH→LOW), provided the pin has been stable for at least DEBOUNCE_MS (500ms). This fires exactly once per physical press regardless of how long the button is held. </p>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
 <div id="page-nav" class="page-nav-panel">

@@ -92,7 +92,7 @@
 <!-- Node7 -->
 <g id="Node000007" class="node">
 <title>Node7</title>
-<g id="a_Node000007"><a xlink:href="class_garage_light.html#aa04933af970e45cd7d524c7ab69f64f5" target="_top" xlink:title="Turns the light off immediately.">
+<g id="a_Node000007"><a xlink:href="class_garage_light.html#a1150f89bf14fc9c886325b5e8a7512ed" target="_top" xlink:title="Turns the light off immediately.">
 <polygon fill="white" stroke="#666666" points="261.88,-58 158.12,-58 158.12,-38 261.88,-38 261.88,-58"/>
 <text xml:space="preserve" text-anchor="middle" x="210" y="-44.5" font-family="Helvetica,sans-Serif" font-size="10.00">GarageLight::turnOff</text>
 </a>
@@ -117,9 +117,9 @@
 </g>
 </g>
 <!-- Node1&#45;&gt;Node8 -->
-<g id="edge7_Node000001_Node000008" class="edge">
+<g id="edge8_Node000001_Node000008" class="edge">
 <title>Node1&#45;&gt;Node8</title>
-<g id="a_edge7_Node000001_Node000008"><a xlink:title=" ">
+<g id="a_edge8_Node000001_Node000008"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M61.25,-94.74C75.76,-78.4 106.42,-46.5 139,-29 142.06,-27.35 145.28,-25.84 148.58,-24.46"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="149.77,-27.75 157.91,-20.97 147.32,-21.19 149.77,-27.75"/>
 </a>
@@ -143,10 +143,19 @@
 </a>
 </g>
 </g>
+<!-- Node7&#45;&gt;Node6 -->
+<g id="edge7_Node000007_Node000006" class="edge">
+<title>Node7&#45;&gt;Node6</title>
+<g id="a_edge7_Node000007_Node000006"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M262.03,-48C276.88,-48 292.53,-48 305.35,-48"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="305.14,-51.5 315.14,-48 305.14,-44.5 305.14,-51.5"/>
+</a>
+</g>
+</g>
 <!-- Node8&#45;&gt;Node6 -->
-<g id="edge8_Node000008_Node000006" class="edge">
+<g id="edge9_Node000008_Node000006" class="edge">
 <title>Node8&#45;&gt;Node6</title>
-<g id="a_edge8_Node000008_Node000006"><a xlink:title=" ">
+<g id="a_edge9_Node000008_Node000006"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M251.89,-20.47C261.48,-23.1 271.64,-26.03 281,-29 289.22,-31.61 298.06,-34.73 306.09,-37.67"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="304.72,-40.9 315.31,-41.12 307.17,-34.34 304.72,-40.9"/>
 </a>

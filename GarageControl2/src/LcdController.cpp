@@ -69,7 +69,7 @@ void LcdController::begin()
   byte DoubleArrow[] = {B00100, B01110, B10101, B00100, B00100, B10101, B01110, B00100};
   byte Degree[] = {B01000, B10100, B01000, B00000, B00000, B00000, B00000, B00000};
 
-  lcd.createChar(0, UpArrow);
+  lcd.createChar(0, UpArrow); // memory \x08
   lcd.createChar(1, DownArrow);
   lcd.createChar(2, DoubleArrow);
   lcd.createChar(3, Degree);
@@ -240,6 +240,7 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
 
   MenuController::Screen currentScreen = menu.get();
   bool EditMode = menu.EditMode;
+  if (!EditMode) lcd.blink_off();
 
   // Single reused stack buffer: 21 bytes = 20 LCD columns + null terminator.
   char buf[21];
@@ -382,11 +383,6 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     printLCDText(4, false, "\x02");
     break;
 
-  case MenuController::Screen::HVACBack:
-    printLCDText(1, true, "Back...");
-    printLCDText(4, false, "\x00"); // up arrow — navigate back up
-    break;
-
   // ══════════════════════════════════════════════════════════════════════════
   //  Light sub-menu screens
   // ══════════════════════════════════════════════════════════════════════════
@@ -402,11 +398,6 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     snprintf(buf, sizeof(buf), "%lu minutes", lights.duration / 60000UL);
     printLCDText(3, true, buf);
     printLCDText(4, false, "\x01");
-    break;
-
-  case MenuController::Screen::LightBack:
-    printLCDText(1, true, "Back...");
-    printLCDText(4, false, "\x00");
     break;
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -434,18 +425,11 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     printLCDText(4, false, "\x02");
     break;
 
-  case MenuController::Screen::DoorBack:
-    printLCDText(1, true, "Back...");
-    printLCDText(4, false, "\x00");
-    break;
-
   // ══════════════════════════════════════════════════════════════════════════
-  //  Config sub-menu screens
+  //  Network sub-menu screens
   // ══════════════════════════════════════════════════════════════════════════
   case MenuController::Screen::NetworkMenu:
-    printLCDText(1, true, "Config Settings");
-    snprintf(buf, sizeof(buf), "Version: %s", GC_VERSION);
-    printLCDText(2, true, buf);
+    printLCDText(1, true, "Network Menu");
     printLCDText(4, false, "\x02");
     break;
 
@@ -473,6 +457,7 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     printLCDText(1, true, "Network Info");
     snprintf(buf, sizeof(buf), "IP: %s", ipStr);
     printLCDText(2, true, buf);
+    printLCDText(4, false, "\x01");
     break;
   }
 
@@ -480,33 +465,42 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
   {
     char mqttStr[21];
     const char *statusStr = "n/a";
-#if ENABLE_WIFI
-    if (g_mqttManager)
+    if (EditMode)
     {
-      g_mqttManager->getMqttServerIP(mqttStr, sizeof(mqttStr));
-      statusStr = g_mqttManager->getNetStatusString();
+      lcd.blink_on();
+      printLCDText(1, true, "MQTT Connection");
+      printLCDText(2, true,  "+ = Connect MQTT");
+      printLCDText(3, true,  "- = Disable WiFi");
     }
     else
     {
+#if ENABLE_WIFI
+      if (g_mqttManager)
+      {
+        g_mqttManager->getMqttServerIP(mqttStr, sizeof(mqttStr));
+        statusStr = g_mqttManager->getNetStatusString();
+      }
+      else
+      {
+        strncpy(mqttStr, "n/a", sizeof(mqttStr));
+        mqttStr[sizeof(mqttStr) - 1] = '\0';
+      }
+#else
       strncpy(mqttStr, "n/a", sizeof(mqttStr));
       mqttStr[sizeof(mqttStr) - 1] = '\0';
-    }
-#else
-    strncpy(mqttStr, "n/a", sizeof(mqttStr));
-    mqttStr[sizeof(mqttStr) - 1] = '\0';
-    statusStr = "Disabled";
+      statusStr = "Disabled";
 #endif
+      lcd.blink_off();
+      printLCDText(1, true, "MQTT Connection");
+      snprintf(buf, sizeof(buf), "IP: %s", mqttStr);
+      printLCDText(2, true, buf);
+      snprintf(buf, sizeof(buf), "Status: %s", statusStr);
+      printLCDText(3, true, buf);
+    }
 
-    EditMode ? lcd.blink_on() : lcd.blink_off();
-    printLCDText(1, true, "MQTT Connection");
-    snprintf(buf, sizeof(buf), "MQTT: %s", mqttStr);
-    printLCDText(2, true, buf);
-    snprintf(buf, sizeof(buf), "\x01 Status: %s", statusStr);
-    printLCDText(3, false, buf);
-    printLCDText(4, false, "\x00");
+    printLCDText(4, false, "\x02");
     break;
   }
-
     // ══════════════════════════════════════════════════════════════════════════
     //  SetNV Values sub-menu screens (v2.17.0)
     //
@@ -611,26 +605,23 @@ void LcdController::updateDisplay(GarageHVAC &hvac, GarageDoor &door,
     printLCDText(4, false, "\x02");
     break;
 
-  case MenuController::Screen::SetNVBack:
-    // Navigation screen at the bottom of the SetNV sub-menu.
-    // UP returns to SetNVLightTimeout; SET returns to NVMenu.
-    printLCDText(1, true, "NV Values Back");
-    printLCDText(4, false, "\x00"); // up arrow — navigate back up through sub-menu
-    break;
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  Menu-level navigation screens
-  // ══════════════════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════════
+    //  Menu-level navigation screens
+    // ══════════════════════════════════════════════════════════════════════════
+  case MenuController::Screen::HVACBack:
+  case MenuController::Screen::LightBack:
+  case MenuController::Screen::DoorBack:
   case MenuController::Screen::NetworkBack:
+  case MenuController::Screen::SetNVBack:
     printLCDText(1, true, "Back...");
-    printLCDText(4, false, "\x00");
+    printLCDText(4, false, "\x08");
     break;
 
   case MenuController::Screen::MenuExit:
     printLCDText(1, true, "Menu Exit...");
-    printLCDText(4, false, "\x00");
+    snprintf(buf, sizeof(buf), "\x08  V: %s", GC_VERSION);
+    printLCDText(4, false, buf);
     break;
-
   // ══════════════════════════════════════════════════════════════════════════
   //  Fallback
   // ══════════════════════════════════════════════════════════════════════════

@@ -105,13 +105,15 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a43e43b70c1b541175625c15fdd306093" id="r_a43e43b70c1b541175625c15fdd306093"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a43e43b70c1b541175625c15fdd306093">begin</a> ()</td></tr>
 <tr class="memdesc:a43e43b70c1b541175625c15fdd306093"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initializes the LCD display.  <br /></td></tr>
 <tr class="memitem:a7f2e8e18a11a1432c4c4833b8240a421" id="r_a7f2e8e18a11a1432c4c4833b8240a421"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a7f2e8e18a11a1432c4c4833b8240a421">SetDirty</a> (bool WakeBackLight)</td></tr>
-<tr class="memdesc:a7f2e8e18a11a1432c4c4833b8240a421"><td class="mdescLeft">&#160;</td><td class="mdescRight">Marks the display as needing an update.  <br /></td></tr>
+<tr class="memdesc:a7f2e8e18a11a1432c4c4833b8240a421"><td class="mdescLeft">&#160;</td><td class="mdescRight">Marks the display as needing a full redraw.  <br /></td></tr>
 <tr class="memitem:a495d658fb009c6c8c0f06f49db6a5788" id="r_a495d658fb009c6c8c0f06f49db6a5788"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a495d658fb009c6c8c0f06f49db6a5788">updateDisplay</a> (<a class="el" href="class_garage_h_v_a_c.html">GarageHVAC</a> &amp;hvac, <a class="el" href="class_garage_door.html">GarageDoor</a> &amp;door, <a class="el" href="class_garage_light.html">GarageLight</a> &amp;lights, float tempF)</td></tr>
 <tr class="memdesc:a495d658fb009c6c8c0f06f49db6a5788"><td class="mdescLeft">&#160;</td><td class="mdescRight">Updates the LCD display with current system state.  <br /></td></tr>
 <tr class="memitem:afa36e9171638184325b2d296e469dbed" id="r_afa36e9171638184325b2d296e469dbed"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#afa36e9171638184325b2d296e469dbed">setBacklight</a> (bool on)</td></tr>
 <tr class="memdesc:afa36e9171638184325b2d296e469dbed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Controls the LCD backlight on/off state.  <br /></td></tr>
 <tr class="memitem:a5c29b2d39105177d045e2a40dbdf1993" id="r_a5c29b2d39105177d045e2a40dbdf1993"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a5c29b2d39105177d045e2a40dbdf1993">isBacklightOn</a> () const</td></tr>
 <tr class="memdesc:a5c29b2d39105177d045e2a40dbdf1993"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the current backlight on/off state.  <br /></td></tr>
+<tr class="memitem:a5b89e158f7a2ff2602937e77046369cb" id="r_a5b89e158f7a2ff2602937e77046369cb"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a5b89e158f7a2ff2602937e77046369cb">setHost</a> (<a class="el" href="class_i_menu_host.html">IMenuHost</a> *hostPtr)</td></tr>
+<tr class="memdesc:a5b89e158f7a2ff2602937e77046369cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the <a class="el" href="class_i_menu_host.html">IMenuHost</a> pointer for NV value access.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Manages a 4x20 I2C LCD display for status and menu rendering. </p>
@@ -134,7 +136,7 @@ Public Member Functions</h2></td></tr>
 <li>PCF8574 I2C backpack (address 0x27) for pin control</li>
 <li>SDA/SCL connections to Arduino I2C pins </li>
 </ul>
-<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#_a4">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
+<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#_a5">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
 </dl>
 </div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a4e1453dcd56d7485eed7d7b3a8fb4966" name="a4e1453dcd56d7485eed7d7b3a8fb4966"></a>
@@ -157,6 +159,7 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Constructor for <a class="el" href="class_lcd_controller.html" title="Manages a 4x20 I2C LCD display for status and menu rendering.">LcdController</a>. </p>
+<p>Constructor — stores references to LCD and menu controller.</p>
 <p>Stores references to LCD and menu controllers. Both references must be valid throughout the <a class="el" href="class_lcd_controller.html" title="Manages a 4x20 I2C LCD display for status and menu rendering.">LcdController</a>'s lifetime. The referenced objects must be initialized (LCD via <a class="el" href="#a43e43b70c1b541175625c15fdd306093" title="Initializes the LCD display.">begin()</a>, menu via <a class="el" href="class_menu_controller.html#aac92364e3f5854b59e7f8b98f23eb62a" title="Initializes the menu controller.">MenuController::begin()</a>) before calling <a class="el" href="class_lcd_controller.html" title="Manages a 4x20 I2C LCD display for status and menu rendering.">LcdController</a> methods.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -167,15 +170,8 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section see"><dt>See also</dt><dd>LiquidCrystal_I2C initialization in main sketch </dd>
 <dd>
-<a class="el" href="class_menu_controller.html#aac92364e3f5854b59e7f8b98f23eb62a" title="Initializes the menu controller.">MenuController::begin()</a></dd></dl>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">lcdRef</td><td>Reference to the LiquidCrystal_I2C instance. </td></tr>
-    <tr><td class="paramname">menuRef</td><td>Reference to the <a class="el" href="class_menu_controller.html" title="Manages hierarchical LCD menu navigation and button input processing.">MenuController</a> instance. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#a5">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
+<a class="el" href="class_menu_controller.html#aac92364e3f5854b59e7f8b98f23eb62a" title="Initializes the menu controller.">MenuController::begin()</a> </dd></dl>
+<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#a6">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
 </dl>
 
 </div>
@@ -197,9 +193,10 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Initializes the LCD display. </p>
-<p>Initializes the LCD display and creates custom characters.</p>
-<p>Must be called once during setup. Clears the display and performs any initial LCD configuration. Typically called after LiquidCrystal_I2C has been initialized with <a class="el" href="#a43e43b70c1b541175625c15fdd306093" title="Initializes the LCD display.">begin()</a>. </p>
-<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#a6">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
+<p>Initializes LCD hardware, loads custom characters, shows splash.</p>
+<p>Must be called once during setup. Clears the display and performs any initial LCD configuration. Typically called after LiquidCrystal_I2C has been initialized with <a class="el" href="#a43e43b70c1b541175625c15fdd306093" title="Initializes the LCD display.">begin()</a>.</p>
+<p>Custom characters (stored in LCD CGRAM slots 0–3): 0 – Up arrow (used on "first" screens where only DOWN is available) 1 – Down arrow (used on "last" screens where only UP is available) 2 – Double arrow (used on screens where both UP and DOWN navigate) 3 – Degree symbol (used in temperature / setpoint displays) </p>
+<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#a7">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
 </dl>
 
 </div>
@@ -230,7 +227,7 @@ Public Member Functions</h2></td></tr>
 <p>Gets the current backlight on/off state. </p>
 <dl class="section return"><dt>Returns</dt><dd>True if backlight is currently on, false if off</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#afa36e9171638184325b2d296e469dbed" title="Controls the LCD backlight on/off state.">setBacklight()</a> </dd></dl>
-<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#a10">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
+<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#a11">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
 </dl>
 
 </div>
@@ -262,11 +259,11 @@ Public Member Functions</h2></td></tr>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#a5c29b2d39105177d045e2a40dbdf1993" title="Gets the current backlight on/off state.">isBacklightOn()</a> to query current state</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">on</td><td>True to turn on backlight, false to turn off. </td></tr>
+    <tr><td class="paramname">on</td><td>True to turn on; false to turn off. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#a9">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
+<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#a10">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
 </dl>
 <div class="dynheader">
 Here is the caller graph for this function:</div>
@@ -291,20 +288,58 @@ Here is the caller graph for this function:</div>
       </table>
 </div><div class="memdoc">
 
-<p>Marks the display as needing an update. </p>
+<p>Marks the display as needing a full redraw. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">WakeBackLight</td><td>If true, turns on the backlight. </td></tr>
+    <tr><td class="paramname">WakeBackLight</td><td>If true, also turns on the backlight. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#a7">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
+<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#a8">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
 </dl>
 <div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
 <div class="center"><iframe scrolling="no" loading="lazy" frameborder="0" src="class_lcd_controller_a7f2e8e18a11a1432c4c4833b8240a421_cgraph.svg" width="392" height="38"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
+
+</div>
+</div>
+<a id="a5b89e158f7a2ff2602937e77046369cb" name="a5b89e158f7a2ff2602937e77046369cb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5b89e158f7a2ff2602937e77046369cb">&#9670;&#160;</a></span>setHost()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LcdController::setHost </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="class_i_menu_host.html">IMenuHost</a> *</td>          <td class="paramname"><span class="paramname"><em>hostPtr</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Sets the <a class="el" href="class_i_menu_host.html">IMenuHost</a> pointer for NV value access. </p>
+<p>Called during setup to wire the <a class="el" href="class_lcd_controller.html" title="Manages a 4x20 I2C LCD display for status and menu rendering.">LcdController</a> to the <a class="el" href="class_i_menu_host.html">IMenuHost</a> implementation (typically GarageController). Required for SetNV menu screens to display and edit NV values via the host-&gt;getNv*() and host-&gt;adjNv*() methods.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">hostPtr</td><td>Pointer to <a class="el" href="class_i_menu_host.html">IMenuHost</a> implementation (typically &amp;controller)</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>Must be called before <a class="el" href="#a495d658fb009c6c8c0f06f49db6a5788" title="Updates the LCD display with current system state.">updateDisplay()</a> is invoked on SetNV screens. If host is nullptr when a SetNV screen is displayed, values show "---".</dd></dl>
+<dl class="section see"><dt>See also</dt><dd>getNvHeatSet(), getNvCoolSet(), etc. for the accessors used </dd></dl>
+<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#a12">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
+</dl>
 
 </div>
 </div>
@@ -338,7 +373,7 @@ Here is the call graph for this function:</div>
 </div><div class="memdoc">
 
 <p>Updates the LCD display with current system state. </p>
-<p>Updates the LCD display with current system status.</p>
+<p>Redraws the LCD if the dirty flag is set; otherwise returns early.</p>
 <p>Should be called once per main loop iteration. Renders the appropriate screen (main status or menu screen) based on <a class="el" href="class_menu_controller.html" title="Manages hierarchical LCD menu navigation and button input processing.">MenuController</a>'s current selection. Main status shows door state, temperature, lights, and motion. Menu screens show configuration options.</p>
 <p>This method implements display-update optimization:</p><ul>
 <li>Skips expensive updates if IsDirty flag is not set</li>
@@ -355,16 +390,18 @@ Here is the call graph for this function:</div>
   </dd>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Call this every main loop iteration for responsive display updates. The dirty flag prevents unnecessary LCD writes when nothing changed.</dd></dl>
+<p>Dispatches to the appropriate rendering block based on the current <a class="el" href="class_menu_controller.html" title="Manages hierarchical LCD menu navigation and button input processing.">MenuController</a> screen. All string formatting uses a single 21-byte stack buffer (buf) to avoid heap allocation.</p>
+<p>SetNV screens query NV values via the <code>host</code> pointer (<a class="el" href="class_i_menu_host.html">IMenuHost</a>). If host is null a safe fallback "---" is shown; this should not occur in normal operation as <a class="el" href="#a5b89e158f7a2ff2602937e77046369cb" title="Sets the IMenuHost pointer for NV value access.">setHost()</a> is called in GarageController::begin().</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">hvac</td><td>Reference to the <a class="el" href="class_garage_h_v_a_c.html" title="Controls heating and cooling relays based on temperature setpoints.">GarageHVAC</a> instance. </td></tr>
-    <tr><td class="paramname">door</td><td>Reference to the <a class="el" href="class_garage_door.html" title="Manages garage door operation, state tracking, and automatic closing.">GarageDoor</a> instance. </td></tr>
-    <tr><td class="paramname">lights</td><td>Reference to the <a class="el" href="class_garage_light.html" title="Controls garage light relay with configurable auto-off timeout.">GarageLight</a> instance. </td></tr>
+    <tr><td class="paramname">hvac</td><td><a class="el" href="class_garage_h_v_a_c.html" title="Controls heating and cooling relays based on temperature setpoints.">GarageHVAC</a> subsystem (live values and state). </td></tr>
+    <tr><td class="paramname">door</td><td><a class="el" href="class_garage_door.html" title="Manages garage door operation, state tracking, and automatic closing.">GarageDoor</a> subsystem (state, timeout). </td></tr>
+    <tr><td class="paramname">lights</td><td><a class="el" href="class_garage_light.html" title="Controls garage light relay with configurable auto-off timeout.">GarageLight</a> subsystem (on/off, duration). </td></tr>
     <tr><td class="paramname">tempF</td><td>Current temperature in Fahrenheit. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#a8">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
+<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="_c_1_2_users_2scott_2_one_drive_2_documents_2_projects_2_garage_control2_2_garage_control2_2src_2_lcd_controller_8h-example.html#a9">C:/Users/scott/OneDrive/Documents/Projects/GarageControl2/GarageControl2/src/LcdController.h</a>.</dd>
 </dl>
 <div class="dynheader">
 Here is the call graph for this function:</div>

@@ -18,7 +18,7 @@
 <area shape="poly" id="edge15_Node000001_Node000010" title=" " alt="" coords="385,30,633,81,628,83,385,35"/>
 <area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="199,179,321,223,316,225,198,184"/>
 <area shape="poly" id="edge6_Node000005_Node000002" title=" " alt="" coords="269,105,273,142,278,162,287,180,307,202,331,222,326,221,303,206,283,183,273,163,268,143,266,109"/>
-<area shape="rect" id="Node000006" href="$_motion_8h.html" title="PIR motion sensor with debouncing and electromagnetic interference rejection." alt="" coords="297,155,369,181"/>
+<area shape="rect" id="Node000006" href="$_motion_8h.html" title="PIR motion sensor with hardware interrupt integration and EMI rejection." alt="" coords="297,155,369,181"/>
 <area shape="poly" id="edge7_Node000005_Node000006" title=" " alt="" coords="280,105,314,143,309,143,278,110"/>
 <area shape="poly" id="edge8_Node000006_Node000002" title=" " alt="" coords="341,180,358,216,353,214,338,184"/>
 <area shape="poly" id="edge10_Node000007_Node000002" title=" " alt="" coords="380,105,384,141,384,182,378,216,374,212,378,181,379,141,377,109"/>

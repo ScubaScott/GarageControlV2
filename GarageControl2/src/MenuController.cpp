@@ -238,8 +238,8 @@ void MenuController::handleSet(IMenuHost &controller)
   case Screen::DoorBack:
     current = Screen::DoorMenu;
     break;
-    // Network MQTT
-    // Network info menu has no set option
+  case Screen::NetworkInfo:
+    break;
   case Screen::MQTTMenu:
     EditMode = !EditMode;
     break;
@@ -398,7 +398,7 @@ void MenuController::handleUp(IMenuHost &controller, GarageHVAC &hvac, GarageLig
     }
     else
     {
-      current = Screen::NetworkMenu;
+      current = Screen::NetworkInfo;
     }
     break;
   case Screen::NetworkBack:

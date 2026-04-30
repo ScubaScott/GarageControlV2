@@ -9,5 +9,13 @@ var searchData=
   ['setminresttime_6',['SetMinRestTime',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a7efd7d7d5a1efc74abbf62ca6e6bc0b3',1,'MenuController']]],
   ['setminruntime_7',['SetMinRunTime',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a576beab75b5b94e28870c6b15a203e59',1,'MenuController']]],
   ['setmode_8',['SetMode',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40ad6726dd19bebc50d7293e04a0c949677',1,'MenuController']]],
-  ['setswing_9',['SetSwing',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a485646c5eeb643f9507cc003d6c5193d',1,'MenuController']]]
+  ['setnvback_9',['SetNVBack',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40afa8c9349b170d0c35fc7dee6dbe6d1ef',1,'MenuController']]],
+  ['setnvcoolset_10',['SetNVCoolSet',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a134b290cc99d9bf16e57cdecd22a9c79',1,'MenuController']]],
+  ['setnvdoortimeout_11',['SetNVDoorTimeout',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a5b6f39473b396b1c821d1213d36957ac',1,'MenuController']]],
+  ['setnvheatset_12',['SetNVHeatSet',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a50857dd42aa3b3e82e21141deb903a4b',1,'MenuController']]],
+  ['setnvlighttimeout_13',['SetNVLightTimeout',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40aba8e34d8b310c1b35f0286f3ddba0dc4',1,'MenuController']]],
+  ['setnvminresttime_14',['SetNVMinRestTime',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a3e334ce91ebfac2df79503836365f037',1,'MenuController']]],
+  ['setnvminruntime_15',['SetNVMinRunTime',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a02266b93fe5433a320694ce206f3da78',1,'MenuController']]],
+  ['setnvswing_16',['SetNVSwing',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a33d1d94956dcb51f73464f58e8222261',1,'MenuController']]],
+  ['setswing_17',['SetSwing',['../class_menu_controller.html#ab21a51647c0c372fad4282810e6a2f40a485646c5eeb643f9507cc003d6c5193d',1,'MenuController']]]
 ];

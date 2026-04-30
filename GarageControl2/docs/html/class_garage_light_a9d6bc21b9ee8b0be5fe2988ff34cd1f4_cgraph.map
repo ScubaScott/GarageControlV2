@@ -1,0 +1,5 @@
+<map id="GarageLight::isInCooldown" name="GarageLight::isInCooldown">
+<area shape="rect" id="Node000001" title="Checks if the light is in cooldown period after manual turn&#45;off." alt="" coords="5,5,184,32"/>
+<area shape="rect" id="Node000002" href="$_utility_8h.html#a0b367d87e38eb8541b95194a0d870322" title=" " alt="" coords="232,5,277,32"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="184,16,219,19,214,19,184,21"/>
+</map>

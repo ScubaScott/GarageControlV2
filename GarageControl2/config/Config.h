@@ -42,7 +42,7 @@
 /**
  * @brief MQTT broker username (if authentication required)
  */
-#define CONFIG_MQTT_USER "garagecoltroller"
+#define CONFIG_MQTT_USER "garagecontroller"
 
 /**
  * @brief MQTT broker password (if authentication required)
