@@ -1,5 +1,18 @@
 # GarageControl2 – Change Log
 
+## [2.20.1] – 2026-05-08
+
+### Fixed
+- **WiFi reconnect is now non-blocking**: Removed the blocking `delay(500)` from the WiFi connect flow and now performs connection status checks on each main-loop execution.
+- **MQTT failures no longer disable WiFi**: MQTT broker disconnects or connect failures keep WiFi active; only WiFi loss disables MQTT.
+- **WiFi loss now explicitly disconnects MQTT**: MQTT is immediately torn down when WiFi drops and is reconnected only once WiFi returns.
+
+### Notes
+- This patch improves main loop responsiveness by avoiding blocking WiFi reconnection delays.
+- Network state handling is now more resilient for intermittent MQTT broker outages.
+
+---
+
 ## [2.20.0] – 2026-04-30
 
 ### Reviewed

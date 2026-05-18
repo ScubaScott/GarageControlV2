@@ -77,9 +77,14 @@ private:
   const char *DISCOVERY_PREFIX;
 
   GarageController *controller;
-  unsigned long lastDisabledRetry = 0; ///< Timestamp when Disabled state began; used for retry delay
+  unsigned long lastDisabledRetry   = 0; ///< Timestamp when Disabled state began; used for retry delay
+  unsigned long wifiConnectStart    = 0; ///< Timestamp when WiFi begin() was called
+  unsigned long lastMqttRetry       = 0; ///< Timestamp of last MQTT reconnect attempt
+  bool         wifiConnectionActive = false; ///< True while a WiFi connect attempt is in progress
+  uint8_t      mqttFailures         = 0; ///< Track MQTT connect failures separately from WiFi
   static constexpr unsigned long DISABLED_RETRY_INTERVAL_MS = 900000UL; ///< 15 minutes
   static constexpr unsigned long WIFI_CONNECT_TIMEOUT_MS     = 15000UL;  ///< WiFi connect attempt window
+  static constexpr unsigned long MQTT_RETRY_INTERVAL_MS     = 5000UL;  ///< Minimum interval between MQTT reconnect attempts
   bool pendingFullPublish         = false; ///< Forces full re-publish after (re)connect
 
   // ── Previous-state cache (change detection for publishStateChanges) ──────
