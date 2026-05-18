@@ -2,32 +2,47 @@
  * @file MQTT.cpp
  * @brief MQTTManager implementation – compiled only when ENABLE_WIFI is 1.
  *
- * @section MemoryStrategy Memory strategy
- * 1. F() macro  – all string literals placed in flash (PROGMEM); never copied to SRAM.
- * 2. No persistent topic Strings – topics built on-demand into a single shared
- *    64-byte _topicBuf.  Previous design held 14 String members (~400 bytes heap).
- * 3. Compact state cache – prevDoorState (was String) → uint8_t; prevHvacMode
- *    (was String) → uint8_t.  Saves ~60 bytes of heap.
- * 4. Discovery payloads – assembled in a single reused 1024-byte stack buffer
- *    instead of heap-concatenated Strings (removed ~6 × 300 byte heap churn).
- * 5. dtostrf() replaces String(float,n) for float→char conversion in
- *    publishStateChanges().
+ * @section Architecture (v2.21.0) — Two independent state machines
  *
- * @section NVSeparation NV vs current value separation
- * publishStateChanges() accepts BOTH the current live timeout values AND the
- * NV (persisted) timeout values as distinct parameters.  They are compared
- * against separate prev-state members (prevDoorDuration vs prevNvDoorTimeout,
- * prevLightDuration vs prevNvLightTimeout) and published to separate MQTT
- * topics.  This means Home Assistant will reflect the correct NV value even
- * when the user has temporarily changed the current setting without saving.
+ * **WiFi** and **MQTT** are now fully decoupled.  Each has its own phase
+ * enum, failure counter, and retry timer.  The overall NetStatus seen by
+ * the UI is derived from both phases but neither can affect the other's
+ * failure accounting.
  *
- * @section NVSaveModel NV save model
- * /nv/ command topics update the NV member variables in RAM only (no auto-save).
- * Changes accumulate in RAM until the client sends /nv/save/cmd, which triggers
- * saveNV() to persist all NV members to EEPROM in a single write pass.
- * This eliminates per-step EEPROM writes when adjusting values incrementally
- * (e.g., stepping a setpoint from 65→75 via HA) and greatly reduces write-cycle
- * wear on the EEPROM cells.
+ * serviceWiFi() is called unconditionally every loop().
+ * serviceMQTT() is called only when wifiPhase == Connected.
+ *
+ * When WiFi drops while MQTT is active, MQTT is immediately disconnected
+ * and reset to Idle (backoff cleared) so it reconnects quickly once WiFi
+ * recovers.  WiFi failure accounting is unaffected by MQTT outcomes.
+ *
+ * @section Blocking behaviour of mqtt.connect()
+ *
+ * PubSubClient::connect() performs a synchronous TCP handshake + MQTT
+ * CONNACK exchange.  If the broker is unreachable this blocks for the
+ * TCP connection timeout (potentially several seconds).
+ *
+ * Mitigation strategy:
+ *   - Exponential backoff: 5 s → 10 s → 20 s → 40 s → 60 s (cap).
+ *     After the first failure, connect attempts are infrequent.
+ *   - ISR-driven light activation (pirISR) is interrupt-based and
+ *     completely unaffected by main-loop blocking.
+ *   - mqttManager.loop() is positioned LAST in the main control loop,
+ *     after motion detection, UI, and HVAC have all been serviced.
+ *
+ * @section Memory strategy
+ * 1. F() macro  – all string literals placed in flash (PROGMEM).
+ * 2. No persistent topic Strings – topics built on-demand into _topicBuf.
+ * 3. Compact state cache – uint8_t / bool instead of heap Strings.
+ * 4. Discovery payloads – assembled in a single reused 2048-byte stack buffer.
+ * 5. dtostrf() replaces String(float,n) for float→char conversion.
+ *
+ * @section NV vs current value separation
+ * publishStateChanges() accepts BOTH the live timeout values AND the NV
+ * (persisted) values as distinct parameters.  They are compared against
+ * separate prev-state members and published to separate MQTT topics.
+ *
+ * @version 2.21.0
  */
 
 #include <ArduinoJson.h>
@@ -48,7 +63,8 @@ MQTTManager *g_mqttManager = nullptr;
  * @brief Constructs MQTTManager and loads compile-time credentials from Config.h.
  *
  * All credential macros resolve to string literals that live in flash; only
- * the 2-byte pointers themselves occupy SRAM.
+ * the 2-byte pointers themselves occupy SRAM.  State machines start in Idle;
+ * actual connection is initiated by the first loop() call.
  */
 MQTTManager::MQTTManager()
     : mqtt(wifiClient)
@@ -144,11 +160,14 @@ const char *MQTTManager::getTopic(const __FlashStringHelper *suffix)
 }
 
 // ============================================================
-//  Public API
+//  Public API — init()
 // ============================================================
 
 /**
- * @brief Initialises WiFi, MQTT, and publishes HA discovery payloads.
+ * @brief Configures the MQTT client and registers global pointer.
+ *
+ * Does NOT initiate any WiFi or MQTT connection.  The state machines
+ * start in Idle; the first loop() call begins the WiFi connection sequence.
  *
  * @param ctrl     Owning GarageController instance.
  * @param callback PubSubClient inbound-message callback.
@@ -156,60 +175,375 @@ const char *MQTTManager::getTopic(const __FlashStringHelper *suffix)
 void MQTTManager::init(GarageController *ctrl,
                        void (*callback)(char *, byte *, unsigned int))
 {
-  controller = ctrl;
+  controller    = ctrl;
   g_mqttManager = this;
 
-  netStatus          = NetStatus::Connecting;
-  consecutiveFailures = 0;
-
-  connectWiFi();
+  // Configure PubSubClient (no connection attempt yet).
   mqtt.setServer(MQTT_SERVER, MQTT_PORT);
   mqtt.setCallback(callback);
-  // Buffer size increased to 2048 to accommodate the large climate discovery payload.
+  // Buffer size 2048 accommodates the large climate discovery payload.
   mqtt.setBufferSize(2048);
-  connectMQTT();
-  publishDiscovery();
+
+  // Reset both state machines to Idle.
+  wifiPhase          = WiFiPhase::Idle;
+  wifiFailures       = 0;
+  wifiConnectStart   = 0;
+  wifiRetryAt        = 0;
+
+  mqttPhase          = MQTTPhase::Idle;
+  mqttFailures       = 0;
+  mqttRetryAt        = 0;
+  mqttCurrentBackoff = MQTT_BACKOFF_MIN;
+
+  netStatus          = NetStatus::Connecting;
+
+  Serial.println(F("MQTT:Manager initialised — state machines in Idle"));
 }
 
+// ============================================================
+//  Main loop dispatcher
+// ============================================================
+
 /**
- * @brief Services the MQTT connection and reconnects as needed.
+ * @brief Services both WiFi and MQTT state machines.
  *
- * When Disabled, waits 15 minutes before retrying. The loop performs at most
- * one WiFi or MQTT reconnect attempt per pass to minimize controller delay.
- * connectWiFi() now starts a non-blocking connection attempt and returns
- * quickly, so the main loop can continue checking network state each pass.
+ * Called once per Arduino loop() iteration, positioned LAST so that
+ * the potentially-blocking mqtt.connect() in attemptMQTTConnect() only
+ * fires after motion detection, UI buttons, and HVAC have been serviced.
+ *
+ * Flow:
+ *   1. serviceWiFi() — always called; may transition between Idle,
+ *      Connecting, Connected, Backoff, or Disabled.
+ *   2. serviceMQTT() — called only when wifiPhase == Connected.
+ *      If WiFi is not up, MQTT is disconnected and reset.
  */
 void MQTTManager::loop()
 {
-  if (netStatus == NetStatus::Disabled)
-  {
-    if (millis() - lastDisabledRetry >= DISABLED_RETRY_INTERVAL_MS)
-    {
-      lastDisabledRetry     = millis();
-      consecutiveFailures   = 0;
-      netStatus             = NetStatus::Connecting;
-      Serial.println(F("MQTT:Disabled retry timeout expired, attempting reconnect"));
-    }
-    else
-    {
-      return;
-    }
-  }
+  unsigned long nowMs = millis();
 
-  if (WiFi.status() != WL_CONNECTED)
+  // ── Step 1: Advance WiFi state machine ─────────────────────────────────
+  serviceWiFi(nowMs);
+
+  // ── Step 2: Advance MQTT state machine (WiFi must be up) ───────────────
+  if (wifiPhase == WiFiPhase::Connected)
   {
-    if (mqtt.connected())
-      mqtt.disconnect();
-    connectWiFi();
-  }
-  else if (!mqtt.connected())
-  {
-    connectMQTT();
+    serviceMQTT(nowMs);
   }
   else
   {
-    mqtt.loop();
+    // WiFi is not connected — ensure MQTT is torn down cleanly.
+    if (mqtt.connected())
+    {
+      Serial.println(F("MQTT:WiFi down — disconnecting MQTT"));
+      mqtt.disconnect();
+    }
+    // If MQTT thought it was connected, reset to Idle so it reconnects
+    // quickly once WiFi recovers.  Preserve backoff if it was already
+    // in Backoff (might indicate a broker issue, not just WiFi).
+    if (mqttPhase == MQTTPhase::Connected)
+    {
+      mqttPhase          = MQTTPhase::Idle;
+      mqttCurrentBackoff = MQTT_BACKOFF_MIN; // Fresh start when WiFi returns
+      mqttRetryAt        = 0;
+    }
   }
+}
+
+// ============================================================
+//  WiFi state machine
+// ============================================================
+
+/**
+ * @brief Advances the WiFi state machine by one step.
+ *
+ * Non-blocking: returns immediately after each phase check.  A WiFi
+ * connection attempt is started (Idle→Connecting) or its status is
+ * polled (Connecting) without any blocking delay.
+ *
+ * Failure accounting:
+ *   - Each timeout increments wifiFailures.
+ *   - Drops from Connected reset wifiFailures (WiFi was working).
+ *   - After MAX_WIFI_FAILURES timeouts, WiFi enters Disabled state for
+ *     DISABLED_RETRY_INTERVAL_MS before attempting again.
+ *
+ * @param nowMs Current millis() snapshot.
+ */
+void MQTTManager::serviceWiFi(unsigned long nowMs)
+{
+  switch (wifiPhase)
+  {
+    // ── Idle: begin a new connection attempt ────────────────────────────
+    case WiFiPhase::Idle:
+      Serial.print(F("WiFi:Connecting to "));
+      Serial.println(WIFI_SSID);
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+      wifiConnectStart = nowMs;
+      wifiPhase        = WiFiPhase::Connecting;
+      netStatus        = NetStatus::Connecting;
+      break;
+
+    // ── Connecting: poll for WL_CONNECTED or timeout ────────────────────
+    case WiFiPhase::Connecting:
+      if (WiFi.status() == WL_CONNECTED)
+      {
+        // Success: reset failure counter and allow MQTT to start.
+        wifiPhase    = WiFiPhase::Connected;
+        wifiFailures = 0;
+        // netStatus stays Connecting until MQTT is also up.
+        Serial.print(F("WiFi:Connected — IP: "));
+        Serial.println(WiFi.localIP());
+      }
+      else if (nowMs - wifiConnectStart >= WIFI_TIMEOUT_MS)
+      {
+        // Timed out: back off before retrying.
+        wifiFailures++;
+        Serial.print(F("WiFi:Connect timeout (failure "));
+        Serial.print(wifiFailures);
+        Serial.println(F(")"));
+
+        if (wifiFailures >= MAX_WIFI_FAILURES)
+        {
+          // Disable the network stack for a long cooldown period.
+          wifiPhase   = WiFiPhase::Disabled;
+          wifiRetryAt = nowMs + DISABLED_RETRY_INTERVAL_MS;
+          netStatus   = NetStatus::Disabled;
+          Serial.println(F("WiFi:Disabled — max failures reached; retry in 15 min"));
+        }
+        else
+        {
+          wifiPhase   = WiFiPhase::Backoff;
+          wifiRetryAt = nowMs + WIFI_RETRY_MS;
+          netStatus   = NetStatus::Connecting;
+          Serial.println(F("WiFi:Backing off before retry"));
+        }
+      }
+      // else: still within the 15-second window — return and check next loop
+      break;
+
+    // ── Connected: watch for unexpected drops ───────────────────────────
+    case WiFiPhase::Connected:
+      if (WiFi.status() != WL_CONNECTED)
+      {
+        Serial.println(F("WiFi:Connection lost"));
+        // Tear down MQTT immediately; reset it to Idle with cleared backoff
+        // so it reconnects quickly once WiFi recovers.
+        if (mqtt.connected()) mqtt.disconnect();
+        mqttPhase          = MQTTPhase::Idle;
+        mqttCurrentBackoff = MQTT_BACKOFF_MIN;
+        mqttRetryAt        = 0;
+
+        // Count this as a failure only if we've never successfully connected
+        // at length.  Drops after a working session don't count toward the
+        // initial-connect failure limit.
+        wifiPhase   = WiFiPhase::Backoff;
+        wifiRetryAt = nowMs + WIFI_RETRY_MS;
+        netStatus   = NetStatus::Connecting;
+      }
+      break;
+
+    // ── Backoff: wait before next attempt ──────────────────────────────
+    case WiFiPhase::Backoff:
+      if (nowMs >= wifiRetryAt)
+      {
+        Serial.println(F("WiFi:Backoff expired — retrying"));
+        wifiPhase = WiFiPhase::Idle;
+      }
+      break;
+
+    // ── Disabled: wait for long cooldown, then restart ──────────────────
+    case WiFiPhase::Disabled:
+      if (nowMs >= wifiRetryAt)
+      {
+        Serial.println(F("WiFi:Disable period expired — re-enabling"));
+        wifiPhase    = WiFiPhase::Idle;
+        wifiFailures = 0;
+        netStatus    = NetStatus::Connecting;
+      }
+      break;
+  }
+}
+
+// ============================================================
+//  MQTT state machine
+// ============================================================
+
+/**
+ * @brief Advances the MQTT state machine by one step.
+ *
+ * Only called when wifiPhase == Connected.
+ *
+ * - If mqtt.connected(): calls mqtt.loop() (non-blocking receive pump).
+ * - If phase was Connected but mqtt.connected() dropped: enters Backoff
+ *   and doubles the backoff interval (exponential).
+ * - If in Backoff: returns until mqttRetryAt expires.
+ * - If Idle: calls the blocking attemptMQTTConnect().
+ *
+ * MQTT failures never affect WiFi failure accounting.
+ *
+ * @param nowMs Current millis() snapshot.
+ */
+void MQTTManager::serviceMQTT(unsigned long nowMs)
+{
+  // ── Already connected: run the MQTT receive pump ──────────────────────
+  if (mqtt.connected())
+  {
+    mqttPhase = MQTTPhase::Connected;
+    netStatus = NetStatus::Connected;
+    mqtt.loop();
+    return;
+  }
+
+  // ── Detect unexpected disconnect ──────────────────────────────────────
+  if (mqttPhase == MQTTPhase::Connected)
+  {
+    // Was confirmed connected; now mqtt.connected() returned false.
+    mqttFailures++;
+    Serial.print(F("MQTT:Connection lost (failure "));
+    Serial.print(mqttFailures);
+    Serial.print(F(") — backoff "));
+    Serial.print(mqttCurrentBackoff / 1000UL);
+    Serial.println(F(" s"));
+
+    mqttPhase        = MQTTPhase::Backoff;
+    mqttRetryAt      = nowMs + mqttCurrentBackoff;
+    // Double backoff for next failure, capped at maximum.
+    mqttCurrentBackoff = min(mqttCurrentBackoff * 2UL, MQTT_BACKOFF_MAX);
+    netStatus        = NetStatus::Connecting;
+    return;
+  }
+
+  // ── In backoff: wait until retry window opens ─────────────────────────
+  if (mqttPhase == MQTTPhase::Backoff)
+  {
+    if (nowMs >= mqttRetryAt)
+    {
+      Serial.println(F("MQTT:Backoff expired — retrying"));
+      mqttPhase = MQTTPhase::Idle;
+    }
+    // else: still waiting; return without blocking
+    return;
+  }
+
+  // ── Idle: attempt connection (BLOCKING call inside) ───────────────────
+  // attemptMQTTConnect() will transition phase to Connected or Backoff.
+  attemptMQTTConnect(nowMs);
+}
+
+// ============================================================
+//  MQTT connect attempt
+// ============================================================
+
+/**
+ * @brief Performs one blocking MQTT connection attempt.
+ *
+ * Called from serviceMQTT() when mqttPhase == Idle.
+ *
+ * @warning mqtt.connect() is synchronous.  TCP timeout latency is
+ *          determined by the underlying WiFiS3 WiFiClient implementation
+ *          and is not directly configurable in all library versions.
+ *          Exponential backoff in serviceMQTT() limits how often this
+ *          blocking call occurs.
+ *
+ * On success:
+ *   - Publishes "online" to availability topic.
+ *   - Subscribes to all live /cmd and /nv/ command topics.
+ *   - Calls publishDiscovery() to (re)register all HA entities.
+ *   - Sets pendingFullPublish so all state is re-pushed to HA.
+ *   - Resets mqttCurrentBackoff to minimum.
+ *   - Transitions mqttPhase to Connected.
+ *
+ * On failure:
+ *   - Increments mqttFailures counter.
+ *   - Applies current exponential backoff.
+ *   - Doubles backoff for next failure.
+ *   - Transitions mqttPhase to Backoff.
+ *
+ * @param nowMs Current millis() snapshot.
+ */
+void MQTTManager::attemptMQTTConnect(unsigned long nowMs)
+{
+  // Build a unique client ID to prevent broker-side stale-session collisions.
+  char clientId[32];
+  snprintf(clientId, sizeof(clientId), "%s_%04x",
+           DEVICE_ID, (unsigned)random(0xffff));
+
+  // Copy availability topic before any further buildTopic() calls that
+  // would overwrite _topicBuf.
+  char avail[64];
+  strncpy(avail, buildTopic(F("/availability")), sizeof(avail));
+  avail[sizeof(avail) - 1] = '\0';
+
+  Serial.print(F("MQTT:Connecting (backoff="));
+  Serial.print(mqttCurrentBackoff / 1000UL);
+  Serial.println(F(" s)..."));
+
+  // ── Blocking connect ──────────────────────────────────────────────────
+  // Will publish a retained "offline" LWT if connection drops unexpectedly.
+  bool ok;
+  if (strlen(MQTT_USER) > 0)
+    ok = mqtt.connect(clientId, MQTT_USER, MQTT_PASS, avail, 1, true, "offline");
+  else
+    ok = mqtt.connect(clientId, nullptr, nullptr,     avail, 1, true, "offline");
+
+  if (!ok)
+  {
+    // ── Connection failed ─────────────────────────────────────────────
+    mqttFailures++;
+    Serial.print(F("MQTT:Connect failed rc="));
+    Serial.print(mqtt.state());
+    Serial.print(F(" (failure "));
+    Serial.print(mqttFailures);
+    Serial.print(F(") — next retry in "));
+    Serial.print(mqttCurrentBackoff / 1000UL);
+    Serial.println(F(" s"));
+
+    mqttPhase        = MQTTPhase::Backoff;
+    mqttRetryAt      = nowMs + mqttCurrentBackoff;
+    // Double backoff for next failure, capped at maximum.
+    mqttCurrentBackoff = min(mqttCurrentBackoff * 2UL, MQTT_BACKOFF_MAX);
+    netStatus        = NetStatus::Connecting;
+    return;
+  }
+
+  // ── Connection succeeded ──────────────────────────────────────────────
+  Serial.println(F("MQTT:Connected"));
+  mqtt.publish(avail, "online", true);
+
+  // ── Subscribe to live /cmd topics (Rule 2 — live values only) ─────────
+  mqtt.subscribe(buildTopic(F("/door/cmd")));
+  mqtt.subscribe(buildTopic(F("/door/duration/cmd")));
+  mqtt.subscribe(buildTopic(F("/light/cmd")));
+  mqtt.subscribe(buildTopic(F("/light/duration/cmd")));
+  mqtt.subscribe(buildTopic(F("/hvac/heat_set/cmd")));
+  mqtt.subscribe(buildTopic(F("/hvac/cool_set/cmd")));
+  mqtt.subscribe(buildTopic(F("/hvac/mode/cmd")));
+  mqtt.subscribe(buildTopic(F("/hvac/swing/cmd")));  // live HVAC swing
+
+  // ── Subscribe to NV /nv/ topics (Rule 3 — RAM only, no auto-save) ─────
+  mqtt.subscribe(buildTopic(F("/nv/hvac/heat_set/cmd")));
+  mqtt.subscribe(buildTopic(F("/nv/hvac/cool_set/cmd")));
+  mqtt.subscribe(buildTopic(F("/nv/door_timeout/cmd")));
+  mqtt.subscribe(buildTopic(F("/nv/light_timeout/cmd")));
+
+  // ── Subscribe to NV control topics ────────────────────────────────────
+  mqtt.subscribe(buildTopic(F("/nv/save/cmd")));    // persist NV → EEPROM
+  mqtt.subscribe(buildTopic(F("/nv/reload/cmd")));  // NV → live subsystems
+
+  // ── Publish HA discovery for all entities ─────────────────────────────
+  // Called on every successful connect so HA re-registers entities even
+  // if HA was restarted while we were offline.
+  publishDiscovery();
+
+  // ── Force full state re-publish ───────────────────────────────────────
+  // Invalidates all prev-state sentinels so the next publishStateChanges()
+  // call overwrites any stale retained values in HA.
+  pendingFullPublish = true;
+
+  // ── Reset MQTT tracking ───────────────────────────────────────────────
+  mqttPhase          = MQTTPhase::Connected;
+  mqttCurrentBackoff = MQTT_BACKOFF_MIN; // Reset to minimum on success
+  mqttFailures       = 0;               // Clear failure streak
+  netStatus          = NetStatus::Connected;
 }
 
 // ============================================================
@@ -219,36 +553,12 @@ void MQTTManager::loop()
 /**
  * @brief Publishes changed sensor and state values to MQTT.
  *
- * Only values that differ from the previous publish are transmitted (change
- * detection).  On (re)connect, pendingFullPublish invalidates all prev-state
- * sentinels so the next call immediately overwrites any stale retained values
- * in Home Assistant.
+ * Only values that differ from the previous publish are transmitted.
+ * On (re)connect, pendingFullPublish invalidates all prev-state sentinels
+ * so the next call immediately overwrites stale retained HA values.
  *
- * Temperature publication is additionally gated until the first valid DS18B20
- * reading arrives (hasValidTemp), preventing DEVICE_DISCONNECTED sentinels
- * (–196.6 °F) from reaching HA during startup.
- *
- * NV door and light timeouts use SEPARATE prev-state members from the current
- * live timeouts so that both HA entities track their correct independent values.
- *
- * @param lightOn             Current light relay state.
- * @param lightDurationMins   Current live light auto-off timeout (min).
- * @param lightRemainingMins  Minutes remaining until light auto-off.
- * @param doorCode            Door state code (0–4).
- * @param doorDurationMins    Current live door auto-close timeout (min).
- * @param doorRemainingMins   Minutes remaining until door auto-close.
- * @param tempF               Current temperature (°F).
- * @param heatSet             Current live HVAC heat setpoint (°F).
- * @param coolSet             Current live HVAC cool setpoint (°F).
- * @param nvHeatSet           NV HVAC heat setpoint (°F).
- * @param nvCoolSet           NV HVAC cool setpoint (°F).
- * @param hvacSwing           Current live HVAC swing (°F).
- * @param nvDoorTimeoutMins   NV door auto-close timeout (min) – independent of doorDurationMins.
- * @param nvLightTimeoutMins  NV light auto-off timeout (min) – independent of lightDurationMins.
- * @param mode                HVAC mode code (0–3).
- * @param hvacState           HVAC runtime state code (0–3).
- * @param motionActive        True if PIR sensor reads HIGH.
- * @param lockout             True when HVAC is locked out.
+ * Temperature is additionally gated until the first valid DS18B20 reading
+ * (hasValidTemp) to prevent DEVICE_DISCONNECTED sentinels reaching HA.
  */
 void MQTTManager::publishStateChanges(bool          lightOn,
                                       unsigned long lightDurationMins,
@@ -269,13 +579,14 @@ void MQTTManager::publishStateChanges(bool          lightOn,
                                       bool          motionActive,
                                       bool          lockout)
 {
+  // Guard: only publish when the MQTT connection is active.
   if (netStatus == NetStatus::Disabled) return;
   if (!mqtt.connected())               return;
 
-  // ── Full publish after (re)connect ───────────────────────────────────────
-  // Invalidate all prev-state sentinels so every value is (re)published on
-  // the next call, overwriting any stale retained values in HA.
-  // Temperature is excluded here – it remains gated by hasValidTemp.
+  // ── Full publish after (re)connect ────────────────────────────────────
+  // Invalidates all prev-state sentinels so every value is (re)published
+  // on this call, overwriting any stale retained values in HA.
+  // Temperature is excluded — it remains gated separately by hasValidTemp.
   if (pendingFullPublish)
   {
     prevLightState     = !lightOn;
@@ -288,28 +599,28 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevCoolSet        = coolSet    + 10.0f;
     prevNvHeatSet      = nvHeatSet  + 10.0f;
     prevNvCoolSet      = nvCoolSet  + 10.0f;
-    prevHvacSwing      = hvacSwing + 1;
+    prevHvacSwing      = hvacSwing  + 1;
     prevNvDoorTimeout  = nvDoorTimeoutMins  + 1;
     prevNvLightTimeout = nvLightTimeoutMins + 1;
     prevMode           = 0xFF;
     prevHvacState      = 0xFF;
     prevMotion         = !motionActive;
     prevLockout        = !lockout;
-    // prevTemp intentionally NOT reset – gated separately by hasValidTemp.
+    // prevTemp intentionally NOT reset — gated separately by hasValidTemp.
     pendingFullPublish = false;
   }
 
-  // Small stack buffer for numeric payloads – avoids heap String temporaries.
+  // Small stack buffer for numeric payloads — avoids heap String temporaries.
   char val[12];
 
-  // ── Light state ───────────────────────────────────────────────────────────
+  // ── Light state ────────────────────────────────────────────────────────
   if (lightOn != prevLightState)
   {
     mqtt.publish(buildTopic(F("/light/state")), lightOn ? "on" : "off", true);
     prevLightState = lightOn;
   }
 
-  // ── Current light timeout ─────────────────────────────────────────────────
+  // ── Current light timeout ──────────────────────────────────────────────
   if (lightDurationMins != prevLightDuration)
   {
     snprintf(val, sizeof(val), "%lu", lightDurationMins);
@@ -317,7 +628,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevLightDuration = lightDurationMins;
   }
 
-  // ── Light remaining ───────────────────────────────────────────────────────
+  // ── Light remaining ────────────────────────────────────────────────────
   if (lightRemainingMins != prevLightRemaining)
   {
     snprintf(val, sizeof(val), "%lu", lightRemainingMins);
@@ -325,7 +636,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevLightRemaining = lightRemainingMins;
   }
 
-  // ── Door state ────────────────────────────────────────────────────────────
+  // ── Door state ─────────────────────────────────────────────────────────
   if (doorCode != prevDoorCode)
   {
     const char *ds;
@@ -341,7 +652,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevDoorCode = doorCode;
   }
 
-  // ── Current door timeout ──────────────────────────────────────────────────
+  // ── Current door timeout ───────────────────────────────────────────────
   if (doorDurationMins != prevDoorDuration)
   {
     snprintf(val, sizeof(val), "%lu", doorDurationMins);
@@ -349,7 +660,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevDoorDuration = doorDurationMins;
   }
 
-  // ── Door remaining ────────────────────────────────────────────────────────
+  // ── Door remaining ─────────────────────────────────────────────────────
   if (doorRemainingMins != prevDoorRemaining)
   {
     snprintf(val, sizeof(val), "%lu", doorRemainingMins);
@@ -357,10 +668,10 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevDoorRemaining = doorRemainingMins;
   }
 
-  // ── Temperature (gated until first valid reading) ─────────────────────────
+  // ── Temperature (gated until first valid reading) ──────────────────────
   if (!hasValidTemp)
   {
-    // Accept the reading once it's within the DS18B20's valid range.
+    // Accept the reading once it is within DS18B20's valid operating range.
     if (!isnan(tempF) && tempF > -40.0f && tempF < 150.0f)
       hasValidTemp = true;
   }
@@ -371,7 +682,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevTemp = tempF;
   }
 
-  // ── Live HVAC setpoints ───────────────────────────────────────────────────
+  // ── Live HVAC heat setpoint ────────────────────────────────────────────
   if (abs(heatSet - prevHeatSet) >= 0.5f)
   {
     dtostrf(heatSet, 4, 1, val);
@@ -379,6 +690,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevHeatSet = heatSet;
   }
 
+  // ── Live HVAC cool setpoint ────────────────────────────────────────────
   if (abs(coolSet - prevCoolSet) >= 0.5f)
   {
     dtostrf(coolSet, 4, 1, val);
@@ -386,14 +698,15 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevCoolSet = coolSet;
   }
 
-  if (abs(hvacSwing - prevHvacSwing) >= 0.5f)
+  // ── Live HVAC swing ────────────────────────────────────────────────────
+  if (hvacSwing != prevHvacSwing)
   {
-    dtostrf(hvacSwing, 4, 1, val);
+    snprintf(val, sizeof(val), "%lu", hvacSwing);
     mqtt.publish(buildTopic(F("/hvac/swing/state")), val, true);
     prevHvacSwing = hvacSwing;
   }
 
-  // ── NV HVAC setpoints ─────────────────────────────────────────────────────
+  // ── NV HVAC heat setpoint ──────────────────────────────────────────────
   if (abs(nvHeatSet - prevNvHeatSet) >= 0.5f)
   {
     dtostrf(nvHeatSet, 4, 1, val);
@@ -401,6 +714,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevNvHeatSet = nvHeatSet;
   }
 
+  // ── NV HVAC cool setpoint ──────────────────────────────────────────────
   if (abs(nvCoolSet - prevNvCoolSet) >= 0.5f)
   {
     dtostrf(nvCoolSet, 4, 1, val);
@@ -408,8 +722,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevNvCoolSet = nvCoolSet;
   }
 
-  // ── NV door timeout ───────────────────────────────────────────────────────
-  // Tracked against prevNvDoorTimeout, which is INDEPENDENT of prevDoorDuration.
+  // ── NV door timeout (independent of live doorDurationMins) ────────────
   if (nvDoorTimeoutMins != prevNvDoorTimeout)
   {
     snprintf(val, sizeof(val), "%lu", nvDoorTimeoutMins);
@@ -417,8 +730,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevNvDoorTimeout = nvDoorTimeoutMins;
   }
 
-  // ── NV light timeout ──────────────────────────────────────────────────────
-  // Tracked against prevNvLightTimeout, INDEPENDENT of prevLightDuration.
+  // ── NV light timeout (independent of live lightDurationMins) ──────────
   if (nvLightTimeoutMins != prevNvLightTimeout)
   {
     snprintf(val, sizeof(val), "%lu", nvLightTimeoutMins);
@@ -426,7 +738,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevNvLightTimeout = nvLightTimeoutMins;
   }
 
-  // ── HVAC mode ─────────────────────────────────────────────────────────────
+  // ── HVAC mode ──────────────────────────────────────────────────────────
   if (mode != prevMode)
   {
     const char *modeStr;
@@ -442,7 +754,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevMode = mode;
   }
 
-  // ── HVAC runtime action ───────────────────────────────────────────────────
+  // ── HVAC runtime action ────────────────────────────────────────────────
   if (hvacState != prevHvacState)
   {
     const char *action;
@@ -458,7 +770,7 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevHvacState = hvacState;
   }
 
-  // ── Motion sensor ─────────────────────────────────────────────────────────
+  // ── Motion sensor ──────────────────────────────────────────────────────
   if (motionActive != prevMotion)
   {
     mqtt.publish(buildTopic(F("/motion/state")),
@@ -466,165 +778,12 @@ void MQTTManager::publishStateChanges(bool          lightOn,
     prevMotion = motionActive;
   }
 
-  // ── HVAC lockout ──────────────────────────────────────────────────────────
+  // ── HVAC lockout ───────────────────────────────────────────────────────
   if (lockout != prevLockout)
   {
     mqtt.publish(buildTopic(F("/lockout/state")),
                  lockout ? "Lockout" : "OK", true);
     prevLockout = lockout;
-  }
-}
-
-// ============================================================
-//  Private helpers
-// ============================================================
-
-/**
- * @brief Starts or evaluates a non-blocking WiFi connection attempt.
- *
- * Begins a WiFi connect attempt with WiFi.begin() and then checks status
- * on each execution of the main loop.  On success, resets consecutiveFailures.
- * On repeated failure, disables the network stack after MAX_FAILURES attempts.
- */
-void MQTTManager::connectWiFi()
-{
-  if (netStatus == NetStatus::Disabled) return;
-
-  if (WiFi.status() == WL_CONNECTED)
-  {
-    if (wifiConnectionActive)
-      wifiConnectionActive = false;
-
-    Serial.print(F("WiFi connected, IP: "));
-    Serial.println(WiFi.localIP());
-    consecutiveFailures = 0;
-    return;
-  }
-
-  if (!wifiConnectionActive)
-  {
-    Serial.print(F("Connecting to WiFi: "));
-    Serial.println(WIFI_SSID);
-    netStatus = NetStatus::Connecting;
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    wifiConnectionActive = true;
-    wifiConnectStart = millis();
-    return;
-  }
-
-  if (millis() - wifiConnectStart < WIFI_CONNECT_TIMEOUT_MS)
-  {
-    // Connection is still in progress; return quickly and check again next loop.
-    return;
-  }
-
-  // The previous connection attempt has timed out.
-  wifiConnectionActive = false;
-  if (WiFi.status() == WL_CONNECTED)
-  {
-    Serial.print(F("WiFi connected, IP: "));
-    Serial.println(WiFi.localIP());
-    consecutiveFailures = 0;
-    return;
-  }
-
-  consecutiveFailures++;
-  Serial.println(F("WiFi connect failed"));
-  if (consecutiveFailures >= MAX_FAILURES)
-  {
-    netStatus = NetStatus::Disabled;
-    lastDisabledRetry = millis();
-    Serial.println(F("Network disabled due to repeated failures"));
-    return;
-  }
-  Serial.println(F("- will retry"));
-}
-
-/**
- * @brief Connects to the MQTT broker, subscribes to command topics,
- *        and schedules a full state re-publish.
- *
- * Subscribes to all live /cmd topics and NV /nv/ topics.
- * The /nv/save/cmd topic is subscribed here; its handler in
- * GarageController::handleMQTT() persists current NV members to EEPROM
- * without touching live subsystem values (Rule 4 MQTT path).
- *
- * Uses a stack-allocated clientId (no heap String).  The availability
- * topic is copied into a local buffer before the connect() call because
- * buildTopic() reuses _topicBuf.
- */
-void MQTTManager::connectMQTT()
-{
-  if (netStatus == NetStatus::Disabled) return;
-
-  if (lastMqttRetry != 0 &&
-      millis() - lastMqttRetry < MQTT_RETRY_INTERVAL_MS)
-    return;
-
-  // Client ID on the stack – avoids a heap String allocation.
-  char clientId[32];
-  snprintf(clientId, sizeof(clientId), "%s_%04x",
-           DEVICE_ID, (unsigned)random(0xffff));
-
-  // Copy availability topic before calling buildTopic() again.
-  char avail[64];
-  strncpy(avail, buildTopic(F("/availability")), sizeof(avail));
-  avail[sizeof(avail) - 1] = '\0';
-
-  Serial.print(F("Connecting MQTT... "));
-
-  bool ok;
-  if (strlen(MQTT_USER) > 0)
-    ok = mqtt.connect(clientId, MQTT_USER, MQTT_PASS, avail, 1, true, "offline");
-  else
-    ok = mqtt.connect(clientId, nullptr, nullptr,     avail, 1, true, "offline");
-
-  if (ok)
-  {
-    Serial.println(F("connected"));
-    mqtt.publish(avail, "online", true);
-
-    // ── Subscribe to live /cmd topics ─────────────────────────────────────
-    mqtt.subscribe(buildTopic(F("/door/cmd")));
-    mqtt.subscribe(buildTopic(F("/door/duration/cmd")));
-    mqtt.subscribe(buildTopic(F("/light/cmd")));
-    mqtt.subscribe(buildTopic(F("/light/duration/cmd")));
-    mqtt.subscribe(buildTopic(F("/hvac/heat_set/cmd")));
-    mqtt.subscribe(buildTopic(F("/hvac/cool_set/cmd")));
-    mqtt.subscribe(buildTopic(F("/hvac/mode/cmd")));
-    mqtt.subscribe(buildTopic(F("/hvac/swing/cmd")));
-
-    // ── Subscribe to NV /nv/ topics ───────────────────────────────────────
-    // These update NV members in RAM only; no auto-save occurs.
-    mqtt.subscribe(buildTopic(F("/nv/hvac/heat_set/cmd")));
-    mqtt.subscribe(buildTopic(F("/nv/hvac/cool_set/cmd")));
-    mqtt.subscribe(buildTopic(F("/nv/door_timeout/cmd")));
-    mqtt.subscribe(buildTopic(F("/nv/light_timeout/cmd")));
-
-    // ── Subscribe to NV control topics ────────────────────────────────────
-    mqtt.subscribe(buildTopic(F("/nv/save/cmd")));    // persist NV members → EEPROM
-    mqtt.subscribe(buildTopic(F("/nv/reload/cmd")));  // copy NV members → live subsystems
-
-    publishDiscovery();
-
-    // Force a complete state re-publish on the next publishStateChanges() call
-    // so any stale retained values in HA are immediately corrected.
-    pendingFullPublish = true;
-
-    netStatus       = NetStatus::Connected;
-    mqttFailures    = 0;
-    lastMqttRetry   = 0;
-  }
-  else
-  {
-    mqttFailures++;
-    lastMqttRetry = millis();
-    Serial.print(F("MQTT failed rc="));
-    Serial.println(mqtt.state());
-    if (mqttFailures >= MAX_FAILURES)
-    {
-      Serial.println(F("MQTT unavailable, will retry later"));
-    }
   }
 }
 
@@ -635,23 +794,15 @@ void MQTTManager::connectMQTT()
 /**
  * @brief Publishes all Home Assistant MQTT Discovery configuration payloads.
  *
- * A single 1024-byte stack buffer is reused for every entity payload,
- * replacing the heap-concatenated String approach that caused repeated
- * ~400-byte heap allocations and fragmentation at startup and on reconnect.
+ * A single 2048-byte stack buffer is reused for every entity payload.
+ * Called automatically after each successful MQTT (re)connect.
  *
- * Includes a "Save NV Settings" button entity that triggers /nv/save/cmd,
- * allowing HA users to explicitly commit pending NV RAM changes to EEPROM
- * after making NV adjustments.
- *
- * Also removes stale 'number' discovery entries for read-only 'remaining'
- * sensors that were previously published with a command_topic, which caused
- * HA import errors.
+ * Tombstones stale 'number' discovery entries for 'remaining' sensors that
+ * were previously published with a command_topic (causing HA import errors).
  */
 void MQTTManager::publishDiscovery()
 {
-  // ── Remove stale retained discovery entries ───────────────────────────────
-  // These were previously published as 'number' (which requires command_topic).
-  // Publishing an empty retained payload removes them from HA's entity registry.
+  // ── Remove stale retained discovery entries ────────────────────────────
   {
     char stale[72];
     snprintf(stale, sizeof(stale), "%s/number/%s_door_remaining/config",
@@ -663,8 +814,8 @@ void MQTTManager::publishDiscovery()
     mqtt.publish(stale, "", true);
   }
 
-  // ── Shared buffers ────────────────────────────────────────────────────────
-  char buf[2048];  // Reused for every entity payload (increased from 1024 to prevent truncation).
+  // ── Shared stack buffers ───────────────────────────────────────────────
+  char buf[2048]; // Reused for every payload; increased to prevent truncation.
 
   char avail[64];
   strncpy(avail, buildTopic(F("/availability")), sizeof(avail));
@@ -673,7 +824,7 @@ void MQTTManager::publishDiscovery()
   char base[64];
   snprintf(base, sizeof(base), "garage/%s", DEVICE_ID);
 
-  // ── Door button ───────────────────────────────────────────────────────────
+  // ── Door button ────────────────────────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_door", DEVICE_ID);
@@ -688,7 +839,7 @@ void MQTTManager::publishDiscovery()
     Serial.println(F("Discovery: door button published"));
   }
 
-  // ── Door state binary sensor ──────────────────────────────────────────────
+  // ── Door state binary sensor ───────────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_door_state", DEVICE_ID);
@@ -705,7 +856,7 @@ void MQTTManager::publishDiscovery()
     Serial.println(F("Discovery: door state published"));
   }
 
-  // ── Current door timeout number ───────────────────────────────────────────
+  // ── Current door timeout number ────────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_door_timeout", DEVICE_ID);
@@ -726,7 +877,7 @@ void MQTTManager::publishDiscovery()
     Serial.println(F("Discovery: door timeout published"));
   }
 
-  // ── Door remaining sensor ─────────────────────────────────────────────────
+  // ── Door remaining sensor (read-only) ─────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_door_remaining", DEVICE_ID);
@@ -742,7 +893,7 @@ void MQTTManager::publishDiscovery()
     Serial.println(F("Discovery: door remaining published"));
   }
 
-  // ── NV heat setpoint ──────────────────────────────────────────────────────
+  // ── NV heat setpoint ──────────────────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_nv_heat_set", DEVICE_ID);
@@ -763,7 +914,7 @@ void MQTTManager::publishDiscovery()
     Serial.println(F("Discovery: nv heat setpoint published"));
   }
 
-  // ── NV cool setpoint ──────────────────────────────────────────────────────
+  // ── NV cool setpoint ──────────────────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_nv_cool_set", DEVICE_ID);
@@ -783,7 +934,8 @@ void MQTTManager::publishDiscovery()
     mqtt.publish(buildDiscoveryTopic(F("number"), F("_nv_cool_set")), buf, true);
     Serial.println(F("Discovery: nv cool setpoint published"));
   }
-  // ── HVAC swing ──────────────────────────────────────────────────────
+
+  // ── HVAC swing (live) ─────────────────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_hvac_swing", DEVICE_ID);
@@ -794,16 +946,17 @@ void MQTTManager::publishDiscovery()
     doc["state_topic"]       = stopic;
     doc["command_topic"]     = ctopic;
     doc["min"]               = 0;
-    doc["max"]               = 5;
-    doc["step"]              = 0.5;
+    doc["max"]               = 20;
+    doc["step"]              = 1;
     doc["unit_of_measurement"] = "°F";
     doc["avty_t"]            = avail;
     addDevice(doc.createNestedObject("dev"));
     serializeJson(doc, buf, sizeof(buf));
-    mqtt.publish(buildDiscoveryTopic(F("number"), F("_hvac_swing_set")), buf, true);
-    Serial.println(F("Discovery: HVAC Swing published"));
+    mqtt.publish(buildDiscoveryTopic(F("number"), F("_hvac_swing")), buf, true);
+    Serial.println(F("Discovery: HVAC swing published"));
   }
-  // ── NV door timeout ───────────────────────────────────────────────────────
+
+  // ── NV door timeout ───────────────────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_nv_door_timeout", DEVICE_ID);
@@ -824,7 +977,7 @@ void MQTTManager::publishDiscovery()
     Serial.println(F("Discovery: nv door timeout published"));
   }
 
-  // ── NV light timeout ──────────────────────────────────────────────────────
+  // ── NV light timeout ──────────────────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_nv_light_timeout", DEVICE_ID);
@@ -845,10 +998,7 @@ void MQTTManager::publishDiscovery()
     Serial.println(F("Discovery: nv light timeout published"));
   }
 
-  // ── NV Save button ────────────────────────────────────────────────────────
-  // A momentary button in HA that publishes to /nv/save/cmd, triggering the
-  // controller to write current NV member variables to EEPROM.
-  // Use this after adjusting any /nv/ number entity to make the changes permanent.
+  // ── NV Save button ────────────────────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_nv_save", DEVICE_ID);
@@ -863,26 +1013,26 @@ void MQTTManager::publishDiscovery()
     Serial.println(F("Discovery: nv save button published"));
   }
 
-  // ── Garage light switch ───────────────────────────────────────────────────
+  // ── Garage light switch ───────────────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_light", DEVICE_ID);
     char stopic[64]; makeTopic(stopic, sizeof(stopic), base, "light/state");
     char ctopic[64]; makeTopic(ctopic, sizeof(ctopic), base, "light/cmd");
-    doc["name"]            = "Garage Light";
-    doc["uniq_id"]         = uniq;
-    doc["state_topic"]     = stopic;
-    doc["command_topic"]   = ctopic;
-    doc["payload_on"]      = "on";
-    doc["payload_off"]     = "off";
-    doc["avty_t"]          = avail;
+    doc["name"]          = "Garage Light";
+    doc["uniq_id"]       = uniq;
+    doc["state_topic"]   = stopic;
+    doc["command_topic"] = ctopic;
+    doc["payload_on"]    = "on";
+    doc["payload_off"]   = "off";
+    doc["avty_t"]        = avail;
     addDevice(doc.createNestedObject("dev"));
     serializeJson(doc, buf, sizeof(buf));
     mqtt.publish(buildDiscoveryTopic(F("light"), F("_light")), buf, true);
     Serial.println(F("Discovery: light published"));
   }
 
-  // ── Current light timeout number ──────────────────────────────────────────
+  // ── Current light timeout number ──────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_light_timeout", DEVICE_ID);
@@ -903,7 +1053,7 @@ void MQTTManager::publishDiscovery()
     Serial.println(F("Discovery: light timeout published"));
   }
 
-  // ── Light remaining sensor ────────────────────────────────────────────────
+  // ── Light remaining sensor (read-only) ────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_light_remaining", DEVICE_ID);
@@ -919,9 +1069,9 @@ void MQTTManager::publishDiscovery()
     Serial.println(F("Discovery: light remaining published"));
   }
 
-  // ── Climate (HVAC thermostat) ─────────────────────────────────────────────
-  // Uses a larger StaticJsonDocument (2048 bytes) because the climate entity
-  // contains many topic fields, all of which include the DEVICE_ID.
+  // ── Climate (HVAC thermostat) ─────────────────────────────────────────
+  // Uses a larger StaticJsonDocument (2048 bytes) — the climate entity
+  // has many topic fields each containing the DEVICE_ID.
   {
     StaticJsonDocument<2048> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_hvac", DEVICE_ID);
@@ -941,7 +1091,6 @@ void MQTTManager::publishDiscovery()
     makeTopic(topic, sizeof(topic), hvacBase, "action/state");      doc["action_topic"]               = topic;
     makeTopic(topic, sizeof(topic), hvacBase, "temp/state");        doc["current_temperature_topic"]  = topic;
     makeTopic(topic, sizeof(topic), hvacBase, "heat_set/state");    doc["temperature_state_topic"]    = topic;
-    makeTopic(topic, sizeof(topic), hvacBase, "hvac_swing/state");  doc["hvac_swing_topic"]           = topic;
     makeTopic(topic, sizeof(topic), hvacBase, "heat_set/cmd");      doc["temperature_command_topic"]  = topic;
     makeTopic(topic, sizeof(topic), hvacBase, "heat_set/state");    doc["temp_low_state_topic"]       = topic;
     makeTopic(topic, sizeof(topic), hvacBase, "heat_set/cmd");      doc["temp_low_command_topic"]     = topic;
@@ -960,7 +1109,7 @@ void MQTTManager::publishDiscovery()
     Serial.println(F("Discovery: climate published"));
   }
 
-  // ── Temperature sensor ────────────────────────────────────────────────────
+  // ── Temperature sensor ────────────────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_temp", DEVICE_ID);
@@ -977,25 +1126,25 @@ void MQTTManager::publishDiscovery()
     Serial.println(F("Discovery: temp sensor published"));
   }
 
-  // ── Motion binary sensor ──────────────────────────────────────────────────
+  // ── Motion binary sensor ──────────────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_motion", DEVICE_ID);
     char topic[64]; makeTopic(topic, sizeof(topic), base, "motion/state");
-    doc["name"]        = "Garage Motion";
-    doc["uniq_id"]     = uniq;
+    doc["name"]         = "Garage Motion";
+    doc["uniq_id"]      = uniq;
     doc["device_class"] = "motion";
-    doc["state_topic"] = topic;
-    doc["payload_on"]  = "on";
-    doc["payload_off"] = "off";
-    doc["avty_t"]      = avail;
+    doc["state_topic"]  = topic;
+    doc["payload_on"]   = "on";
+    doc["payload_off"]  = "off";
+    doc["avty_t"]       = avail;
     addDevice(doc.createNestedObject("dev"));
     serializeJson(doc, buf, sizeof(buf));
     mqtt.publish(buildDiscoveryTopic(F("binary_sensor"), F("_motion")), buf, true);
     Serial.println(F("Discovery: motion sensor published"));
   }
 
-  // ── HVAC lockout binary sensor ────────────────────────────────────────────
+  // ── HVAC lockout binary sensor ────────────────────────────────────────
   {
     StaticJsonDocument<256> doc;
     char uniq[32]; snprintf(uniq, sizeof(uniq), "%s_lockout", DEVICE_ID);
@@ -1017,49 +1166,86 @@ void MQTTManager::publishDiscovery()
 //  Network status helpers
 // ============================================================
 
+/** @brief Returns the aggregated public NetStatus. */
 MQTTManager::NetStatus MQTTManager::getNetStatus() const { return netStatus; }
 
+/**
+ * @brief Returns a granular human-readable status string for LCD display.
+ *
+ * Reflects the individual WiFi and MQTT phase states, giving the user
+ * more specific information than the three-value NetStatus enum alone.
+ */
 const char *MQTTManager::getNetStatusString() const
 {
-  switch (netStatus)
-  {
-  case NetStatus::Connecting: return "Connecting";
-  case NetStatus::Connected:  return "Connected";
-  case NetStatus::Disabled:   return "Disabled";
-  }
-  return "Unknown";
+  // Disabled state takes priority over everything.
+  if (wifiPhase == WiFiPhase::Disabled)   return "Disabled";
+
+  // WiFi not yet connected.
+  if (wifiPhase == WiFiPhase::Backoff)    return "WiFi Wait";
+  if (wifiPhase != WiFiPhase::Connected)  return "WiFi...";
+
+  // WiFi is up — report MQTT phase.
+  if (mqttPhase == MQTTPhase::Backoff)    return "MQTT Wait";
+  if (mqttPhase == MQTTPhase::Connected)  return "Connected";
+  return "MQTT..."; // Idle = about to attempt connection
 }
 
+/** @brief Returns true unless the network is in Disabled state. */
 bool MQTTManager::isNetworkEnabled() const
 {
-  return netStatus != NetStatus::Disabled;
+  return wifiPhase != WiFiPhase::Disabled;
 }
 
-/** @brief Resets the failure counter and re-enters Connecting state. */
+/**
+ * @brief Resets both state machines to Idle and clears all failure counters.
+ *
+ * Forces a clean reconnect cycle from scratch on the next loop() call.
+ * Called from the MQTT menu "Connect" action.
+ */
 void MQTTManager::resetNetStatus()
 {
-  consecutiveFailures     = 0;
-  mqttFailures            = 0;
-  lastDisabledRetry       = 0;
-  lastMqttRetry           = 0;
-  wifiConnectionActive    = false;
-  wifiConnectStart        = 0;
-  if (netStatus == NetStatus::Disabled)
-    netStatus = NetStatus::Connecting;
-}
+  Serial.println(F("MQTT:Network reset requested"));
 
-/** @brief Immediately disconnects WiFi and MQTT and sets Disabled state. */
-void MQTTManager::disableNetwork()
-{
-  netStatus = NetStatus::Disabled;
-  lastDisabledRetry = millis();
+  // Tear down current connections cleanly.
   if (mqtt.connected()) mqtt.disconnect();
   WiFi.disconnect();
-  wifiConnectionActive = false;
+
+  // Reset WiFi state machine.
+  wifiPhase    = WiFiPhase::Idle;
+  wifiFailures = 0;
   wifiConnectStart = 0;
-  lastMqttRetry = 0;
+  wifiRetryAt  = 0;
+
+  // Reset MQTT state machine.
+  mqttPhase          = MQTTPhase::Idle;
+  mqttFailures       = 0;
+  mqttRetryAt        = 0;
+  mqttCurrentBackoff = MQTT_BACKOFF_MIN;
+
+  netStatus = NetStatus::Connecting;
 }
 
+/**
+ * @brief Immediately disconnects everything and forces Disabled state.
+ *
+ * No automatic retry will occur.  Call resetNetStatus() to re-enable.
+ * Called from the MQTT menu "Disable" action.
+ */
+void MQTTManager::disableNetwork()
+{
+  Serial.println(F("MQTT:Network disabled by user"));
+
+  if (mqtt.connected()) mqtt.disconnect();
+  WiFi.disconnect();
+
+  wifiPhase          = WiFiPhase::Disabled;
+  wifiRetryAt        = millis() + DISABLED_RETRY_INTERVAL_MS;
+  mqttPhase          = MQTTPhase::Idle;
+  mqttCurrentBackoff = MQTT_BACKOFF_MIN;
+  netStatus          = NetStatus::Disabled;
+}
+
+/** @brief Writes the local IP address string into buf (or "n/a" if not connected). */
 void MQTTManager::getLocalIP(char *buf, size_t len) const
 {
   if (WiFi.status() == WL_CONNECTED)
@@ -1074,6 +1260,7 @@ void MQTTManager::getLocalIP(char *buf, size_t len) const
   }
 }
 
+/** @brief Writes the configured MQTT server address into buf. */
 void MQTTManager::getMqttServerIP(char *buf, size_t len) const
 {
   strncpy(buf, MQTT_SERVER, len);

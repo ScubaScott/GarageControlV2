@@ -70,7 +70,7 @@
 
 #include "src/Utility.h"
 #include <EEPROM.h>
-const char *GC_VERSION = "2.20.1";
+const char *GC_VERSION = "2.20.2";
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>

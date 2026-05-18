@@ -1,5 +1,27 @@
 # GarageControl2 – Change Log
 
+## [2.20.2] – 2026-05-18
+
+### Fixed
+- **Dual independent WiFi and MQTT state machines**: WiFi and MQTT are now fully decoupled with separate failure counters, retry timers, and backoff logic.
+  - MQTT connect/disconnect failures no longer affect WiFi state or failure accounting
+  - WiFi failures do not disable MQTT (only WiFi loss resets MQTT state)
+  - Each state machine operates independently with its own timeout and backoff strategy
+- **MQTT exponential backoff**: Implemented progressive backoff for MQTT connection attempts (5s → 10s → 20s → 40s → 60s cap) to reduce blocking behavior frequency.
+- **Immediate MQTT reset on WiFi loss**: MQTT is immediately reset to Idle with backoff timer cleared when WiFi drops, enabling fast reconnection once WiFi recovers.
+- **Documented blocking behavior**: mqtt.connect() remains synchronous (PubSubClient limitation), but exponential backoff and final loop positioning ensure UI responsiveness and motion detection remain unaffected.
+
+### Architecture
+- **WiFi state machine**: Idle → Connecting → Connected → Backoff → [Disabled after 4 failures for 15 min]
+- **MQTT state machine**: Idle → Connected/Backoff → [reset on WiFi loss or connection failure]
+- **Priority order maintained**: 1) Motion → light (ISR), 2) UI responsiveness, 3) MQTT publish/receive, 4) HVAC control
+
+### Notes
+- Network resilience significantly improved for intermittent broker/WiFi outages
+- No user-facing changes; operation remains transparent
+
+---
+
 ## [2.20.1] – 2026-05-08
 
 ### Fixed
